@@ -1,3 +1,31 @@
-cmake_minimum_required(VERSION 3.20.0)
-project(Albedo)
-add_executable(Albedo ./source/main.cpp)
+cmake_minimum_required(VERSION 3.21.0 FATAL_ERROR)
+
+project("Albedo"
+    LANGUAGES CXX
+    VERSION 1.0.0)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # Explicitly require the standard
+set(CMAKE_CXX_EXTENSIONS OFF) # Vendor-specific Extensions
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/_script")
+
+include(check_in_source_build)
+
+add_subdirectory(Albedo)
+
+# Put targets into Folders
+include(target_put_into_folder)
+target_put_into_folder(Albedo "Albedo")
+
+target_put_into_folder(AlbedoLog "Albedo/Extern/AlbedoLog")
+    target_put_into_folder(spdlog "Albedo/Extern/AlbedoLog/Library/spdlog")
+
+target_put_into_folder(glfw "Albedo/Extern/GLFW3") 
+    target_put_into_folder(update_mappings "Albedo/Extern/GLFW3") 
+target_put_into_folder(VulkanMemoryAllocator "Albedo/Extern/VMA")
+
+target_put_into_folder(AlbedoUtils "Albedo/Extern/AlbedoUtils")
+
+# StartUp Project in Visual Studio
+set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})

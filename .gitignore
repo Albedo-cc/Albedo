@@ -1,14 +1,19 @@
-# Frozen
-.vscode
-.xmake
-build
-*.spv
+# Frozen C++ Ignore
 
-# Compiled source #
-###################
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
+# Directories
+.vscode/
+build/
+build_debug/
+build_release/
+
+# Generated and user files 
+**/CMakeCache.txt 
+**/CMakeUserPresets.json 
+**/CTestTestfile.cmake 
+**/CPackConfig.cmake 
+**/cmake_install.cmake 
+**/install_manifest.txt 
+**/compile_commands.json
+
+# Frozen Vulkan Ignore
+.spv
