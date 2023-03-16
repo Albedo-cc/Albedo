@@ -8,6 +8,8 @@
 #include <vector>
 #include <format>
 #include <optional>
+#include <numeric>
+#include <algorithm>
 #include <unordered_set>
 
 namespace Albedo {
@@ -22,30 +24,44 @@ namespace RHI
 	class VulkanContext
 	{
 	public:
-		VkDebugUtilsMessengerEXT	m_debug_messenger	= nullptr;
-		VkAllocationCallbacks*			m_memory_allocator	= nullptr;
-		VkInstance								m_instance					= nullptr;
-		GLFWwindow*							m_window						= nullptr;
-		VkSurfaceKHR							m_surface						= nullptr;
-		VkPhysicalDevice						m_physical_device		= nullptr;
+		VkInstance								m_instance									= VK_NULL_HANDLE;
+		VkSurfaceKHR							m_surface										= VK_NULL_HANDLE;
+		GLFWwindow*							m_window										= VK_NULL_HANDLE;
+
+		VkPhysicalDevice						m_physical_device						= VK_NULL_HANDLE;
 		VkPhysicalDeviceFeatures		m_physical_device_features;
 		VkPhysicalDeviceMemoryProperties m_physical_device_memory_properties;
 
-		VkDevice									m_device						= nullptr;
+		VkDevice									m_device										= VK_NULL_HANDLE;
 		std::optional<uint32_t>			m_device_queue_graphics;
 		std::optional<uint32_t>			m_device_queue_present;
 		std::optional<uint32_t>			m_device_queue_compute;
 		std::optional<uint32_t>			m_device_queue_transfer;
 		std::optional<uint32_t>			m_device_queue_sparsebinding;
 
+		VkSwapchainKHR					m_swapchain								= VK_NULL_HANDLE;
+		uint32_t										m_swapchain_image_count;		// clamp(minImageCount + 1, maxImageCount)
+		VkFormat									m_swapchain_image_format		= VK_FORMAT_B8G8R8A8_SRGB;
+		VkColorSpaceKHR					m_swapchain_color_space		= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		VkPresentModeKHR				m_swapchain_present_mode	= VK_PRESENT_MODE_MAILBOX_KHR;
+		VkExtent2D								m_swapchain_current_extent;
+		std::vector<VkImage>				m_swapchain_images;
+		std::vector<VkImageView>		m_swapchain_imageviews;
+
+		VkAllocationCallbacks*			m_memory_allocator					= VK_NULL_HANDLE;
+		VkDebugUtilsMessengerEXT	m_debug_messenger					= VK_NULL_HANDLE;
+
 	private:
-		std::vector<std::pair<std::optional<uint32_t>*, float>> 
-			m_required_queue_families_with_priorities{ 
-				{&m_device_queue_graphics,		1.0f},
-				{&m_device_queue_present,		1.0f }};
+		std::vector<std::pair<std::optional<uint32_t>*, std::vector<float>>> 
+			m_required_queue_families_with_priorities{
+				{&m_device_queue_graphics,		{1.0f}},
+				{&m_device_queue_present,		{1.0f }}};
+
+		std::vector<VkPresentModeKHR> m_surface_present_modes;
+		std::vector<VkSurfaceFormatKHR> m_surface_formats; // 1.VK_FORMAT_X 2. VK_COLOR_SPACE_X
+		
 		std::vector<const char*>			m_validation_layers{ "VK_LAYER_KHRONOS_validation" };
 		std::vector<const char*>			m_device_extensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
 	public:
 		VulkanContext() = delete;
 		VulkanContext(GLFWwindow* window);
@@ -54,12 +70,15 @@ namespace RHI
 	private:
 		// Initialization
 		void enable_validation_layers();
-		void initialize_vulkan_instance();
-		void initialize_debug_messenger();
-		void initialize_surface();
-		void initialize_physical_device();
-		void initialize_logical_device();
-		// Destroy (reverse order of initialization)
+		void create_vulkan_instance();
+		void create_debug_messenger();
+		void create_surface();
+		void create_physical_device();
+		void create_logical_device();
+		void create_swap_chain();
+		// Destroy (reverse order of initialization) 
+		// Physical Devices will be implicitly destroyed when the VkInstance is destroyed.
+		void destroy_swap_chain();
 		void destroy_logical_device();
 		void destroy_surface();
 		void destroy_debug_messenger();
@@ -71,6 +90,10 @@ namespace RHI
 		bool check_physical_device_queue_families_support();
 		bool check_physical_device_extensions_support();
 		bool check_physical_device_surface_support();
+
+		// Swap Chain Support
+		bool check_swap_chain_image_format_support();
+		bool check_swap_chain_present_mode_support();
 
 	private: 
 		// Debug Messenger
@@ -112,7 +135,7 @@ namespace RHI
 			else if (VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT & messageSeverity)
 			{
 				VulkanContext::s_debug_message_statistics[INFO]++;
-				log::info(" [Vulkan]: {}", pCallbackData->pMessage);
+				//log::info(" [Vulkan]: {}", pCallbackData->pMessage);
 			}
 			else if (VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT & messageSeverity)
 			{

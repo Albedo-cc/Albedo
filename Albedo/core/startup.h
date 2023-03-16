@@ -15,20 +15,21 @@ namespace Albedo
 
 		APP()
 		{
+			log::info("Albedo is being initialized");
 			m_stopwatch.start();
-
-			log::info("Initialization cost {} ms", m_stopwatch.split(false).milliseconds());
 		}
 
 		~APP()
 		{
-			log::info("Albedo is terminating, total run time {} s", m_stopwatch.split().seconds());
+			log::info("Albedo is being terminated, total run time {} s", m_stopwatch.split().seconds());
 		}
 
 	public:
 		void run()
 		{
 			Runtime::RenderSystem rs{};
+
+			log::info("Runtime Systems Initialization cost {} ms", m_stopwatch.split(false).milliseconds());
 		}
 	private:
 		time::StopWatch<uint64_t> m_stopwatch;
