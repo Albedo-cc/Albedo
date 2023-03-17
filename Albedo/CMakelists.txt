@@ -12,5 +12,15 @@ source_group(TREE
 add_executable(${PROJECT_NAME}
     ${ALBEDO_HEADER} 
     ${ALBEDO_SOURCE})
-
+    
+# Link
 target_link_libraries(${PROJECT_NAME} PRIVATE AlbedoExternalLibraries)
+
+# Resource
+add_subdirectory(resource)
+
+add_custom_command(
+    TARGET ${PROJECT_NAME} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND}
+    -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resource $<TARGET_FILE_DIR:${PROJECT_NAME}>/resource
+)
