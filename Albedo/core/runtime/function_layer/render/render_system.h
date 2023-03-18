@@ -1,7 +1,8 @@
 #pragma once
 
+#include <AlbedoRHI.hpp>
+
 #include "../window/window_system.h"
-#include "RHI/Vulkan/vulkan_context.h"
 
 #include <memory>
 
