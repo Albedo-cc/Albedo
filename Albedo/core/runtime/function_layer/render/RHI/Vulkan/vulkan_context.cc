@@ -27,6 +27,17 @@ namespace RHI
 		destroy_vulkan_instance();
 	}
 
+	void VulkanContext::RecreateSwapChain()
+	{
+		static bool RECREATING = false;
+		if (RECREATING) throw std::runtime_error("Failed to recreate the Swap Chain - more than one caller at the same time!");
+
+		RECREATING = true;
+		destroy_swap_chain();
+		create_swap_chain();
+		RECREATING = false;
+	}
+
 	void VulkanContext::enable_validation_layers()
 	{
 		if (!EnableValidationLayers) return;

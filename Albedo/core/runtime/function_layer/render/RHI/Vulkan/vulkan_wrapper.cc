@@ -1,31 +1,13 @@
-#include "vulkan_context.h"
-#include "vulkan_manager.h"
+#include "vulkan_wrapper.h"
 
 namespace Albedo {
 namespace RHI
 {
-	VulkanManager::VulkanManager(GLFWwindow* window) :
-		m_context{ window }
-	{
 
-	}
-
-	VulkanManager::~VulkanManager()
-	{
-
-	}
-
-	GraphicsPipeline CreateGraphicsPipeline()
-	{
-
-	}
-
-	VkShaderModule VulkanManager::create_shader_module(std::string_view shader_file)
+	VkShaderModule GraphicsPipeline::create_shader_module(std::string_view shader_file)
 	{
 		// Check Reload
 		VkShaderModule shader_module{};
-		if (shader_module != VK_NULL_HANDLE)
-			throw std::runtime_error(std::format("Failed to load an existent shader file {}!", shader_file));
 
 		// Read File
 		std::ifstream file(shader_file.data(), std::ios::ate | std::ios::binary);
@@ -48,9 +30,9 @@ namespace RHI
 		};
 
 		if (vkCreateShaderModule(
-			m_context.m_device,
-			&shaderModuleCreateInfo, 
-			m_context.m_memory_allocator,
+			m_context->m_device,
+			&shaderModuleCreateInfo,
+			m_context->m_memory_allocator,
 			&shader_module) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create shader module!");
 

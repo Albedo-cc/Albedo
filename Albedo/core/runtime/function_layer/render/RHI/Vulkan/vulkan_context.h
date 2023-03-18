@@ -23,7 +23,6 @@ namespace RHI
 
 	class VulkanContext
 	{
-		friend class VulkanManager;
 	public:
 		VkInstance								m_instance									= VK_NULL_HANDLE;
 		VkSurfaceKHR							m_surface										= VK_NULL_HANDLE;
@@ -51,6 +50,9 @@ namespace RHI
 
 		VkAllocationCallbacks*			m_memory_allocator					= VK_NULL_HANDLE;
 		VkDebugUtilsMessengerEXT	m_debug_messenger					= VK_NULL_HANDLE;
+
+	public:
+		void RecreateSwapChain();
 
 	private:
 		std::vector<std::pair<std::optional<uint32_t>*, std::vector<float>>> 

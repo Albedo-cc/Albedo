@@ -1,4 +1,4 @@
-#include "front_render_pipeline.h"
+#include "present_subpass.h"
 
 #include "../../RHI/Vulkan/vulkan_manager.h"
 
@@ -9,68 +9,7 @@ namespace Runtime
 	FrontRenderPipeline::FrontRenderPipeline(std::shared_ptr<RHI::VulkanManager> vulkan_manager)
 	{
 		m_vulkan_manager = std::move(vulkan_manager);
-
-		// Shader Stages
-		std::array<VkPipelineShaderStageCreateInfo, MAX_SHADER_STAGE> shaderStages{};
-		shaderStages[VERTEX_STAGE]			= prepare_vertex_shader_stage("resource/shader/default.vert.spv");
-		shaderStages[FRAGMENT_STAGE]	= prepare_fragment_shader_stage("resource/shader/default.frag.spv");
-
-		// Pipeline Layout
-		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			.setLayoutCount  = 0,
-			.pSetLayouts = nullptr,
-			.pushConstantRangeCount = 0,
-			.pPushConstantRanges = nullptr
-		};
-
-		// Fixed State
-		// 1. Vertex Input	
-		auto vertexInputState = prepare_vertex_inpute_state();
-		// 2. Input Assembly 
-		auto inputAssemblyState = prepare_input_assembly_state();
-		// 3. Viewports and Scissors - A viewport basically describes the region of the framebuffer that the output will be rendered to.
-		auto viewportState = prepare_viewport_state();
-		// 4. Rasterizer
-		auto rasterizationState = prepare_rasterization_state();
-		// 5. Multisampling (Enabling it requires enabling a GPU feature)
-		auto multisamplingState = prepare_multisampling_state();
-		// 6. Depth and Stencil Testing
-		auto depthStencilState = nullptr;
-		// 7. Color Blending
-		auto colorBlendState = prepare_color_blend_state();
-
-		// Dynamic State
-		auto dynamicState = prepare_dynamic_state();
-
-		// Pipeline Layout
-	}
-
-	VkPipelineShaderStageCreateInfo FrontRenderPipeline::
-		prepare_vertex_shader_stage(std::string_view vertex_shader)
-	{
-		m_shader_stages[VERTEX_STAGE] = m_vulkan_manager->CreateShaderModule(vertex_shader);
-		return VkPipelineShaderStageCreateInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.stage = VK_SHADER_STAGE_VERTEX_BIT,
-			.module = m_shader_stages[VERTEX_STAGE],
-			.pName = "main" // [Entrypoint] it¡¯s possible to combine multiple fragment shaders into a single shader module
-		};
-	}
-
-	VkPipelineShaderStageCreateInfo FrontRenderPipeline::
-		prepare_fragment_shader_stage(std::string_view fragment_shader)
-	{
-		m_shader_stages[FRAGMENT_STAGE] = m_vulkan_manager->CreateShaderModule(fragment_shader);
-		return VkPipelineShaderStageCreateInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.module = m_shader_stages[FRAGMENT_STAGE],
-			.pName = "main" // [Entrypoint] it¡¯s possible to combine multiple fragment shaders into a single shader module
-		};
+		initialize(0);
 	}
 
 	VkPipelineVertexInputStateCreateInfo FrontRenderPipeline::
@@ -83,6 +22,56 @@ namespace Runtime
 			.pVertexBindingDescriptions = nullptr,
 			.vertexAttributeDescriptionCount = 0,
 			.pVertexAttributeDescriptions = nullptr
+		};
+	}
+
+	VkPipelineLayoutCreateInfo FrontRenderPipeline::
+		prepare_pipeline_layout_state()
+	{
+		return VkPipelineLayoutCreateInfo
+		{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+			.setLayoutCount = 0,
+			.pSetLayouts = nullptr,
+			.pushConstantRangeCount = 0,
+			.pPushConstantRanges = nullptr
+		};
+	}
+	VkRenderPassCreateInfo FrontRenderPipeline::
+		prepare_render_pass_state()
+	{
+		static VkAttachmentDescription colorAttachment
+		{
+			.format = m_vulkan_manager->GetVulkanContext().m_swapchain_image_format,
+			.samples = VK_SAMPLE_COUNT_1_BIT,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		};
+
+		static VkAttachmentReference colorAttachmentReference
+		{
+			.attachment = 0,
+			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		};
+
+		static VkSubpassDescription subpassDescription
+		{
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = &colorAttachmentReference,
+		};
+
+		return VkRenderPassCreateInfo
+		{
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+			.attachmentCount = 1,
+			.pAttachments = &colorAttachment,
+			.subpassCount = 1,
+			.pSubpasses = &subpassDescription
 		};
 	}
 
@@ -156,6 +145,19 @@ namespace Runtime
 		};
 	}
 
+	VkPipelineDepthStencilStateCreateInfo FrontRenderPipeline::
+		prepare_depth_stencil_state()
+	{
+		return VkPipelineDepthStencilStateCreateInfo
+		{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			.depthTestEnable = VK_FALSE,
+			.depthWriteEnable = VK_FALSE,
+			.depthBoundsTestEnable = VK_FALSE,
+			.stencilTestEnable = VK_FALSE
+		};
+	}
+
 	VkPipelineColorBlendStateCreateInfo FrontRenderPipeline::
 		prepare_color_blend_state(bool is_mix_mode/* = true*/)
 	{
@@ -179,6 +181,7 @@ namespace Runtime
 				Note that this will automatically disable the first method*/
 				.logicOp = VK_LOGIC_OP_COPY,
 				.attachmentCount = 1,
+				.pAttachments = &colorBlendAttachment,
 				.blendConstants = {0.0f, 0.0f, 0.0f, 0.0f}
 		};
 	}
