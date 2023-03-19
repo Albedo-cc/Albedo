@@ -13,12 +13,7 @@ namespace Runtime
 	class RenderSystem
 	{
 	public:
-		RenderSystem() :
-			m_window_system{ std::make_shared<WindowSystem>() },
-			m_vulkan_context{ std::make_shared<RHI::VulkanContext>(m_window_system->GetWindow()) }
-		{
-
-		}
+		RenderSystem();
 
 		void Update()
 		{
@@ -28,6 +23,8 @@ namespace Runtime
 	private:
 		std::shared_ptr<WindowSystem> m_window_system;
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context; // Make sure that this context will be released at last.
+
+		std::vector<std::unique_ptr<RHI::RenderPass>> m_render_passes;
 	};
 
 }} // namespace Albedo::Runtime

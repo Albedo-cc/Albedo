@@ -29,7 +29,7 @@ namespace Albedo
 		{
 			Runtime::RenderSystem rs{};
 
-			log::info("Runtime Systems Initialization cost {} ms", m_stopwatch.split(false).milliseconds());
+			log::info("Runtime Systems Initialization cost {} ms", m_stopwatch.split().milliseconds());
 		}
 	private:
 		time::StopWatch<uint64_t> m_stopwatch;
