@@ -10,6 +10,9 @@ namespace Runtime
 		public RHI::GraphicsPipeline
 	{
 	public:
+		virtual void Draw(RHI::CommandPool::CommandBuffer& command_buffer) override;
+
+	public:
 		PresentPipeline() = delete;
 		PresentPipeline(std::shared_ptr<RHI::VulkanContext> vulkan_context,
 									 VkRenderPass owner, uint32_t subpass_bind_point,

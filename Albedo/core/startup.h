@@ -25,11 +25,9 @@ namespace Albedo
 		}
 
 	public:
-		void run()
+		void Run()
 		{
-			Runtime::RenderSystem rs{};
-
-			log::info("Runtime Systems Initialization cost {} ms", m_stopwatch.split().milliseconds());
+			Runtime::RuntimeModule::instance().Run();
 		}
 	private:
 		time::StopWatch<uint64_t> m_stopwatch;

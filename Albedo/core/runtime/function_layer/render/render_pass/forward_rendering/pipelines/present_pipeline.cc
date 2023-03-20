@@ -5,6 +5,15 @@
 namespace Albedo {
 namespace Runtime
 {
+	void PresentPipeline::Draw(RHI::CommandPool::CommandBuffer& command_buffer)
+	{
+		assert(command_buffer.IsRecording() && "You cannot Draw() before beginning the command buffer!");
+
+		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+		vkCmdSetViewport(command_buffer, 0, m_viewports.size(), m_viewports.data());
+		vkCmdDraw(command_buffer, 3, 1, 0, 0);
+	}
+
 	PresentPipeline::PresentPipeline(
 		std::shared_ptr<RHI::VulkanContext> vulkan_context,
 		VkRenderPass owner,
@@ -80,25 +89,25 @@ namespace Runtime
 	VkPipelineViewportStateCreateInfo	PresentPipeline::
 		prepare_viewport_state()
 	{
-		static VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(m_context->m_swapchain_current_extent.width);
-		viewport.height = static_cast<float>(m_context->m_swapchain_current_extent.height);
-		viewport.minDepth = 0.0f;	// minDepth may be higher than maxDepth
-		viewport.maxDepth = 1.0f;	// If you aren¡¯t doing anything special, then you should stick to the standard values of 0.0f and 1.0f.
+		auto& default_viewport = m_viewports.emplace_back();
+		default_viewport.x = 0.0f;
+		default_viewport.y = 0.0f;
+		default_viewport.width = static_cast<float>(m_context->m_swapchain_current_extent.width);
+		default_viewport.height = static_cast<float>(m_context->m_swapchain_current_extent.height);
+		default_viewport.minDepth = 0.0f;	// minDepth may be higher than maxDepth
+		default_viewport.maxDepth = 1.0f;	// If you aren¡¯t doing anything special, then you should stick to the standard values of 0.0f and 1.0f.
 
-		static VkRect2D scissor{};
-		scissor.offset = { 0,0 };
-		scissor.extent = m_context->m_swapchain_current_extent;
+		auto& default_scissor = m_scissors.emplace_back();
+		default_scissor.offset = { 0,0 };
+		default_scissor.extent = m_context->m_swapchain_current_extent;
 
 		return VkPipelineViewportStateCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-			.viewportCount = 1,
-			.pViewports = &viewport,
-			.scissorCount = 1,
-			.pScissors = &scissor
+			.viewportCount = static_cast<uint32_t>(m_viewports.size()),
+			.pViewports = m_viewports.data(),
+			.scissorCount = static_cast<uint32_t>(m_scissors.size()),
+			.pScissors = m_scissors.data()
 		};
 	}
 

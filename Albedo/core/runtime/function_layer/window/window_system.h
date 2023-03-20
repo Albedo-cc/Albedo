@@ -20,8 +20,8 @@ namespace Runtime
 
 		GLFWwindow* GetWindow() const { return m_window; }
 		const Configuration& GetConfiguration() const { return m_config; }
-		bool ShouldClose() const { return !glfwWindowShouldClose(m_window); }
-		bool IsResized() const { return m_is_resized; }
+		bool ShouldClose() const { return glfwWindowShouldClose(m_window); }
+		bool IsResized(bool reset = false) { if (reset) m_is_resized = false; return reset? !m_is_resized : m_is_resized; }
 
 		WindowSystem();
 		~WindowSystem();

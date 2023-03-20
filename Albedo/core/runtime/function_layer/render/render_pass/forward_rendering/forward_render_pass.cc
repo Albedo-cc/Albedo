@@ -5,6 +5,15 @@
 namespace Albedo {
 namespace Runtime
 {
+	void ForwardRenderPass::Render(RHI::CommandPool::CommandBuffer& command_buffer)
+	{
+		assert(command_buffer.IsRecording() && "You cannot Render() before beginning the command buffer!");
+
+		for (auto& graphics_pipeline : m_graphics_pipelines)
+		{
+			graphics_pipeline->Draw(command_buffer);
+		}
+	}
 
 	ForwardRenderPass::ForwardRenderPass(std::shared_ptr<RHI::VulkanContext> vulkan_context):
 		RHI::RenderPass{ vulkan_context }
@@ -27,29 +36,8 @@ namespace Runtime
 		present.initialLayout		= VK_IMAGE_LAYOUT_UNDEFINED;
 		present.finalLayout			= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		auto& present_ref = m_attachment_references[attachment_present_color];
-		present_ref.attachment = attachment_present_color;
-		present_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	}
-
-	void ForwardRenderPass::create_frame_buffers()
-	{
-		m_frame_buffers.resize(m_context->m_swapchain_imageviews.size());
-
-		for (size_t i = 0; i < m_context->m_swapchain_imageviews.size(); ++i)
-		{
-			VkImageView attachments[] = { m_context->m_swapchain_imageviews[i] };
-
-			VkFramebufferCreateInfo framebufferCreateInfo
-			{
-				.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-				.renderPass = m_render_pass,
-				.attachmentCount = static_cast<uint32_t>(m_attachment_descriptions.size()),
-				.pAttachments = attachments,
-				.width = m_context->m_swapchain_current_extent.width,
-				.height = m_context->m_swapchain_current_extent.height,
-				.layers = 1
-			};
-		}
+		present_ref.attachment	= attachment_present_color;
+		present_ref.layout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	}
 
 	void ForwardRenderPass::create_subpasses()
@@ -60,6 +48,22 @@ namespace Runtime
 		present.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		present.colorAttachmentCount = 1;
 		present.pColorAttachments = &m_attachment_references[attachment_present_color];
+	}
+
+	std::vector<VkSubpassDependency> ForwardRenderPass::
+		set_subpass_dependencies()
+	{
+		std::vector<VkSubpassDependency> dependencies(MAX_SUBPASS_COUNT);
+		// Present Subpass Dependency
+		auto& present = dependencies[subpass_present];
+		present.srcSubpass = VK_SUBPASS_EXTERNAL; // Implicit subpass (First subpass set in srcSubpass and Last subpass set in dstSubpass)
+		present.dstSubpass = 0; // Must higher than srcSubpass, 0 refers to this subpass is the first and only one
+		present.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // The stages to start subpass
+		present.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // The stages to complete
+		present.srcAccessMask = 0;
+		present.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // Writable
+
+		return dependencies;
 	}
 
 	void ForwardRenderPass::create_pipelines()
