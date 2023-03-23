@@ -12,6 +12,18 @@ namespace Runtime
 
 	class RenderSystem
 	{
+		static const int MAX_FRAME_IN_FLIGHT = 2;
+		struct FrameState // [MAX_FRAME_IN_FLIGHT]
+		{
+			static int32_t	GetCurrentFrame();
+			std::unique_ptr<RHI::Fence>			m_fence_in_flight;
+			std::unique_ptr<RHI::Semaphore>	m_semaphore_image_available;
+			std::unique_ptr<RHI::Semaphore>	m_semaphore_render_finished;
+			RHI::CommandPool::CommandBuffer& m_command_buffer;
+			FrameState() = delete;
+			FrameState(RHI::CommandPool::CommandBuffer& command_buffer) :
+				m_command_buffer{ command_buffer } {}
+		};
 	public:
 		RenderSystem() = delete;
 		RenderSystem(std::weak_ptr<WindowSystem> window_system);
@@ -19,29 +31,28 @@ namespace Runtime
 		void Update()
 		{
 			// Wait for previous frame
-			m_fence_in_flight.Wait();
+			auto& current_frame_state = m_frame_states[FrameState::GetCurrentFrame()];
+			current_frame_state.m_fence_in_flight->Wait();
 			// Wait for next image and handle window resize
-			wait_for_next_image_index();
+			wait_for_next_image_index(current_frame_state);
 			auto next_image_index = m_vulkan_context->m_swapchain_current_image_index;
 
-			static auto& primary_command_buffer = m_command_pool_reset[m_command_pool_reset.AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY)];
-
-			primary_command_buffer.Begin(0, 0);
+			current_frame_state.m_command_buffer.Begin(0, 0);
 			for (auto& render_pass : m_render_passes)
 			{
-				render_pass->Begin(primary_command_buffer, m_framebuffer_pool[next_image_index]);
-				render_pass->Render(primary_command_buffer);
-				render_pass->End(primary_command_buffer);
+				render_pass->Begin(current_frame_state.m_command_buffer, m_framebuffer_pool[next_image_index]);
+				render_pass->Render(current_frame_state.m_command_buffer);
+				render_pass->End(current_frame_state.m_command_buffer);
 			}
-			primary_command_buffer.End();
+			current_frame_state.m_command_buffer.End();
 
-			primary_command_buffer.Submit(
-				0, m_fence_in_flight,
+			current_frame_state.m_command_buffer.Submit(
+				0, *current_frame_state.m_fence_in_flight,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				{ m_semaphore_image_available },
-				{ m_semaphore_render_finished });
+				{ *current_frame_state.m_semaphore_image_available },
+				{ *current_frame_state.m_semaphore_render_finished });
 
-			m_vulkan_context->PresentSwapChain(m_semaphore_render_finished);
+			m_vulkan_context->PresentSwapChain(*current_frame_state.m_semaphore_render_finished);
 		}
 
 	private:
@@ -58,14 +69,13 @@ namespace Runtime
 		RHI::CommandPool		m_command_pool_reset;
 		RHI::FramebufferPool	m_framebuffer_pool;
 
-		RHI::Semaphore m_semaphore_image_available;
-		RHI::Semaphore m_semaphore_render_finished;
-		RHI::Fence			  m_fence_in_flight;
+		std::vector<FrameState>		m_frame_states;
 
 	private:
-		void wait_for_next_image_index();
+		void wait_for_next_image_index(FrameState& current_frame_state);
 
 		void create_framebuffer_pool();
+		void create_frame_states();
 		void create_render_passes();
 	};
 
