@@ -1,4 +1,5 @@
 #include "present_pipeline.h"
+#include "../../../model/model.h"
 
 #include <AlbedoRHI.hpp>
 
@@ -11,7 +12,6 @@ namespace Runtime
 
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 		vkCmdSetViewport(command_buffer, 0, m_viewports.size(), m_viewports.data());
-		vkCmdDraw(command_buffer, 3, 1, 0, 0);
 	}
 
 	PresentPipeline::PresentPipeline(
@@ -65,13 +65,15 @@ namespace Runtime
 	VkPipelineVertexInputStateCreateInfo	 PresentPipeline::
 		prepare_vertex_inpute_state()
 	{
+		auto& bind_description = ModelVertex::GetBindingDescription(0);
+		auto& attribute_description = ModelVertex::GetAttributeDescription(0);
 		return VkPipelineVertexInputStateCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			.vertexBindingDescriptionCount = 0,
-			.pVertexBindingDescriptions = nullptr,
-			.vertexAttributeDescriptionCount = 0,
-			.pVertexAttributeDescriptions = nullptr
+			.vertexBindingDescriptionCount = 1,
+			.pVertexBindingDescriptions = &bind_description,
+			.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_description.size()),
+			.pVertexAttributeDescriptions = attribute_description.data()
 		};
 	}
 

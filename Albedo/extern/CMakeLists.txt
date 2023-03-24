@@ -21,3 +21,10 @@ if (NOT TARGET AlbedoUtils)
     add_subdirectory(AlbedoUtils)
     target_link_libraries(AlbedoExternalLibraries INTERFACE Albedo::utils)
 endif()
+
+# Eigen
+if (NOT TARGET eigen)
+    message(STATUS "\nLoading Eigen3 (eigen)")
+    add_subdirectory(Eigen-3.4.0)
+    target_link_libraries(AlbedoExternalLibraries INTERFACE eigen)
+endif()

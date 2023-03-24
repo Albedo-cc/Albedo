@@ -10,10 +10,11 @@ namespace Runtime
 		m_vulkan_context{ std::make_shared<RHI::VulkanContext>(window_system.lock()->GetWindow()) },
 		m_window_system{ std::move(window_system) },
 		// Command Pool
-		m_command_pool_reset{ std::make_unique<RHI::CommandPool>(
+		m_command_pool_reset{
 				m_vulkan_context,
 				m_vulkan_context->m_device_queue_graphics.value(),
-				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT) }
+				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT },
+		m_framebuffer_pool{ m_vulkan_context }
 	{
 		// Render Passes
 		create_render_passes();
@@ -23,28 +24,20 @@ namespace Runtime
 		create_frame_states();
 	}
 
-	bool RenderSystem::wait_for_next_image_index(FrameState& current_frame_state)
+	uint32_t RenderSystem::wait_for_next_image_index(FrameState& current_frame_state)
 	{
-		auto res = m_vulkan_context->NextSwapChainImageIndex(
+		m_vulkan_context->NextSwapChainImageIndex(
 			*current_frame_state.m_semaphore_image_available, VK_NULL_HANDLE);
 
-		if (m_window_system.lock()->IsResized(true) ||
-			res == VK_ERROR_OUT_OF_DATE_KHR ||
-			res == VK_SUBOPTIMAL_KHR)
-		{
-			log::warn("Window Resized!");
-			m_vulkan_context->RecreateSwapChain();
-			create_framebuffer_pool(); // Recreate Framebuffers
-			create_render_passes();		 // Recreate Render Passes
-			return false;
-		}
-		return true;
+		if (m_window_system.lock()->IsResized(true)) 
+			throw RHI::VulkanContext::swapchain_error();
+
+		return m_vulkan_context->m_swapchain_current_image_index;
 	}
 
 	void RenderSystem::create_framebuffer_pool()
 	{
-		m_framebuffer_pool.reset();
-		m_framebuffer_pool = std::make_unique<RHI::FramebufferPool>(m_vulkan_context);
+		m_framebuffer_pool = RHI::FramebufferPool(m_vulkan_context);
 
 		for (size_t i = 0; i < m_vulkan_context->m_swapchain_imageviews.size(); ++i)
 		{
@@ -60,7 +53,7 @@ namespace Runtime
 				.height = m_vulkan_context->m_swapchain_current_extent.height,
 				.layers = 1
 			};
-			m_framebuffer_pool->AllocateFramebuffer(framebufferCreateInfo);
+			m_framebuffer_pool.AllocateFramebuffer(framebufferCreateInfo);
 		}
 	}
 
@@ -69,9 +62,9 @@ namespace Runtime
 		m_frame_states.reserve(MAX_FRAME_IN_FLIGHT);
 		for (int i = 0; i < MAX_FRAME_IN_FLIGHT; ++i)
 		{
-			auto token = m_command_pool_reset->AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+			auto token = m_command_pool_reset.AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 			auto& state = m_frame_states.emplace_back(
-				FrameState{ .m_command_buffer = m_command_pool_reset->GetCommandBuffer(token) });
+				FrameState{ .m_command_buffer = m_command_pool_reset[token] });
 			state.m_fence_in_flight = std::make_unique<RHI::Fence>(m_vulkan_context, VK_FENCE_CREATE_SIGNALED_BIT);
 			state.m_semaphore_image_available	= std::make_unique<RHI::Semaphore>(m_vulkan_context, 0x0);
 			state.m_semaphore_render_finished	= std::make_unique<RHI::Semaphore>(m_vulkan_context, 0x0);
@@ -85,10 +78,30 @@ namespace Runtime
 		m_render_passes[render_pass_forward] = std::make_unique<ForwardRenderPass>(m_vulkan_context);
 	}
 
-	int32_t RenderSystem::FrameState::GetCurrentFrame()
+	void RenderSystem::load_models()
 	{
-		static int32_t current_frame{ -1 };
-		current_frame = (current_frame + 1) % MAX_FRAME_IN_FLIGHT;
+		static std::vector<ModelVertex> 
+		triangle_vertices
+		{
+			{ {0.0f, -0.5f} ,{1.0f, 0.0f, 0.0f} },
+			{ {0.5f, 0.5f} ,{0.0f, 1.0f, 0.0f} },
+			{ {-0.5f, 0.5f} ,{0.0f, 0.0f, 1.0f} }
+		};
+		m_models.emplace_back(m_vulkan_context, triangle_vertices, 0);
+	}
+
+	void RenderSystem::handle_window_resize()
+	{
+		log::warn("Window Resized!");
+		m_vulkan_context->RecreateSwapChain();
+		create_framebuffer_pool(); // Recreate Framebuffers
+		create_render_passes();		 // Recreate Render Passes
+	}
+
+	uint32_t RenderSystem::FrameState::GetCurrentFrame(bool increase/* = false*/)
+	{
+		static uint32_t current_frame{ 0 };
+		if (increase) current_frame = (current_frame + 1) % MAX_FRAME_IN_FLIGHT;
 		return current_frame;
 	}
 
