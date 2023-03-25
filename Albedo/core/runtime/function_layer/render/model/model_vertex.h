@@ -13,8 +13,8 @@ namespace Runtime
 	struct ModelVertex
 	{
 		static const uint16_t ATTRIBUTE_COUNT = 2; // Equals to the varibles in Model Vertex
-		Vector2 m_positon;
-		Vector3 m_color;
+		alignas(16) Vector2 m_positon;
+		alignas(16) Vector3 m_color;
 
 		// Binding Description & Attribute Description
 		static VkVertexInputBindingDescription&

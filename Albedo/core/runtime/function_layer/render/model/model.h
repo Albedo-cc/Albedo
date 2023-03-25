@@ -14,8 +14,9 @@ namespace Runtime
 		void Draw(RHI::CommandPool::CommandBuffer& command_buffer)
 		{
 			VkBuffer buffer = m_buffer;
-			vkCmdBindVertexBuffers(command_buffer, 0, 1, &buffer, nullptr);
-			vkCmdDraw(command_buffer, m_vertices.size(), 1, 0, 0);
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(command_buffer, 0, 1, &buffer, offsets);
+			vkCmdDraw(command_buffer, static_cast<uint32_t>(m_vertices.size()), 1, 0, 0);
 		}
 
 	public:
@@ -28,11 +29,11 @@ namespace Runtime
 			m_binding{ binding },
 			m_buffer{	m_vulkan_context->m_memory_allocator->GetBuffer(
 								m_vulkan_context->m_memory_allocator->
-								CreateBuffer(m_vertices.size(),
+								CreateBuffer(sizeof(ModelVertex) * m_vertices.size(),
 														VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 														VK_SHARING_MODE_EXCLUSIVE)) }
 		{
-			
+			m_buffer.Write(m_vertices.data());
 		}
 
 	private:

@@ -37,7 +37,7 @@ namespace Runtime
 
 				current_frame_state.m_fence_in_flight->Reset();
 
-				current_frame_state.m_command_buffer.Begin(0, 0);
+				current_frame_state.m_command_buffer.Begin();
 				{
 					for (auto& render_pass : m_render_passes)
 					{
@@ -76,7 +76,8 @@ namespace Runtime
 			MAX_RENDER_PASS_COUNT
 		};
 		std::vector<std::unique_ptr<RHI::RenderPass>> m_render_passes;
-		RHI::CommandPool		m_command_pool_reset;
+		RHI::CommandPool		m_command_pool_resetable;
+		RHI::CommandPool		m_command_pool_transient;
 		RHI::FramebufferPool	m_framebuffer_pool;
 
 		std::vector<FrameState> m_frame_states;
