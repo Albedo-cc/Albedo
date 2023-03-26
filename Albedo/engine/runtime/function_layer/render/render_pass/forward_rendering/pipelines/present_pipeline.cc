@@ -6,12 +6,12 @@
 namespace Albedo {
 namespace Runtime
 {
-	void PresentPipeline::Draw(RHI::CommandPool::CommandBuffer& command_buffer)
+	void PresentPipeline::Draw(std::shared_ptr<RHI::CommandBuffer> command_buffer)
 	{
-		assert(command_buffer.IsRecording() && "You cannot Draw() before beginning the command buffer!");
+		assert(command_buffer->IsRecording() && "You cannot Draw() before beginning the command buffer!");
 
-		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
-		vkCmdSetViewport(command_buffer, 0, m_viewports.size(), m_viewports.data());
+		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
 	}
 
 	PresentPipeline::PresentPipeline(
@@ -97,7 +97,7 @@ namespace Runtime
 		default_viewport.width = static_cast<float>(m_context->m_swapchain_current_extent.width);
 		default_viewport.height = static_cast<float>(m_context->m_swapchain_current_extent.height);
 		default_viewport.minDepth = 0.0f;	// minDepth may be higher than maxDepth
-		default_viewport.maxDepth = 1.0f;	// If you aren¡¯t doing anything special, then you should stick to the standard values of 0.0f and 1.0f.
+		default_viewport.maxDepth = 1.0f;	// If you arenï¿½ï¿½t doing anything special, then you should stick to the standard values of 0.0f and 1.0f.
 
 		auto& default_scissor = m_scissors.emplace_back();
 		default_scissor.offset = { 0,0 };

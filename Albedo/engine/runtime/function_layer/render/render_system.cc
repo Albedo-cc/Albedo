@@ -11,14 +11,16 @@ namespace Runtime
 		m_window_system{ std::move(window_system) },
 		// Command Pools
 		m_command_pool_resetable{
-				m_vulkan_context,
+				m_vulkan_context->CreateCommandPool(
 				m_vulkan_context->m_device_queue_graphics.value(),
-				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT },
+				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT) },
+
 		m_command_pool_transient{
-				m_vulkan_context,
+				m_vulkan_context->CreateCommandPool(
 				m_vulkan_context->m_device_queue_graphics.value(),
-				VK_COMMAND_POOL_CREATE_TRANSIENT_BIT },
-		m_framebuffer_pool{ m_vulkan_context }
+				VK_COMMAND_POOL_CREATE_TRANSIENT_BIT) }, 
+		// Framebuffer Pool
+		m_framebuffer_pool{ m_vulkan_context->CreateFramebufferPool() }
 	{
 		// Render Passes
 		create_render_passes();
@@ -43,7 +45,7 @@ namespace Runtime
 
 	void RenderSystem::create_framebuffer_pool()
 	{
-		m_framebuffer_pool = RHI::FramebufferPool(m_vulkan_context);
+		m_framebuffer_pool = m_vulkan_context->CreateFramebufferPool();
 
 		for (size_t i = 0; i < m_vulkan_context->m_swapchain_imageviews.size(); ++i)
 		{
@@ -59,7 +61,7 @@ namespace Runtime
 				.height = m_vulkan_context->m_swapchain_current_extent.height,
 				.layers = 1
 			};
-			m_framebuffer_pool.AllocateFramebuffer(framebufferCreateInfo);
+			m_framebuffer_pool->AllocateFramebuffer(framebufferCreateInfo);
 		}
 	}
 
@@ -68,12 +70,11 @@ namespace Runtime
 		m_frame_states.reserve(MAX_FRAME_IN_FLIGHT);
 		for (int i = 0; i < MAX_FRAME_IN_FLIGHT; ++i)
 		{
-			auto token = m_command_pool_resetable.AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-			auto& state = m_frame_states.emplace_back(
-				FrameState{ .m_command_buffer = m_command_pool_resetable[token] });
-			state.m_fence_in_flight = std::make_unique<RHI::Fence>(m_vulkan_context, VK_FENCE_CREATE_SIGNALED_BIT);
-			state.m_semaphore_image_available	= std::make_unique<RHI::Semaphore>(m_vulkan_context, 0x0);
-			state.m_semaphore_render_finished	= std::make_unique<RHI::Semaphore>(m_vulkan_context, 0x0);
+			auto& state = m_frame_states.emplace_back();
+			state.m_fence_in_flight = m_vulkan_context->CreateFence(VK_FENCE_CREATE_SIGNALED_BIT);
+			state.m_semaphore_image_available	= m_vulkan_context->CreateSemaphore(0x0);
+			state.m_semaphore_render_finished	= m_vulkan_context->CreateSemaphore(0x0);
+			state.m_command_buffer = m_command_pool_resetable->AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		}
 	}
 

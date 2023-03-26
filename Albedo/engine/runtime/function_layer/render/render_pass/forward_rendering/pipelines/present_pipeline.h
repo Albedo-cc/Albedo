@@ -10,7 +10,7 @@ namespace Runtime
 		public RHI::GraphicsPipeline
 	{
 	public:
-		virtual void Draw(RHI::CommandPool::CommandBuffer& command_buffer) override;
+		virtual void Draw(std::shared_ptr<RHI::CommandBuffer> command_buffer) override;
 
 	public:
 		PresentPipeline() = delete;

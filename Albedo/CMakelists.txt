@@ -1,7 +1,7 @@
 add_subdirectory(extern)
 
-file(GLOB_RECURSE ALBEDO_HEADER "core/*.h")
-file(GLOB_RECURSE ALBEDO_SOURCE "core/*.cc")
+file(GLOB_RECURSE ALBEDO_HEADER "engine/*.h")
+file(GLOB_RECURSE ALBEDO_SOURCE "engine/*.cc")
 
 source_group(TREE 
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -15,6 +15,7 @@ add_executable(${PROJECT_NAME}
     
 # Link
 target_link_libraries(${PROJECT_NAME} PRIVATE AlbedoExternalLibraries)
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/engine")
 
 # Resource
 add_subdirectory(resource)

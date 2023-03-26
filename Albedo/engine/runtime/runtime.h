@@ -1,5 +1,7 @@
 #pragma once
 
+#include <AlbedoTime.hpp>
+
 #include "runtime_context.h"
 #include "function_layer/function_layer.h"
 

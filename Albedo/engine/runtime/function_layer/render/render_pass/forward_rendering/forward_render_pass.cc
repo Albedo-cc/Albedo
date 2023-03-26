@@ -5,9 +5,9 @@
 namespace Albedo {
 namespace Runtime
 {
-	void ForwardRenderPass::Render(RHI::CommandPool::CommandBuffer& command_buffer)
+	void ForwardRenderPass::Render(std::shared_ptr<RHI::CommandBuffer> command_buffer)
 	{
-		assert(command_buffer.IsRecording() && "You cannot Render() before beginning the command buffer!");
+		assert(command_buffer->IsRecording() && "You cannot Render() before beginning the command buffer!");
 
 		for (auto& graphics_pipeline : m_graphics_pipelines)
 		{

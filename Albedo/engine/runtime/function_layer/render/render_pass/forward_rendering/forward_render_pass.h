@@ -30,7 +30,7 @@ namespace Runtime
 			MAX_PIPELINE_COUNT
 		};
 	public:
-		virtual void Render(RHI::CommandPool::CommandBuffer& command_buffer) override;
+		virtual void Render(std::shared_ptr<RHI::CommandBuffer> command_buffer) override;
 
 		ForwardRenderPass() = delete;
 		ForwardRenderPass(std::shared_ptr<RHI::VulkanContext> vulkan_context);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../core_layer/math/math.h"
+#include <core/math/math.h>
 
 #include <vulkan/vulkan.h>
 

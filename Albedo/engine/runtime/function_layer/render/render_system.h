@@ -20,7 +20,7 @@ namespace Runtime
 			std::unique_ptr<RHI::Fence>			m_fence_in_flight;
 			std::unique_ptr<RHI::Semaphore>	m_semaphore_image_available;
 			std::unique_ptr<RHI::Semaphore>	m_semaphore_render_finished;
-			RHI::CommandPool::CommandBuffer m_command_buffer; // [Q]: Using Reference causes a bug!
+			std::shared_ptr<RHI::CommandBuffer> m_command_buffer; // [Q]: Using Reference causes a bug!
 		};
 	public:
 		RenderSystem() = delete;
@@ -37,23 +37,26 @@ namespace Runtime
 
 				current_frame_state.m_fence_in_flight->Reset();
 
-				current_frame_state.m_command_buffer.Begin();
+				auto& current_commandbuffer = current_frame_state.m_command_buffer;
+				auto& current_framebuffer = m_framebuffer_pool->GetFramebuffer(next_image_index);
+
+				current_commandbuffer->Begin();
 				{
 					for (auto& render_pass : m_render_passes)
 					{
-						render_pass->Begin(current_frame_state.m_command_buffer, m_framebuffer_pool[next_image_index]);
-						render_pass->Render(current_frame_state.m_command_buffer);
-						for (auto& model : m_models) model.Draw(current_frame_state.m_command_buffer);
-						render_pass->End(current_frame_state.m_command_buffer);
+						render_pass->Begin(current_commandbuffer, current_framebuffer);
+						render_pass->Render(current_commandbuffer);
+						for (auto& model : m_models) model.Draw(*current_commandbuffer);
+						render_pass->End(current_commandbuffer);
 					}
 				}
-				current_frame_state.m_command_buffer.End();
+				current_commandbuffer->End();
 
-				current_frame_state.m_command_buffer.Submit(
-					0, *current_frame_state.m_fence_in_flight,
-					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				current_commandbuffer->Submit(false,
+					*current_frame_state.m_fence_in_flight,
 					{ *current_frame_state.m_semaphore_image_available },
-					{ *current_frame_state.m_semaphore_render_finished });
+					{ *current_frame_state.m_semaphore_render_finished },
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 				m_vulkan_context->PresentSwapChain(*current_frame_state.m_semaphore_render_finished);
 
@@ -76,9 +79,9 @@ namespace Runtime
 			MAX_RENDER_PASS_COUNT
 		};
 		std::vector<std::unique_ptr<RHI::RenderPass>> m_render_passes;
-		RHI::CommandPool		m_command_pool_resetable;
-		RHI::CommandPool		m_command_pool_transient;
-		RHI::FramebufferPool	m_framebuffer_pool;
+		std::shared_ptr<RHI::CommandPool	>		m_command_pool_resetable;
+		std::shared_ptr<RHI::CommandPool>		m_command_pool_transient;
+		std::shared_ptr<RHI::FramebufferPool>	m_framebuffer_pool;
 
 		std::vector<FrameState> m_frame_states;
 		
