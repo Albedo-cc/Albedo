@@ -49,14 +49,52 @@ namespace Runtime
 		return shaderInfos;
 	}
 
+	void PresentPipeline::prepare_descriptor_layouts()
+	{
+		m_descriptor_set_layouts.resize(MAX_DESCRIPTOR_SET_LAYOUT_COUNT);
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		// Descriptor Set Bindings
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		// Binding: UBO
+		std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings(MAX_DESCRIPTOR_SET_COUNT);
+		auto& ubo = descriptor_set_layout_bindings[descriptor_set_uniform_buffer];
+		ubo.binding = descriptor_set_uniform_buffer;
+		ubo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		ubo.descriptorCount = 1;
+		ubo.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		ubo.pImmutableSamplers = nullptr;
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+
+
+
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		// Descriptor Set Layouts
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		// Layout: UBO
+		std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings_uniform_buffer
+		{ descriptor_set_layout_bindings[descriptor_set_uniform_buffer] };
+		VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info_uniform_buffer
+		{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = static_cast<uint32_t>(descriptor_set_layout_bindings_uniform_buffer.size()),
+			.pBindings = descriptor_set_layout_bindings_uniform_buffer.data()
+		};
+		if (vkCreateDescriptorSetLayout(m_context->m_device,
+			&descriptor_set_layout_create_info_uniform_buffer,
+			m_context->m_memory_allocation_callback,
+			&m_descriptor_set_layouts[descriptor_set_layout_uniform_buffer]) != VK_SUCCESS)
+			throw std::runtime_error("Failed to create the Vulkan Descriptor Set Layout!");
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+	}
+
 	VkPipelineLayoutCreateInfo PresentPipeline::
 		prepare_pipeline_layout_state()
 	{
 		return VkPipelineLayoutCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			.setLayoutCount = 0,
-			.pSetLayouts = nullptr,
+			.setLayoutCount = static_cast<uint32_t>(m_descriptor_set_layouts.size()),
+			.pSetLayouts = m_descriptor_set_layouts.data(),
 			.pushConstantRangeCount = 0,
 			.pPushConstantRanges = nullptr
 		};

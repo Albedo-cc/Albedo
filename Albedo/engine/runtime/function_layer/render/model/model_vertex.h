@@ -9,12 +9,12 @@
 namespace Albedo {
 namespace Runtime
 {
-	
+	using ModelVertexIndex = uint32_t; // VK_INDEX_TYPE_UINT32
 	struct ModelVertex
 	{
 		static const uint16_t ATTRIBUTE_COUNT = 2; // Equals to the varibles in Model Vertex
-		alignas(16) Vector2 m_positon;
-		alignas(16) Vector3 m_color;
+		alignas(16) Vector2f m_positon;
+		alignas(16) Vector3f m_color;
 
 		// Binding Description & Attribute Description
 		static VkVertexInputBindingDescription&

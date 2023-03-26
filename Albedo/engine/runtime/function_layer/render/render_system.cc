@@ -75,6 +75,8 @@ namespace Runtime
 			state.m_semaphore_image_available	= m_vulkan_context->CreateSemaphore(0x0);
 			state.m_semaphore_render_finished	= m_vulkan_context->CreateSemaphore(0x0);
 			state.m_command_buffer = m_command_pool_resetable->AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+			state.m_uniform_buffer = m_vulkan_context->m_memory_allocator->AllocateBuffer
+			(sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
 		}
 	}
 
@@ -90,11 +92,17 @@ namespace Runtime
 		static std::vector<ModelVertex> 
 		triangle_vertices
 		{	// [ X		Y]		[ R		G		  B ]
-			{ {0.0f, -0.5f},	{1.0f, 1.0f, 1.0f} },
-			{ {0.5f, 0.5f},	{0.0f, 1.0f, 0.0f} },
-			{ {-0.5f, 0.5f},	{0.0f, 0.0f, 1.0f} }
+			{ {-0.5f, -0.5f},	{1.0f, 1.0f, 1.0f} },
+			{ {0.5f, -0.5f},	{0.0f, 1.0f, 0.0f} },
+			{ {0.5f, 0.5f},	{0.0f, 0.0f, 1.0f} },
+			{ {-0.5f, 0.5f},	{1.0f, 1.0f, 1.0f} }
 		};
-		m_models.emplace_back(m_vulkan_context, triangle_vertices, 0);
+		static std::vector<ModelVertexIndex>
+		triangle_indices
+		{
+			0, 1, 2, 2, 3, 0
+		};
+		m_models.emplace_back(m_vulkan_context, triangle_vertices, triangle_indices, 0);
 	}
 
 	void RenderSystem::handle_window_resize()
@@ -103,13 +111,11 @@ namespace Runtime
 		m_vulkan_context->RecreateSwapChain();
 		create_framebuffer_pool(); // Recreate Framebuffers
 		create_render_passes();		 // Recreate Render Passes
-	}
-
-	uint32_t RenderSystem::FrameState::GetCurrentFrame(bool increase/* = false*/)
-	{
-		static uint32_t current_frame{ 0 };
-		if (increase) current_frame = (current_frame + 1) % MAX_FRAME_IN_FLIGHT;
-		return current_frame;
+		for (auto& frame_state : m_frame_states) // Recreate Uniform Buffer
+		{
+			frame_state.m_uniform_buffer = m_vulkan_context->m_memory_allocator->AllocateBuffer
+			(sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
+		}
 	}
 
 }} // namespace Albedo::Runtime

@@ -9,6 +9,19 @@ namespace Runtime
 	class PresentPipeline  final :
 		public RHI::GraphicsPipeline
 	{
+		enum DescriptorSet
+		{
+			descriptor_set_uniform_buffer,
+
+			MAX_DESCRIPTOR_SET_COUNT
+		};
+
+		enum DescriptorSetLayout
+		{
+			descriptor_set_layout_uniform_buffer,
+
+			MAX_DESCRIPTOR_SET_LAYOUT_COUNT
+		};
 	public:
 		virtual void Draw(std::shared_ptr<RHI::CommandBuffer> command_buffer) override;
 
@@ -20,6 +33,7 @@ namespace Runtime
 
 	private:
 		virtual std::vector<VkPipelineShaderStageCreateInfo>		prepare_shader_stage_state() override;
+		virtual void																					prepare_descriptor_layouts() override;
 		virtual VkPipelineLayoutCreateInfo										prepare_pipeline_layout_state()  override;
 
 		virtual VkPipelineVertexInputStateCreateInfo						prepare_vertex_inpute_state() override;

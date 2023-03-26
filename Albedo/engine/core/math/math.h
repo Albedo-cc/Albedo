@@ -1,29 +1,17 @@
 #pragma once
 
-#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
 
-namespace Albedo {
-namespace Runtime
+namespace Albedo 
 {
-#ifndef ALBEDO_RUNTIME_CORE_HIGH_PRECISION_MODE
+	using namespace Eigen; // Eigen stores matrices in column-major order by default!
 
-	using Vector2 = Eigen::Vector2f;
-	using Vector3 = Eigen::Vector3f;
-	using Vector4 = Eigen::Vector4f;
+	constexpr const double PI = 3.141592653589793;	// 180бу
+	constexpr const double PI_HALF			= PI	/ 2.0;		// 90бу
+	constexpr const double PI_QUARTER	= PI	/ 4.0;		// 45бу
+	constexpr const double PI_SIXTHS		= PI / 6.0;		// 30бу
+	constexpr const double TWO_PI			= PI * 2.0;		// 360бу
+	constexpr const double ONE_RADIAN = PI / 180.0;	// 1бу
 
-	using Matrix2 = Eigen::Matrix2f;
-	using Matrix3 = Eigen::Matrix3f;
-	using Matrix4 = Eigen::Matrix4f;
-
-#else // Note that double vector is multi-slot variable (OpenGL Wiki)
-
-	using Vector2 = Eigen::Vector2d;
-	using Vector3 = Eigen::Vector3d;
-	using Vector4 = Eigen::Vector4d;
-
-	using Matrix2 = Eigen::Matrix2d;
-	using Matrix3 = Eigen::Matrix3d;
-	using Matrix4 = Eigen::Matrix4d;
-
-#endif
-}} // namespace Albedo::Runtime
+} // namespace Albedo::Runtime

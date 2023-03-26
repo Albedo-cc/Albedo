@@ -1,6 +1,6 @@
 #pragma once
 
-#include <AlbedoRHI.hpp>
+#include "render_system_types.h"
 
 #include "model/model.h"
 #include "../window/window_system.h"
@@ -13,15 +13,6 @@ namespace Runtime
 
 	class RenderSystem
 	{
-		static const int MAX_FRAME_IN_FLIGHT = 2;
-		struct FrameState // [MAX_FRAME_IN_FLIGHT]
-		{
-			static uint32_t	GetCurrentFrame(bool increase = false);
-			std::unique_ptr<RHI::Fence>			m_fence_in_flight;
-			std::unique_ptr<RHI::Semaphore>	m_semaphore_image_available;
-			std::unique_ptr<RHI::Semaphore>	m_semaphore_render_finished;
-			std::shared_ptr<RHI::CommandBuffer> m_command_buffer; // [Q]: Using Reference causes a bug!
-		};
 	public:
 		RenderSystem() = delete;
 		RenderSystem(std::weak_ptr<WindowSystem> window_system);
