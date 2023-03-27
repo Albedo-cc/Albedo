@@ -1,5 +1,6 @@
 #include "present_pipeline.h"
-#include "../../../model/model.h"
+#include <runtime/function_layer/render/render_system_context.h>
+#include <runtime/function_layer/render/model/model.h>
 
 #include <AlbedoRHI.hpp>
 
@@ -10,8 +11,13 @@ namespace Runtime
 	{
 		assert(command_buffer->IsRecording() && "You cannot Draw() before beginning the command buffer!");
 
-		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
+
+		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+		auto& descriptorSets = m_descriptor_pool->GetAllDescriptorSets();
+		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 
+														0, descriptorSets.size(), descriptorSets.data(),
+														0, nullptr);
 	}
 
 	PresentPipeline::PresentPipeline(
@@ -49,7 +55,7 @@ namespace Runtime
 		return shaderInfos;
 	}
 
-	void PresentPipeline::prepare_descriptor_layouts()
+	void PresentPipeline::prepare_descriptor_sets()
 	{
 		m_descriptor_set_layouts.resize(MAX_DESCRIPTOR_SET_LAYOUT_COUNT);
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -84,6 +90,22 @@ namespace Runtime
 			m_context->m_memory_allocation_callback,
 			&m_descriptor_set_layouts[descriptor_set_layout_uniform_buffer]) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create the Vulkan Descriptor Set Layout!");
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+
+
+
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		// Create Descriptor Pool and Allocate Descriptor Sets
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		VkDescriptorPoolSize uniform_buffer_descriptor_set_size
+		{
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = MAX_FRAME_IN_FLIGHT
+		};
+		m_descriptor_pool = m_context->CreateDescriptorPool({ uniform_buffer_descriptor_set_size },
+																											MAX_FRAME_IN_FLIGHT);
+
+		m_descriptor_pool->AllocateDescriptorSets(m_descriptor_set_layouts);
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 	}
 

@@ -4,46 +4,52 @@ namespace Albedo {
 namespace Runtime
 {
 
-	Camera::Camera(ProjectionMode mode/* = Projection::PERSPECTIVE*/) :
-		m_projection_mode{ mode }
+	Camera::Camera(std::shared_ptr<RHI::VulkanContext> vulkan_context, ProjectionMode mode/* = Projection::PERSPECTIVE*/) :
+		m_vulkan_context{ std::move(vulkan_context) }
 	{
-		GetViewingMatrix(true);
+		auto& extent = m_vulkan_context->m_swapchain_current_extent;
+		
+		m_parameters = Parameter
+		{
+			.projection_mode = mode,
+			.aspect_ratio = static_cast<float>(extent.width) / extent.height
+		};
 	}
 
 	Matrix4f Camera::GetViewingMatrix(bool update/* = false*/)
 	{
-		static Matrix4f projection;
-		static Matrix4f view_translate;
-		static Matrix4f view_rotate;
-		static auto view_rotate_block = view_rotate.block(0, 0, 3, 3);
-
+		static auto& extent = m_vulkan_context->m_swapchain_current_extent;
 		// Projection Matrix
+		static Matrix4f projection =
+			(ProjectionMode::PERSPECTIVE == m_projection_mode) ?
+			make_perspective_matrix(m_parameters.FOV, m_parameters.aspect_ratio, m_parameters.plane_near, m_parameters.plane_far)
+			:
+			make_orthographics_matrix(0, extent.width, extent.height, 0, m_parameters.plane_near, m_parameters.plane_far);
+		
 		if (update)
 		{
-			view_translate.setIdentity();
-			view_rotate(3, 3) = 1;
-			Matrix4f prjection_translate;	prjection_translate.setIdentity();
-			Matrix4f prjection_rotate;		prjection_rotate.setIdentity();
-			auto& extent = m_vulkan_context->m_swapchain_current_extent;
+			m_parameters.aspect_ratio = static_cast<float>(extent.width) / extent.height;
 			if (ProjectionMode::PERSPECTIVE == m_projection_mode)
 			{
-
+				projection = make_perspective_matrix(m_parameters.FOV,
+					m_parameters.aspect_ratio, m_parameters.plane_near, m_parameters.plane_far);
 			}
-			else //ProjectionMode::ORTHOGRAPHICS
+			else // ProjectionMode::ORTHOGRAPHICS
 			{
-				prjection_translate.col(3) = Vector4f{ -extent.width / 2.0f,  -extent.height / 2.0f, -(m_plane_near + m_plane_far) / 2.0f, 1.0f };
-				prjection_rotate.diagonal() = Vector4f{ 2.0f / extent.width , 2.0f / extent.height, 2.0f / m_plane_near - m_plane_far, 1.0f };
+				projection = make_orthographics_matrix(0, extent.width, extent.height, 0,
+					m_parameters.plane_near, m_parameters.plane_far);
 			}
-			projection = prjection_rotate * prjection_translate;
 		}
 
 		// View Matrix
-		view_translate.col(3) = (-m_position).homogeneous();
-		view_rotate_block.row(0) = m_lookat.cross(m_updirection);
-		view_rotate_block.row(1) = m_updirection;
-		view_rotate_block.row(2) = -m_lookat;
+		static Matrix4f view = make_look_at_matrix(m_parameters.position, m_parameters.forward, m_parameters.upward);;
+		update |= m_is_moved;
+		m_is_moved = false;
+		if (update) view = make_look_at_matrix(m_parameters.position, m_parameters.forward, m_parameters.upward);
 
-		return projection * (view_rotate * view_translate); // Viewing Matrix
+		static Matrix4f viewing = projection * view;
+		if (update) viewing = projection * view;
+		return  viewing;
 	}
 
 }} // namespace Albedo::Runtime

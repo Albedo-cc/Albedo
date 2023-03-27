@@ -33,7 +33,7 @@ namespace Runtime
 
 	private:
 		virtual std::vector<VkPipelineShaderStageCreateInfo>		prepare_shader_stage_state() override;
-		virtual void																					prepare_descriptor_layouts() override;
+		virtual void																					prepare_descriptor_sets() override;
 		virtual VkPipelineLayoutCreateInfo										prepare_pipeline_layout_state()  override;
 
 		virtual VkPipelineVertexInputStateCreateInfo						prepare_vertex_inpute_state() override;

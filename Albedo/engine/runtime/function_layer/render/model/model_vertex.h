@@ -9,6 +9,8 @@
 namespace Albedo {
 namespace Runtime
 {
+	using namespace Albedo::Core;
+
 	using ModelVertexIndex = uint32_t; // VK_INDEX_TYPE_UINT32
 	struct ModelVertex
 	{

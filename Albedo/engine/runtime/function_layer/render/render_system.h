@@ -1,11 +1,16 @@
 #pragma once
 
-#include "render_system_types.h"
+#include "render_system_context.h"
 
 #include "model/model.h"
-#include "../window/window_system.h"
+#include "camera/camera.h"
+#include <runtime/function_layer/window/window_system.h>
+#include <core/math/math.h>
+
+#include <AlbedoTime.hpp>
 
 #include <memory>
+#include <iostream>
 
 namespace Albedo {
 namespace Runtime
@@ -30,6 +35,13 @@ namespace Runtime
 
 				auto& current_commandbuffer = current_frame_state.m_command_buffer;
 				auto& current_framebuffer = m_framebuffer_pool->GetFramebuffer(next_image_index);
+
+				static UniformBuffer UBO;
+				static time::StopWatch timer{};
+				UBO.matrix_model = make_rotation_matrix(WORLD_AXIS_Y, ONE_RADIAN * timer.split().microseconds());
+				UBO.matrix_viewing = m_camera.GetViewingMatrix();
+
+				current_frame_state.m_uniform_buffer->Write(&UBO);
 
 				current_commandbuffer->Begin();
 				{
@@ -62,6 +74,10 @@ namespace Runtime
 	private:
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context; // Make sure that this context will be released at last.
 		std::weak_ptr<WindowSystem> m_window_system;
+		Camera m_camera;
+
+		std::vector<FrameState> m_frame_states;
+		std::vector<Model> m_models;
 
 		enum RenderPasses
 		{
@@ -73,10 +89,6 @@ namespace Runtime
 		std::shared_ptr<RHI::CommandPool	>		m_command_pool_resetable;
 		std::shared_ptr<RHI::CommandPool>		m_command_pool_transient;
 		std::shared_ptr<RHI::FramebufferPool>	m_framebuffer_pool;
-
-		std::vector<FrameState> m_frame_states;
-		
-		std::vector<Model> m_models;
 
 	private:
 		uint32_t wait_for_next_image_index(FrameState& current_frame_state);

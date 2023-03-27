@@ -9,6 +9,8 @@
 namespace Albedo {
 namespace Runtime
 {
+	using namespace Albedo::Core;
+
 	// Type List
 	struct FrameState;
 	struct UniformBuffer;
@@ -33,8 +35,7 @@ namespace Runtime
 	struct UniformBuffer
 	{
 		Matrix4f matrix_model;
-		Matrix4f matrix_view;
-		Matrix4f matrix_projection;
+		Matrix4f matrix_viewing; // Projection * View
 	};
 
 }} // namespace Albedo::Runtime

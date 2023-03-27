@@ -9,6 +9,7 @@ namespace Runtime
 	RenderSystem::RenderSystem(std::weak_ptr<WindowSystem> window_system) :
 		m_vulkan_context{ std::make_shared<RHI::VulkanContext>(window_system.lock()->GetWindow()) },
 		m_window_system{ std::move(window_system) },
+		m_camera{ m_vulkan_context },
 		// Command Pools
 		m_command_pool_resetable{
 				m_vulkan_context->CreateCommandPool(
@@ -116,6 +117,7 @@ namespace Runtime
 			frame_state.m_uniform_buffer = m_vulkan_context->m_memory_allocator->AllocateBuffer
 			(sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
 		}
+		m_camera.GetViewingMatrix(true); // Update
 	}
 
 }} // namespace Albedo::Runtime
