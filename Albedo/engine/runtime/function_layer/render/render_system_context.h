@@ -1,41 +1,28 @@
 #pragma once
 
-#include <AlbedoRHI.hpp>
-
-#include <core/math/math.h>
-
-#include <memory>
+#include "render_system_types.h"
 
 namespace Albedo {
 namespace Runtime
 {
-	using namespace Albedo::Core;
 
-	// Type List
-	struct FrameState;
-	struct UniformBuffer;
-
-	constexpr const uint32_t MAX_FRAME_IN_FLIGHT = 2;
-	struct FrameState // [MAX_FRAME_IN_FLIGHT]
+	class RenderSystemContext
 	{
-		std::unique_ptr<RHI::Fence>			m_fence_in_flight;
-		std::unique_ptr<RHI::Semaphore>	m_semaphore_image_available;
-		std::unique_ptr<RHI::Semaphore>	m_semaphore_render_finished;
-		std::shared_ptr<RHI::VMA::Buffer> m_uniform_buffer;
-		std::shared_ptr<RHI::CommandBuffer> m_command_buffer; // [Q]: Using Reference caused a bug!
+		friend class RenderSystem;
+	public:
+		static constexpr const uint32_t MAX_FRAME_IN_FLIGHT = 2;
 
-		static uint32_t	GetCurrentFrame(bool increase = false)
-		{
-			static uint32_t current_frame{ 0 };
-			if (increase) current_frame = (current_frame + 1) % MAX_FRAME_IN_FLIGHT;
-			return current_frame;
-		}
-	};
+	public:
+		static FrameState& GetCurrentFrameState() { return m_frame_states[m_current_frame]; }
 
-	struct UniformBuffer
-	{
-		Matrix4f matrix_model;
-		Matrix4f matrix_viewing; // Projection * View
+	private:
+		static std::vector<FrameState> m_frame_states;
+		static size_t m_current_frame/* = 0*/;
+		static std::shared_ptr<RHI::CommandPool	> m_command_pool_resetable;
+
+	private: // Interfaces for RenderSystem
+		static void Initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context);
+		static void SwitchToNextFrame() { m_current_frame = (m_current_frame + 1) % MAX_FRAME_IN_FLIGHT; }
 	};
 
 }} // namespace Albedo::Runtime

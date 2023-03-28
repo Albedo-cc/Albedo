@@ -36,7 +36,7 @@ namespace Runtime
 		virtual void																					prepare_descriptor_sets() override;
 		virtual VkPipelineLayoutCreateInfo										prepare_pipeline_layout_state()  override;
 
-		virtual VkPipelineVertexInputStateCreateInfo						prepare_vertex_inpute_state() override;
+		virtual VkPipelineVertexInputStateCreateInfo						prepare_vertex_input_state() override;
 		virtual VkPipelineInputAssemblyStateCreateInfo				prepare_input_assembly_state() override;
 		virtual VkPipelineViewportStateCreateInfo							prepare_viewport_state() override;
 		virtual VkPipelineRasterizationStateCreateInfo					prepare_rasterization_state() override;

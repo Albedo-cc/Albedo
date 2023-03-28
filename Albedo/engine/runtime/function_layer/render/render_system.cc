@@ -10,25 +10,15 @@ namespace Runtime
 		m_vulkan_context{ std::make_shared<RHI::VulkanContext>(window_system.lock()->GetWindow()) },
 		m_window_system{ std::move(window_system) },
 		m_camera{ m_vulkan_context },
-		// Command Pools
-		m_command_pool_resetable{
-				m_vulkan_context->CreateCommandPool(
-				m_vulkan_context->m_device_queue_graphics.value(),
-				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT) },
-
-		m_command_pool_transient{
-				m_vulkan_context->CreateCommandPool(
-				m_vulkan_context->m_device_queue_graphics.value(),
-				VK_COMMAND_POOL_CREATE_TRANSIENT_BIT) }, 
 		// Framebuffer Pool
 		m_framebuffer_pool{ m_vulkan_context->CreateFramebufferPool() }
 	{
+		// Initialize Render System Context
+		RenderSystemContext::Initialize(m_vulkan_context);
 		// Render Passes
 		create_render_passes();
 		// Framebuffers
 		create_framebuffer_pool();
-		// Frame States
-		create_frame_states();
 		// Load Models
 		load_models();
 	}
@@ -66,21 +56,6 @@ namespace Runtime
 		}
 	}
 
-	void RenderSystem::create_frame_states()
-	{
-		m_frame_states.reserve(MAX_FRAME_IN_FLIGHT);
-		for (int i = 0; i < MAX_FRAME_IN_FLIGHT; ++i)
-		{
-			auto& state = m_frame_states.emplace_back();
-			state.m_fence_in_flight = m_vulkan_context->CreateFence(VK_FENCE_CREATE_SIGNALED_BIT);
-			state.m_semaphore_image_available	= m_vulkan_context->CreateSemaphore(0x0);
-			state.m_semaphore_render_finished	= m_vulkan_context->CreateSemaphore(0x0);
-			state.m_command_buffer = m_command_pool_resetable->AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-			state.m_uniform_buffer = m_vulkan_context->m_memory_allocator->AllocateBuffer
-			(sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
-		}
-	}
-
 	void RenderSystem::create_render_passes()
 	{
 		m_render_passes.clear();
@@ -112,7 +87,8 @@ namespace Runtime
 		m_vulkan_context->RecreateSwapChain();
 		create_framebuffer_pool(); // Recreate Framebuffers
 		create_render_passes();		 // Recreate Render Passes
-		for (auto& frame_state : m_frame_states) // Recreate Uniform Buffer
+
+		for (auto& frame_state : RenderSystemContext::m_frame_states) // Recreate Uniform Buffer
 		{
 			frame_state.m_uniform_buffer = m_vulkan_context->m_memory_allocator->AllocateBuffer
 			(sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory

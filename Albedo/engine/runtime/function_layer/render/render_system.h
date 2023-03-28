@@ -25,7 +25,7 @@ namespace Runtime
 		void Update()
 		{
 			// Wait for previous frame
-			auto& current_frame_state = m_frame_states[FrameState::GetCurrentFrame()];
+			auto& current_frame_state = RenderSystemContext::GetCurrentFrameState();
 			current_frame_state.m_fence_in_flight->Wait();
 			try
 			{
@@ -63,7 +63,7 @@ namespace Runtime
 
 				m_vulkan_context->PresentSwapChain(*current_frame_state.m_semaphore_render_finished);
 
-				FrameState::GetCurrentFrame(true); // Next Frame
+				RenderSystemContext::SwitchToNextFrame();
 			}
 			catch (RHI::VulkanContext::swapchain_error& swapchian_recreation)
 			{
@@ -76,7 +76,6 @@ namespace Runtime
 		std::weak_ptr<WindowSystem> m_window_system;
 		Camera m_camera;
 
-		std::vector<FrameState> m_frame_states;
 		std::vector<Model> m_models;
 
 		enum RenderPasses
@@ -86,15 +85,12 @@ namespace Runtime
 			MAX_RENDER_PASS_COUNT
 		};
 		std::vector<std::unique_ptr<RHI::RenderPass>> m_render_passes;
-		std::shared_ptr<RHI::CommandPool	>		m_command_pool_resetable;
-		std::shared_ptr<RHI::CommandPool>		m_command_pool_transient;
 		std::shared_ptr<RHI::FramebufferPool>	m_framebuffer_pool;
 
 	private:
 		uint32_t wait_for_next_image_index(FrameState& current_frame_state);
 
 		void create_framebuffer_pool();
-		void create_frame_states();
 		void create_render_passes();
 
 		void load_models();

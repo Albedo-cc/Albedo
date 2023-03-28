@@ -11,8 +11,10 @@ namespace Runtime
 	{
 		assert(command_buffer->IsRecording() && "You cannot Draw() before beginning the command buffer!");
 
+		// Prepare Data
 		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
 
+		// Bind
 		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 		auto& descriptorSets = m_descriptor_pool->GetAllDescriptorSets();
 		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 
@@ -59,7 +61,21 @@ namespace Runtime
 	{
 		m_descriptor_set_layouts.resize(MAX_DESCRIPTOR_SET_LAYOUT_COUNT);
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// Descriptor Set Bindings
+		// 1. Create Descriptor Pool 
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		VkDescriptorPoolSize uniform_buffer_descriptor_set_size
+		{
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = RenderSystemContext::MAX_FRAME_IN_FLIGHT
+		};
+		m_descriptor_pool = m_context->CreateDescriptorPool({ uniform_buffer_descriptor_set_size },
+			RenderSystemContext::MAX_FRAME_IN_FLIGHT);
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		
+		
+		
+		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		// 2. Descriptor Set Bindings
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 		// Binding: UBO
 		std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings(MAX_DESCRIPTOR_SET_COUNT);
@@ -74,11 +90,11 @@ namespace Runtime
 
 
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// Descriptor Set Layouts
+		// 3. Descriptor Set Layouts
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 		// Layout: UBO
 		std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings_uniform_buffer
-		{ descriptor_set_layout_bindings[descriptor_set_uniform_buffer] };
+																					  { descriptor_set_layout_bindings[descriptor_set_uniform_buffer] };
 		VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info_uniform_buffer
 		{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -95,17 +111,12 @@ namespace Runtime
 
 
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// Create Descriptor Pool and Allocate Descriptor Sets
+		// 4. Allocate and Write Descriptor Sets
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		VkDescriptorPoolSize uniform_buffer_descriptor_set_size
-		{
-			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = MAX_FRAME_IN_FLIGHT
-		};
-		m_descriptor_pool = m_context->CreateDescriptorPool({ uniform_buffer_descriptor_set_size },
-																											MAX_FRAME_IN_FLIGHT);
-
 		m_descriptor_pool->AllocateDescriptorSets(m_descriptor_set_layouts);
+		// Uniform Buffers
+		m_descriptor_pool->WriteBufferSet(descriptor_set_uniform_buffer, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1, descriptor_set_uniform_buffer, current_frame_state.m_uniform_buffer, 0);
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 	}
 
@@ -123,7 +134,7 @@ namespace Runtime
 	}
 
 	VkPipelineVertexInputStateCreateInfo	 PresentPipeline::
-		prepare_vertex_inpute_state()
+		prepare_vertex_input_state()
 	{
 		auto& bind_description = ModelVertex::GetBindingDescription(0);
 		auto& attribute_description = ModelVertex::GetAttributeDescription(0);
@@ -200,7 +211,7 @@ namespace Runtime
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 			.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
 			.sampleShadingEnable = VK_FALSE,
-			. minSampleShading = 1.0f,
+			.minSampleShading = 1.0f,
 			.pSampleMask = nullptr,
 			.alphaToCoverageEnable = VK_FALSE,
 			.alphaToOneEnable = VK_FALSE
