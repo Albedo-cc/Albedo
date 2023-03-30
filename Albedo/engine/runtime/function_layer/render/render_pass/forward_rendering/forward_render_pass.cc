@@ -26,18 +26,21 @@ namespace Runtime
 		m_attachment_descriptions.resize(MAX_ATTACHMENT_COUNT);
 		m_attachment_references.resize(MAX_ATTACHMENT_COUNT);
 		// Present Attachment
-		auto& present = m_attachment_descriptions[attachment_present_color];
-		present.format					= m_context->m_swapchain_image_format;
-		present.samples				= VK_SAMPLE_COUNT_1_BIT;
-		present.loadOp					= VK_ATTACHMENT_LOAD_OP_CLEAR;
-		present.storeOp				= VK_ATTACHMENT_STORE_OP_STORE;
-		present.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		present.stencilStoreOp	= VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		present.initialLayout		= VK_IMAGE_LAYOUT_UNDEFINED;
-		present.finalLayout			= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		auto& present_ref = m_attachment_references[attachment_present_color];
-		present_ref.attachment	= attachment_present_color;
-		present_ref.layout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		{
+			auto& present = m_attachment_descriptions[attachment_present_color];
+			present.format = m_context->m_swapchain_image_format;
+			present.samples = VK_SAMPLE_COUNT_1_BIT;
+			present.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			present.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			present.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			present.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			present.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			present.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+			auto& present_ref = m_attachment_references[attachment_present_color];
+			present_ref.attachment = attachment_present_color;
+			present_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
 	}
 
 	void ForwardRenderPass::create_subpasses()

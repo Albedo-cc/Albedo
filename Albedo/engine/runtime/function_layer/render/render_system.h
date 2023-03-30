@@ -21,6 +21,7 @@ namespace Runtime
 	public:
 		RenderSystem() = delete;
 		RenderSystem(std::weak_ptr<WindowSystem> window_system);
+		~RenderSystem() { m_vulkan_context->WaitDeviceIdle(); RenderSystemContext::Stop(); }
 
 		void Update()
 		{
@@ -38,10 +39,14 @@ namespace Runtime
 
 				static UniformBuffer UBO;
 				static time::StopWatch timer{};
-				UBO.matrix_model = make_rotation_matrix(WORLD_AXIS_Y, ONE_RADIAN * timer.split().microseconds());
+				UBO.matrix_model = make_rotation_matrix(WORLD_AXIS_Z, ONE_RADIAN * timer.split().milliseconds());
 				UBO.matrix_viewing = m_camera.GetViewingMatrix();
 
 				current_frame_state.m_uniform_buffer->Write(&UBO);
+				current_frame_state.m_uniform_buffer_descriptor_set->WriteBuffer(
+					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+					RenderSystemContext::uniform_buffer_binding_matrics,
+					current_frame_state.m_uniform_buffer);
 
 				current_commandbuffer->Begin();
 				{

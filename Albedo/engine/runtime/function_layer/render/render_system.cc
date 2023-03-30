@@ -15,6 +15,7 @@ namespace Runtime
 	{
 		// Initialize Render System Context
 		RenderSystemContext::Initialize(m_vulkan_context);
+
 		// Render Passes
 		create_render_passes();
 		// Framebuffers

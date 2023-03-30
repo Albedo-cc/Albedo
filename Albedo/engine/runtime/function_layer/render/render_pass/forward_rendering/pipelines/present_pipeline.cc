@@ -11,12 +11,17 @@ namespace Runtime
 	{
 		assert(command_buffer->IsRecording() && "You cannot Draw() before beginning the command buffer!");
 
-		// Prepare Data
+		auto& frame_state = RenderSystemContext::GetCurrentFrameState();
+
 		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
 
-		// Bind
 		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
-		auto& descriptorSets = m_descriptor_pool->GetAllDescriptorSets();
+
+		// Descriptor Set
+		std::vector<VkDescriptorSet> descriptorSets
+		{ 
+			*(frame_state.m_uniform_buffer_descriptor_set)
+		};
 		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 
 														0, descriptorSets.size(), descriptorSets.data(),
 														0, nullptr);
@@ -36,11 +41,11 @@ namespace Runtime
 	std::vector<VkPipelineShaderStageCreateInfo>	 PresentPipeline::
 		prepare_shader_stage_state()
 	{
-		std::vector<VkPipelineShaderStageCreateInfo> shaderInfos(2);
+		std::vector<VkPipelineShaderStageCreateInfo> shaderInfos(MAX_SHADER_COUNT);
 
 		// Vertex Shader
 		auto vertex_shader = create_shader_module("resource/shader/default.vert.spv");
-		auto& vertex_shader_info = shaderInfos[0];
+		auto& vertex_shader_info = shaderInfos[vertex_shader_present];
 		vertex_shader_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vertex_shader_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
 		vertex_shader_info.module = vertex_shader;
@@ -48,7 +53,7 @@ namespace Runtime
 
 		// Fragment Shader
 		auto fragment_shader = create_shader_module("resource/shader/default.frag.spv");
-		auto& fragment_shader_info = shaderInfos[1];
+		auto& fragment_shader_info = shaderInfos[fragment_shader_present];
 		fragment_shader_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		fragment_shader_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		fragment_shader_info.module = fragment_shader;
@@ -57,80 +62,16 @@ namespace Runtime
 		return shaderInfos;
 	}
 
-	void PresentPipeline::prepare_descriptor_sets()
+	std::vector<VkDescriptorSetLayout> PresentPipeline::prepare_descriptor_layouts()
 	{
-		m_descriptor_set_layouts.resize(MAX_DESCRIPTOR_SET_LAYOUT_COUNT);
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// 1. Create Descriptor Pool 
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		VkDescriptorPoolSize uniform_buffer_descriptor_set_size
-		{
-			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = RenderSystemContext::MAX_FRAME_IN_FLIGHT
-		};
-		m_descriptor_pool = m_context->CreateDescriptorPool({ uniform_buffer_descriptor_set_size },
-			RenderSystemContext::MAX_FRAME_IN_FLIGHT);
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		
-		
-		
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// 2. Descriptor Set Bindings
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// Binding: UBO
-		std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings(MAX_DESCRIPTOR_SET_COUNT);
-		auto& ubo = descriptor_set_layout_bindings[descriptor_set_uniform_buffer];
-		ubo.binding = descriptor_set_uniform_buffer;
-		ubo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		ubo.descriptorCount = 1;
-		ubo.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		ubo.pImmutableSamplers = nullptr;
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-
-
-
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// 3. Descriptor Set Layouts
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// Layout: UBO
-		std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings_uniform_buffer
-																					  { descriptor_set_layout_bindings[descriptor_set_uniform_buffer] };
-		VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info_uniform_buffer
-		{
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-			.bindingCount = static_cast<uint32_t>(descriptor_set_layout_bindings_uniform_buffer.size()),
-			.pBindings = descriptor_set_layout_bindings_uniform_buffer.data()
-		};
-		if (vkCreateDescriptorSetLayout(m_context->m_device,
-			&descriptor_set_layout_create_info_uniform_buffer,
-			m_context->m_memory_allocation_callback,
-			&m_descriptor_set_layouts[descriptor_set_layout_uniform_buffer]) != VK_SUCCESS)
-			throw std::runtime_error("Failed to create the Vulkan Descriptor Set Layout!");
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-
-
-
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		// 4. Allocate and Write Descriptor Sets
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-		m_descriptor_pool->AllocateDescriptorSets(m_descriptor_set_layouts);
-		// Uniform Buffers
-		m_descriptor_pool->WriteBufferSet(descriptor_set_uniform_buffer, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1, descriptor_set_uniform_buffer, current_frame_state.m_uniform_buffer, 0);
-		// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+		auto& layout_UBO =  RenderSystemContext::GetCurrentFrameState().m_uniform_buffer_descriptor_set->GetDescriptorSetLayout();
+		return { layout_UBO };
 	}
 
-	VkPipelineLayoutCreateInfo PresentPipeline::
-		prepare_pipeline_layout_state()
+	std::vector<VkPushConstantRange> PresentPipeline::
+		prepare_push_constant_state()
 	{
-		return VkPipelineLayoutCreateInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			.setLayoutCount = static_cast<uint32_t>(m_descriptor_set_layouts.size()),
-			.pSetLayouts = m_descriptor_set_layouts.data(),
-			.pushConstantRangeCount = 0,
-			.pPushConstantRanges = nullptr
-		};
+		return {};
 	}
 
 	VkPipelineVertexInputStateCreateInfo	 PresentPipeline::
@@ -194,7 +135,7 @@ namespace Runtime
 			.rasterizerDiscardEnable = VK_FALSE, // if VK_TRUE, then geometry never passes through the rasterizer stage
 			.polygonMode = VK_POLYGON_MODE_FILL,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
-			.frontFace = VK_FRONT_FACE_CLOCKWISE,
+			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, // Y-Flip (Vulkan Coordinate System is different with OpenGL)
 			.depthBiasEnable = VK_FALSE,
 			.depthBiasConstantFactor = 0.0f,
 			.depthBiasClamp = 0.0f,

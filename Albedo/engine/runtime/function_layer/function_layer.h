@@ -13,13 +13,16 @@ namespace Runtime
 	{
 	public:
 		virtual void Update() override
-		{	
+		{
 			//std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-			if (m_window_system->ShouldClose()) 
-				m_runtime_context.Stop("Albedo Runtime - Function Layer: WindowSystem::ShouldClose()");
-			else  m_window_system->Update(); 
-
+			if (m_window_system->ShouldClose()) // Future: exception
+			{
+				m_render_system.reset();
+				return m_runtime_context.Stop("Albedo Runtime - Function Layer: WindowSystem::ShouldClose()");
+			}
+	
+			m_window_system->Update(); 
 			m_render_system->Update();
 		}
 
