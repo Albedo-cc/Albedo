@@ -80,7 +80,7 @@ namespace Runtime
 			commandBuffer->Begin();
 			vkCmdCopyBuffer(*commandBuffer, *staging_buffer, *m_vertex_buffer, 1, &copyinfo);
 			commandBuffer->End();
-			commandBuffer->Submit(true); // Mush wait for transfer operation
+			commandBuffer->Submit(true); // Must wait for transfer operation
 		}
 
 		void create_index_buffer()
@@ -106,7 +106,7 @@ namespace Runtime
 			commandBuffer->Begin();
 			vkCmdCopyBuffer(*commandBuffer, *staging_buffer, *m_index_buffer, 1, &copyinfo);
 			commandBuffer->End();
-			commandBuffer->Submit(true); // Mush wait for transfer operation
+			commandBuffer->Submit(true); // Must wait for transfer operation
 		}
 	};
 

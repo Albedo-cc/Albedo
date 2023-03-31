@@ -18,7 +18,6 @@ namespace Runtime
 
 	Matrix4f Camera::GetViewingMatrix(bool update/* = false*/)
 	{
-		auto& extent = m_vulkan_context->m_swapchain_current_extent;
 		// Projection Matrix
 		static Matrix4f projection = GetProjectionMatrix();
 		if (update) projection = GetProjectionMatrix();
@@ -36,7 +35,8 @@ namespace Runtime
 
 	Matrix4f Camera::GetViewMatrix()
 	{
-		Matrix4f view = make_look_at_matrix(m_parameters.position, m_parameters.target, m_parameters.upward);
+		Matrix4f view =  make_look_at_matrix(m_parameters.position, m_parameters.target, m_parameters.upward);;
+		view.row(1) *= -1.0; // Vulkan Y-Flip
 		return view;
 	}
 

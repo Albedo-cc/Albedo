@@ -20,7 +20,7 @@ namespace Runtime
 			ProjectionMode projection_mode;
 			Vector3f position			{ WORLD_CENTER };
 			Vector3f target				{ -WORLD_AXIS_Z };
-			Vector3f upward			{ WORLD_AXIS_Y };
+			Vector3f upward			{ -WORLD_AXIS_Y };
 			
 			float FOV = MAX_FOV_Y;
 			float aspect_ratio;

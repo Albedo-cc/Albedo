@@ -28,3 +28,10 @@ if (NOT TARGET eigen)
     add_subdirectory(Eigen-3.4.0)
     target_link_libraries(AlbedoExternalLibraries INTERFACE eigen)
 endif()
+
+# stb_image
+if (NOT TARGET stb_image)
+    message(STATUS "\nLoading stb_image (stb_image)")
+    add_subdirectory(stb_image-2023.1.29)
+    target_link_libraries(AlbedoExternalLibraries INTERFACE stb_image)
+endif()
