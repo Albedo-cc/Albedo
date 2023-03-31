@@ -49,7 +49,6 @@ namespace Runtime
 
 	void RenderSystemContext::Stop()
 	{
-		log::info("CMD {}, DSE {}", m_command_pool_resetable.use_count(), m_descriptor_pool.use_count());
 		m_command_pool_resetable.reset();
 		m_descriptor_pool.reset();
 

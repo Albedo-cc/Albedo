@@ -109,7 +109,7 @@ namespace Runtime
 		default_viewport.width = static_cast<float>(m_context->m_swapchain_current_extent.width);
 		default_viewport.height = static_cast<float>(m_context->m_swapchain_current_extent.height);
 		default_viewport.minDepth = 0.0f;	// minDepth may be higher than maxDepth
-		default_viewport.maxDepth = 1.0f;	// If you aren��t doing anything special, then you should stick to the standard values of 0.0f and 1.0f.
+		default_viewport.maxDepth = 1.0f;	// If you are not doing anything special, then you should stick to the standard values of 0.0f and 1.0f.
 
 		auto& default_scissor = m_scissors.emplace_back();
 		default_scissor.offset = { 0,0 };
@@ -135,7 +135,7 @@ namespace Runtime
 			.rasterizerDiscardEnable = VK_FALSE, // if VK_TRUE, then geometry never passes through the rasterizer stage
 			.polygonMode = VK_POLYGON_MODE_FILL,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
-			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, // Y-Flip (Vulkan Coordinate System is different with OpenGL)
+			.frontFace = VK_FRONT_FACE_CLOCKWISE, // Y-Flip (Vulkan Coordinate System is different with OpenGL)
 			.depthBiasEnable = VK_FALSE,
 			.depthBiasConstantFactor = 0.0f,
 			.depthBiasClamp = 0.0f,

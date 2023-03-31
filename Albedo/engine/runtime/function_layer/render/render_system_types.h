@@ -27,8 +27,9 @@ namespace Runtime
 
 	struct UniformBuffer
 	{
-		Matrix4f matrix_model;
-		Matrix4f matrix_viewing; // Projection * View
+		alignas(16) Matrix4f matrix_model;
+		alignas(16) Matrix4f matrix_view;
+		alignas(16) Matrix4f matrix_projection;
 	};
 
 }} // namespace Albedo::Runtime

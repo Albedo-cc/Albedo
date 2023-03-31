@@ -17,9 +17,9 @@ namespace Core
 		linear_block.row(0) = dir_right;
 		linear_block.row(1) = dir_up;
 		linear_block.row(2) = dir_forward;
-		look_at_matrix(0, 3) = position.dot(dir_right);
-		look_at_matrix(1, 3) = position.dot(dir_up);
-		look_at_matrix(2, 3) = position.dot(dir_forward);
+		look_at_matrix(0, 3) = -position.dot(dir_right);
+		look_at_matrix(1, 3) = -position.dot(dir_up);
+		look_at_matrix(2, 3) = -position.dot(dir_forward);
 
 		return look_at_matrix;
 	}

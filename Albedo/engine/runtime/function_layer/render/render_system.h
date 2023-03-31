@@ -39,8 +39,10 @@ namespace Runtime
 
 				static UniformBuffer UBO;
 				static time::StopWatch timer{};
-				UBO.matrix_model = make_rotation_matrix(WORLD_AXIS_Z, ONE_RADIAN * timer.split().milliseconds());
-				UBO.matrix_viewing = m_camera.GetViewingMatrix();
+
+				UBO.matrix_model = make_rotation_matrix(WORLD_AXIS_Z, 0.1 * ONE_RADIAN * timer.split().milliseconds());
+				UBO.matrix_view = m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
+				UBO.matrix_projection = m_camera.GetProjectionMatrix();
 
 				current_frame_state.m_uniform_buffer->Write(&UBO);
 				current_frame_state.m_uniform_buffer_descriptor_set->WriteBuffer(
