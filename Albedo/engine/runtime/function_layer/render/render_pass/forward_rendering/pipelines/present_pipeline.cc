@@ -20,7 +20,7 @@ namespace Runtime
 		// Descriptor Set
 		std::vector<VkDescriptorSet> descriptorSets
 		{ 
-			*(frame_state.m_uniform_buffer_descriptor_set)
+			*(frame_state.m_global_descriptor_set)
 		};
 		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 
 														0, descriptorSets.size(), descriptorSets.data(),
@@ -64,8 +64,9 @@ namespace Runtime
 
 	std::vector<VkDescriptorSetLayout> PresentPipeline::prepare_descriptor_layouts()
 	{
-		auto& layout_UBO =  RenderSystemContext::GetCurrentFrameState().m_uniform_buffer_descriptor_set->GetDescriptorSetLayout();
-		return { layout_UBO };
+		auto& layout_global_descriptor_set = RenderSystemContext::GetCurrentFrameState().m_global_descriptor_set->GetDescriptorSetLayout();
+		
+		return { layout_global_descriptor_set };
 	}
 
 	std::vector<VkPushConstantRange> PresentPipeline::

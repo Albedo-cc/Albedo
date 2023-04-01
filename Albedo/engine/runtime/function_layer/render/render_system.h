@@ -4,8 +4,9 @@
 
 #include "model/model.h"
 #include "camera/camera.h"
-#include <runtime/function_layer/window/window_system.h>
 #include <core/math/math.h>
+#include <runtime/resource_layer/image/image_loader.h>
+#include <runtime/function_layer/window/window_system.h>
 
 #include <AlbedoTime.hpp>
 
@@ -18,6 +19,12 @@ namespace Runtime
 
 	class RenderSystem
 	{
+		enum RenderPasses
+		{
+			render_pass_forward,
+
+			MAX_RENDER_PASS_COUNT
+		};
 	public:
 		RenderSystem() = delete;
 		RenderSystem(std::weak_ptr<WindowSystem> window_system);
@@ -45,10 +52,15 @@ namespace Runtime
 				UBO.matrix_projection = m_camera.GetProjectionMatrix();
 
 				current_frame_state.m_uniform_buffer->Write(&UBO);
-				current_frame_state.m_uniform_buffer_descriptor_set->WriteBuffer(
+				current_frame_state.m_global_descriptor_set->WriteBuffer(
 					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-					RenderSystemContext::uniform_buffer_binding_matrics,
+					RenderSystemContext::global_descriptor_set_binding_matrics,
 					current_frame_state.m_uniform_buffer);
+
+				current_frame_state.m_global_descriptor_set->WriteImage(
+					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					RenderSystemContext::global_descriptor_set_binding_textures,
+					m_image);
 
 				current_commandbuffer->Begin();
 				{
@@ -79,18 +91,13 @@ namespace Runtime
 		}
 
 	private:
-		std::shared_ptr<RHI::VulkanContext> m_vulkan_context; // Make sure that this context will be released at last.
+		std::shared_ptr<RHI::VulkanContext> m_vulkan_context; // Make sure that vulkan context will be released at last.
 		std::weak_ptr<WindowSystem> m_window_system;
 		Camera m_camera;
 
 		std::vector<Model> m_models;
+		std::shared_ptr<RHI::VMA::Image> m_image;
 
-		enum RenderPasses
-		{
-			render_pass_forward,
-			
-			MAX_RENDER_PASS_COUNT
-		};
 		std::vector<std::unique_ptr<RHI::RenderPass>> m_render_passes;
 		std::shared_ptr<RHI::FramebufferPool>	m_framebuffer_pool;
 
@@ -101,6 +108,7 @@ namespace Runtime
 		void create_render_passes();
 
 		void load_models();
+		void load_images();
 
 		void handle_window_resize();
 	};

@@ -20,8 +20,9 @@ namespace Runtime
 		create_render_passes();
 		// Framebuffers
 		create_framebuffer_pool();
-		// Load Models
+		// Load Assets
 		load_models();
+		load_images();
 	}
 
 	uint32_t RenderSystem::wait_for_next_image_index(FrameState& current_frame_state)
@@ -68,11 +69,11 @@ namespace Runtime
 	{
 		static std::vector<ModelVertex> 
 		triangle_vertices
-		{	// [ X		Y]		[ R		G		  B ]
-			{ {-0.5f, -0.5f},	{1.0f, 1.0f, 1.0f} },
-			{ {0.5f, -0.5f},	{0.0f, 1.0f, 0.0f} },
-			{ {0.5f, 0.5f},	{0.0f, 0.0f, 1.0f} },
-			{ {-0.5f, 0.5f},	{1.0f, 1.0f, 1.0f} }
+		{	// [ X		Y]		[ R		G		  B ]	  [ U		   V]
+			{ {-0.5f, -0.5f},	{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f} },
+			{ {0.5f, -0.5f},	{0.0f, 1.0f, 0.0f}, {0.0f, 0.0f} },
+			{ {0.5f, 0.5f},	{0.0f, 0.0f, 1.0f}, {0.0f, 1.0f} },
+			{ {-0.5f, 0.5f},	{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f} }
 		};
 		static std::vector<ModelVertexIndex>
 		triangle_indices
@@ -80,6 +81,19 @@ namespace Runtime
 			0, 1, 2, 2, 3, 0
 		};
 		m_models.emplace_back(m_vulkan_context, triangle_vertices, triangle_indices, 0);
+	}
+
+	void RenderSystem::load_images()
+	{
+		auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
+
+		auto image_data = ImageLoader::Load("resource/image/watch_tower_512x512.png");
+		m_image  = m_vulkan_context->m_memory_allocator->
+								AllocateImage(image_data->width, image_data->height, image_data->channel,
+								VK_FORMAT_R8G8B8A8_SRGB,
+								VK_IMAGE_USAGE_SAMPLED_BIT);
+		m_image->Write(image_data->data);
+		m_image->BindSampler(sampler);
 	}
 
 	void RenderSystem::handle_window_resize()

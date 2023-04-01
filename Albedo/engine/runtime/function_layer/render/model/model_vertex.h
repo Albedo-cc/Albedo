@@ -14,9 +14,17 @@ namespace Runtime
 	using ModelVertexIndex = uint32_t; // VK_INDEX_TYPE_UINT32
 	struct ModelVertex
 	{
-		static const uint16_t ATTRIBUTE_COUNT = 2; // Equals to the varibles in Model Vertex
+		enum AttributeDescription
+		{
+			attribute_description_position,
+			attribute_description_color,
+			attribute_description_texture_coordinate,
+
+			MAX_ATTRIBUTE_DESCRIPTION_COUNT
+		};
 		alignas(16) Vector2f m_positon;
 		alignas(16) Vector3f m_color;
+		alignas(16) Vector2f m_texture_coord;
 
 		// Binding Description & Attribute Description
 		static VkVertexInputBindingDescription&
@@ -31,25 +39,32 @@ namespace Runtime
 			return vertexInputBindingDescription;
 		}
 		
-		static std::array<VkVertexInputAttributeDescription, ATTRIBUTE_COUNT>&
+		static std::array<VkVertexInputAttributeDescription, MAX_ATTRIBUTE_DESCRIPTION_COUNT>&
 			GetAttributeDescription(uint32_t binding)
 		{
-			static std::array<VkVertexInputAttributeDescription, ATTRIBUTE_COUNT>
+			static std::array<VkVertexInputAttributeDescription, MAX_ATTRIBUTE_DESCRIPTION_COUNT>
 				vertexInputAttributeDescription
 			{
 				VkVertexInputAttributeDescription
 				{
-					.location = 0,
+					.location = attribute_description_position,
 					.binding = binding,
 					.format = VK_FORMAT_R32G32_SFLOAT,
 					.offset = offsetof(ModelVertex, m_positon)
 				},
 				VkVertexInputAttributeDescription
 				{
-					.location = 1,
+					.location = attribute_description_color,
 					.binding = binding,
 					.format = VK_FORMAT_R32G32B32_SFLOAT,
 					.offset = offsetof(ModelVertex, m_color)
+				},
+				VkVertexInputAttributeDescription
+				{
+					.location = attribute_description_texture_coordinate,
+					.binding = binding,
+					.format = VK_FORMAT_R32G32_SFLOAT,
+					.offset = offsetof(ModelVertex, m_texture_coord)
 				}
 			};
 			return vertexInputAttributeDescription;

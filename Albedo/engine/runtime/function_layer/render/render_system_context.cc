@@ -20,11 +20,14 @@ namespace Runtime
 		m_descriptor_pool = vulkan_context->CreateDescriptorPool(std::vector<VkDescriptorPoolSize>
 		{
 			VkDescriptorPoolSize // Uniform Buffers
-			{.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = MAX_FRAME_IN_FLIGHT}
+			{.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = MAX_FRAME_IN_FLIGHT},
+			VkDescriptorPoolSize // Image Samplers
+			{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = MAX_FRAME_IN_FLIGHT }
 		}, MAX_FRAME_IN_FLIGHT);
 
 		// Frame States
 		m_frame_states.reserve(MAX_FRAME_IN_FLIGHT);
+
 		for (int i = 0; i < MAX_FRAME_IN_FLIGHT; ++i)
 		{
 			auto& state = m_frame_states.emplace_back();
@@ -34,14 +37,21 @@ namespace Runtime
 			state.m_command_buffer = m_command_pool_resetable->AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 			state.m_uniform_buffer = vulkan_context->m_memory_allocator->AllocateBuffer
 			(sizeof(UniformBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
-			state.m_uniform_buffer_descriptor_set = m_descriptor_pool->AllocateDescriptorSet(std::vector<VkDescriptorSetLayoutBinding>
+			state.m_global_descriptor_set = m_descriptor_pool->AllocateDescriptorSet(std::vector<VkDescriptorSetLayoutBinding>
 			{
 				VkDescriptorSetLayoutBinding
 				{
-					.binding = uniform_buffer_binding_matrics,
+					.binding = global_descriptor_set_binding_matrics,
 					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 					.descriptorCount = 1, // Not Array
 					.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+				},
+				VkDescriptorSetLayoutBinding
+				{
+					.binding = global_descriptor_set_binding_textures,
+					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 				}
 			});
 		}

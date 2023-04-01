@@ -12,9 +12,10 @@ namespace Runtime
 	public:
 		static constexpr const uint32_t MAX_FRAME_IN_FLIGHT = 2;
 
-		enum UniformBufferBinding
+		enum GlobalDescriptorSetBinding
 		{
-			uniform_buffer_binding_matrics,
+			global_descriptor_set_binding_matrics,
+			global_descriptor_set_binding_textures,
 
 			MAX_UNIFORM_BUFFER_BINDING_COUNT
 		};
