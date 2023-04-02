@@ -3,6 +3,11 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
+#define GLM_FORCE_RADIANS 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
+
 namespace Albedo{
 namespace Core
 {
@@ -12,11 +17,11 @@ namespace Core
 
 	// PI
 	constexpr Radian PI = 3.141592653589793;	// 180
-	constexpr Radian PI_HALF			= PI	/ 2.0;		// 90
-	constexpr Radian PI_QUARTER	= PI	/ 4.0;		// 45
-	constexpr Radian PI_SIXTHS		= PI / 6.0;		// 30
-	constexpr Radian TWO_PI			= PI * 2.0;		// 360
-	constexpr Radian ONE_RADIAN = PI / 180.0;	// 1
+	constexpr Radian PI_HALF				= PI	/ 2.0;		// 90
+	constexpr Radian PI_QUARTER		= PI	/ 4.0;		// 45
+	constexpr Radian PI_SIXTHS			= PI / 6.0;		// 30
+	constexpr Radian TWO_PI				= PI * 2.0;		// 360
+	constexpr Radian ONE_DEGREE	= PI / 180.0;	// 1
 
 	// Graphics
 	Matrix4f make_look_at_matrix(const Vector3f& position, const Vector3f& target, const Vector3f& upward_direction);

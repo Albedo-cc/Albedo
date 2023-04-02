@@ -11,8 +11,8 @@ namespace Runtime
 	class Camera
 	{
 		static constexpr float MAX_FAR_PLANE = 65535.0; // If Z-Buffer is 16bits
-		static constexpr float MAX_FOV_Y	= 89 * ONE_RADIAN;
-		static constexpr float MIN_FOV_Y	= 10 * ONE_RADIAN;
+		static constexpr float MAX_FOV_Y	= 89 * ONE_DEGREE;
+		static constexpr float MIN_FOV_Y	= 10 * ONE_DEGREE;
 	public:
 		enum class ProjectionMode { ORTHOGRAPHICS, PERSPECTIVE };
 		struct Parameter
@@ -20,11 +20,11 @@ namespace Runtime
 			ProjectionMode projection_mode;
 			Vector3f position			{ WORLD_CENTER };
 			Vector3f target				{ -WORLD_AXIS_Z };
-			Vector3f upward			{ -WORLD_AXIS_Y };
+			Vector3f upward			{ WORLD_AXIS_Y };
 			
-			float FOV = MAX_FOV_Y;
+			float FOV = 45 * ONE_DEGREE;
 			float aspect_ratio;
-			float plane_near{ -0.1 }, plane_far{ -100.0 };
+			float plane_near{ 0.1 }, plane_far{ 100.0 };
 		};
 		Camera(std::shared_ptr<RHI::VulkanContext> vulkan_context, ProjectionMode mode = ProjectionMode::PERSPECTIVE);
 

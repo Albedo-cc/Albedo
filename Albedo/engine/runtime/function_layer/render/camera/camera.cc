@@ -35,9 +35,7 @@ namespace Runtime
 
 	Matrix4f Camera::GetViewMatrix()
 	{
-		Matrix4f view =  make_look_at_matrix(m_parameters.position, m_parameters.target, m_parameters.upward);;
-		view.row(1) *= -1.0; // Vulkan Y-Flip
-		return view;
+		return make_look_at_matrix(m_parameters.position, m_parameters.target, m_parameters.upward);;
 	}
 
 	Matrix4f Camera::GetProjectionMatrix()

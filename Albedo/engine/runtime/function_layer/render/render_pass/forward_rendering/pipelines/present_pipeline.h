@@ -27,14 +27,15 @@ namespace Runtime
 
 	private:
 		virtual std::vector<VkDescriptorSetLayout>  						prepare_descriptor_layouts() override;
-		virtual std::vector<VkPushConstantRange>						prepare_push_constant_state()  override;
+		//virtual std::vector<VkPushConstantRange>						prepare_push_constant_state()  override;
 
 		virtual std::vector<VkPipelineShaderStageCreateInfo>		prepare_shader_stage_state() override;
 		virtual VkPipelineVertexInputStateCreateInfo						prepare_vertex_input_state() override;
 		virtual VkPipelineInputAssemblyStateCreateInfo				prepare_input_assembly_state() override;
+		//virtual VkPipelineTessellationStateCreateInfo					prepare_tessellation_state() override;
 		virtual VkPipelineViewportStateCreateInfo							prepare_viewport_state() override;
 		virtual VkPipelineRasterizationStateCreateInfo					prepare_rasterization_state() override;
-		virtual VkPipelineMultisampleStateCreateInfo					prepare_multisampling_state() override;
+		//virtual VkPipelineMultisampleStateCreateInfo				prepare_multisampling_state() override;
 		virtual VkPipelineDepthStencilStateCreateInfo					prepare_depth_stencil_state() override;
 		virtual VkPipelineColorBlendStateCreateInfo						prepare_color_blend_state() override;
 		virtual VkPipelineDynamicStateCreateInfo							prepare_dynamic_state() override;

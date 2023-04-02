@@ -22,7 +22,7 @@ namespace Runtime
 
 			MAX_ATTRIBUTE_DESCRIPTION_COUNT
 		};
-		alignas(16) Vector2f m_positon;
+		alignas(16) Vector3f m_positon;
 		alignas(16) Vector3f m_color;
 		alignas(16) Vector2f m_texture_coord;
 
@@ -49,7 +49,7 @@ namespace Runtime
 				{
 					.location = attribute_description_position,
 					.binding = binding,
-					.format = VK_FORMAT_R32G32_SFLOAT,
+					.format = VK_FORMAT_R32G32B32_SFLOAT,
 					.offset = offsetof(ModelVertex, m_positon)
 				},
 				VkVertexInputAttributeDescription

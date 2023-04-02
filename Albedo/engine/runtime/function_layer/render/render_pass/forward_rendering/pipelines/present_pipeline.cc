@@ -69,12 +69,6 @@ namespace Runtime
 		return { layout_global_descriptor_set };
 	}
 
-	std::vector<VkPushConstantRange> PresentPipeline::
-		prepare_push_constant_state()
-	{
-		return {};
-	}
-
 	VkPipelineVertexInputStateCreateInfo	 PresentPipeline::
 		prepare_vertex_input_state()
 	{
@@ -145,31 +139,21 @@ namespace Runtime
 		};
 	}
 
-	VkPipelineMultisampleStateCreateInfo PresentPipeline::
-		prepare_multisampling_state()
-	{
-		return VkPipelineMultisampleStateCreateInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-			.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-			.sampleShadingEnable = VK_FALSE,
-			.minSampleShading = 1.0f,
-			.pSampleMask = nullptr,
-			.alphaToCoverageEnable = VK_FALSE,
-			.alphaToOneEnable = VK_FALSE
-		};
-	}
-
 	VkPipelineDepthStencilStateCreateInfo PresentPipeline::
 		prepare_depth_stencil_state()
 	{
 		return VkPipelineDepthStencilStateCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-			.depthTestEnable = VK_FALSE,
-			.depthWriteEnable = VK_FALSE,
-			.depthBoundsTestEnable = VK_FALSE,
-			.stencilTestEnable = VK_FALSE
+			.depthTestEnable = VK_TRUE,
+			.depthWriteEnable = VK_TRUE,
+			.depthCompareOp = VK_COMPARE_OP_LESS, // Keep fragments, which has lower depth
+			.depthBoundsTestEnable = VK_FALSE,  // Only keep fragments that fall within the specified depth range.
+			.stencilTestEnable = VK_FALSE,
+			.front = {},
+			.back = {},
+			.minDepthBounds = 0.0,
+			.maxDepthBounds = 1.0
 		};
 	}
 

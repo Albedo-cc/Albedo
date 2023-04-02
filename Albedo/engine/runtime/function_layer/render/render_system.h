@@ -37,19 +37,30 @@ namespace Runtime
 			current_frame_state.m_fence_in_flight->Wait();
 			try
 			{
-				auto next_image_index = wait_for_next_image_index(current_frame_state);
-
+				wait_for_next_image_index(current_frame_state);
 				current_frame_state.m_fence_in_flight->Reset();
 
 				auto& current_commandbuffer = current_frame_state.m_command_buffer;
-				auto& current_framebuffer = m_framebuffer_pool->GetFramebuffer(next_image_index);
 
 				static UniformBuffer UBO;
 				static time::StopWatch timer{};
 
-				UBO.matrix_model = make_rotation_matrix(WORLD_AXIS_Z, 0.1 * ONE_RADIAN * timer.split().milliseconds());
-				UBO.matrix_view = m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
-				UBO.matrix_projection = m_camera.GetProjectionMatrix();
+				UBO.matrix_model =	glm::rotate(glm::mat4x4(1.0f),
+														0.1f * (float)ONE_DEGREE * static_cast<float>(timer.split().milliseconds()),
+														glm::vec3(0.0f, 0.0f, 1.0f));
+
+					//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
+				UBO.matrix_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
+																		glm::vec3(0.0f, 0.0f, 0.0f),
+																		glm::vec3(0.0f, 0.0f, 1.0f));
+					//m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
+				UBO.matrix_projection = glm::perspective(glm::radians(45.0f),
+															(float)m_vulkan_context->m_swapchain_current_extent.width /
+															(float)m_vulkan_context->m_swapchain_current_extent.height,
+															0.1f,
+															10.0f);
+				UBO.matrix_projection[1][1] *= -1.0f;
+					//m_camera.GetProjectionMatrix();
 
 				current_frame_state.m_uniform_buffer->Write(&UBO);
 				current_frame_state.m_global_descriptor_set->WriteBuffer(
@@ -66,7 +77,7 @@ namespace Runtime
 				{
 					for (auto& render_pass : m_render_passes)
 					{
-						render_pass->Begin(current_commandbuffer, current_framebuffer);
+						render_pass->Begin(current_commandbuffer);
 						render_pass->Render(current_commandbuffer);
 						for (auto& model : m_models) model.Draw(*current_commandbuffer);
 						render_pass->End(current_commandbuffer);
@@ -99,18 +110,15 @@ namespace Runtime
 		std::shared_ptr<RHI::VMA::Image> m_image;
 
 		std::vector<std::unique_ptr<RHI::RenderPass>> m_render_passes;
-		std::shared_ptr<RHI::FramebufferPool>	m_framebuffer_pool;
 
 	private:
-		uint32_t wait_for_next_image_index(FrameState& current_frame_state);
+		void wait_for_next_image_index(FrameState& current_frame_state);
 
-		void create_framebuffer_pool();
 		void create_render_passes();
+		void handle_window_resize();
 
 		void load_models();
 		void load_images();
-
-		void handle_window_resize();
 	};
 
 }} // namespace Albedo::Runtime

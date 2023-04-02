@@ -35,3 +35,7 @@ if (NOT TARGET stb_image)
     add_subdirectory(stb_image-2023.1.29)
     target_link_libraries(AlbedoExternalLibraries INTERFACE stb_image)
 endif()
+
+add_subdirectory(glm)
+target_include_directories(glm INTERFACE glm)
+target_link_libraries(AlbedoExternalLibraries INTERFACE glm)
