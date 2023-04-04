@@ -36,6 +36,17 @@ if (NOT TARGET stb_image)
     target_link_libraries(AlbedoExternalLibraries INTERFACE stb_image)
 endif()
 
+# Tiny glTF
+if (NOT TARGET tinygltf)
+    message(STATUS "\nLoading Tiny glTF (tinygltf)")
+    option(TINYGLTF_BUILD_LOADER_EXAMPLE "Build loader_example(load glTF and dump infos)" OFF)
+    set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
+    set(TINYGLTF_INSTALL OFF CACHE INTERNAL "" FORCE)
+    add_subdirectory(tinygltf-2.8.5)
+    target_link_libraries(AlbedoExternalLibraries INTERFACE tinygltf)
+endif()
+
+###DELETE
 add_subdirectory(glm)
 target_include_directories(glm INTERFACE glm)
 target_link_libraries(AlbedoExternalLibraries INTERFACE glm)

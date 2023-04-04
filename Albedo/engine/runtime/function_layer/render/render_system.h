@@ -1,17 +1,13 @@
 #pragma once
+#include <AlbedoTime.hpp>
 
 #include "render_system_context.h"
 
 #include "model/model.h"
 #include "camera/camera.h"
 #include <core/math/math.h>
-#include <runtime/resource_layer/image/image_loader.h>
+#include <runtime/asset_layer/asset_manager.h>
 #include <runtime/function_layer/window/window_system.h>
-
-#include <AlbedoTime.hpp>
-
-#include <memory>
-#include <iostream>
 
 namespace Albedo {
 namespace Runtime
@@ -117,8 +113,10 @@ namespace Runtime
 		void create_render_passes();
 		void handle_window_resize();
 
+		std::vector<std::shared_ptr<LoadImageTask>> begin_loading_images();
+		void end_loading_images(std::vector<std::shared_ptr<LoadImageTask>> image_tasks);
+
 		void load_models();
-		void load_images();
 	};
 
 }} // namespace Albedo::Runtime
