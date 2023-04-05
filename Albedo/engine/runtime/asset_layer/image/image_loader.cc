@@ -1,10 +1,18 @@
 #include "image_loader.h"
 
+#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#include <AlbedoLog.hpp>
 
 namespace Albedo {
 namespace Runtime
 {
+
+	Image::~Image()
+	{
+		stbi_image_free(data);
+	}
 
 	std::shared_ptr<Image> ImageLoader::LoadTexture2D(std::string_view image_path)
 	{

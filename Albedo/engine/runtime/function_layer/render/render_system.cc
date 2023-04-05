@@ -11,15 +11,14 @@ namespace Runtime
 		m_window_system{ std::move(window_system) },
 		m_camera{ m_vulkan_context }
 	{
-		// Initialize Render System Context
-		RenderSystemContext::Initialize(m_vulkan_context);
-
 		// Async Loading Assets
 		auto image_tasks = begin_loading_images();
 
+		// Initialize Render System Context
+		RenderSystemContext::Initialize(m_vulkan_context);
+
 		// Render Passes
 		create_render_passes();
-
 
 		// Load Assets
 		load_models();
@@ -70,16 +69,16 @@ namespace Runtime
 	std::vector<std::shared_ptr<LoadImageTask>> RenderSystem::
 		begin_loading_images()
 	{
-		//auto image_data = AssetManager::instance().LoadTexture2D("watch_tower_512x512.png");
 		std::vector<std::shared_ptr<LoadImageTask>> image_tasks(1);
-		image_tasks[0] = AssetManager::instance().AsyncLoadTexture2D("watch_tower_512x512.png");
+		image_tasks[0] = AssetManager::instance().AsyncLoadTexture2D("watchtower.jpg");
+		//image_tasks[0] = AssetManager::instance().AsyncLoadTexture2D("watch_tower_512x512.png");
 		return image_tasks;
 	}
 
 	void RenderSystem::end_loading_images(std::vector<std::shared_ptr<LoadImageTask>> image_tasks)
 	{
 		auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
-
+		
 		for (auto& image_task : image_tasks)
 		{
 			auto image_data = image_task->WaitResult();
