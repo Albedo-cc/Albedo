@@ -55,7 +55,8 @@ namespace Runtime
 				// Get the local node matrix, it's either made up from translation, rotation, scale or a 4x4 matrix
 				if (src_node.matrix.size() == 16)
 				{
-					node->matrix = Matrix4f(src_node.matrix.data());
+					std::vector<float> vec(src_node.matrix.begin(), src_node.matrix.end());
+					node->matrix = Matrix4f(vec.data()); // Cannot convert double vector to Matrix4f directly.
 				}
 				else
 				{
@@ -202,14 +203,15 @@ namespace Runtime
 					dst_image.width		= src_image.width;
 					dst_image.height		= src_image.height;
 					dst_image.channel	= src_image.component;
-					VkDeviceSize buffer_size = static_cast<VkDeviceSize>(dst_image.width) * dst_image.height * 4;
+					size_t image_area = static_cast<VkDeviceSize>(dst_image.width) * dst_image.height;
+					VkDeviceSize buffer_size = image_area * 4;
 					
 					dst_image.data = new uint8_t[buffer_size];
 					unsigned char* dst_data = dst_image.data;
 					unsigned char* src_data = src_image.image.data();
 					if (src_image.component != 4)
 					{
-						for (size_t i = 0; i < src_image.width * src_image.height; ++i)
+						for (size_t i = 0; i < image_area; ++i)
 						{
 							memcpy(dst_data, src_data, sizeof(uint8_t) * src_image.component);
 							dst_data += 4; // RGBA
@@ -227,7 +229,9 @@ namespace Runtime
 					// Get base color factor
 					if (material.values.find("baseColorFactor") != material.values.end())
 					{
-						model->materials[i].base_color_factor = Vector4f(material.values["baseColorFactor"].ColorFactor().data());
+						auto base_color_factor = material.values["baseColorFactor"].ColorFactor();
+						std::vector<float> baseColor(base_color_factor.begin(), base_color_factor.end());
+						model->materials[i].base_color_factor = Vector4f(baseColor.data());
 					}
 					// Get base color texture index
 					if (material.values.find("baseColorTexture") != material.values.end())

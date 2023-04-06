@@ -74,8 +74,13 @@ namespace Runtime
 					for (auto& render_pass : m_render_passes)
 					{
 						render_pass->Begin(current_commandbuffer);
-						render_pass->Render(current_commandbuffer);
-						for (auto& model : m_models) model.Draw(*current_commandbuffer);
+						auto& pipelines = render_pass->GetGraphicsPipelines();
+						for (auto& pipeline : pipelines)
+						{
+							pipeline->Bind(current_commandbuffer);
+							for (auto& model : m_models) 
+								model.Draw(*current_commandbuffer);
+						}
 						render_pass->End(current_commandbuffer);
 					}
 				}
@@ -113,8 +118,8 @@ namespace Runtime
 		void create_render_passes();
 		void handle_window_resize();
 
-		std::vector<std::shared_ptr<LoadImageTask>> begin_loading_images();
-		void end_loading_images(std::vector<std::shared_ptr<LoadImageTask>> image_tasks);
+		std::vector<std::shared_ptr<ImageFuture>> begin_loading_images();
+		void end_loading_images(std::vector<std::shared_ptr<ImageFuture>> image_tasks);
 
 		void load_models();
 	};

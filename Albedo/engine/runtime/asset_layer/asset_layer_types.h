@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <algorithm>
 #include <string_view>
 
 namespace Albedo {
@@ -38,6 +39,11 @@ namespace Runtime
 		friend class ModelLoader;
 	public:
 		using VertexIndex = uint32_t; // VK_INDEX_TYPE_UINT32
+
+		size_t GetVertexBufferSize() { return vertices.size() * sizeof(Vertex); }
+		size_t GetIndexBufferSize() { return indices.size() * sizeof(VertexIndex); }
+
+	public:
 		struct Vertex
 		{
 			alignas(16) Vector3f position;
@@ -86,8 +92,8 @@ namespace Runtime
 			int32_t imageIndex;
 		};
 
-		std::vector<VertexIndex> indices;
 		std::vector<Vertex> vertices;
+		std::vector<VertexIndex> indices;
 		std::vector<Image> images;
 		std::vector<Texture> textures;
 		std::vector<Material> materials;

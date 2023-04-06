@@ -7,9 +7,9 @@
 namespace Albedo {
 namespace Runtime
 {
-	void PresentPipeline::Draw(std::shared_ptr<RHI::CommandBuffer> command_buffer)
+	void PresentPipeline::Bind(std::shared_ptr<RHI::CommandBuffer> command_buffer)
 	{
-		assert(command_buffer->IsRecording() && "You cannot Draw() before beginning the command buffer!");
+		assert(command_buffer->IsRecording() && "You cannot Bind() before beginning the command buffer!");
 
 		auto& frame_state = RenderSystemContext::GetCurrentFrameState();
 

@@ -5,15 +5,6 @@
 namespace Albedo {
 namespace Runtime
 {
-	void ForwardRenderPass::Render(std::shared_ptr<RHI::CommandBuffer> command_buffer)
-	{
-		assert(command_buffer->IsRecording() && "You cannot Render() before beginning the command buffer!");
-
-		for (auto& graphics_pipeline : m_graphics_pipelines)
-		{
-			graphics_pipeline->Draw(command_buffer);
-		}
-	}
 
 	ForwardRenderPass::ForwardRenderPass(std::shared_ptr<RHI::VulkanContext> vulkan_context):
 		RHI::RenderPass{ vulkan_context }
@@ -141,7 +132,7 @@ namespace Runtime
 		m_graphics_pipelines.resize(MAX_PIPELINE_COUNT);
 		// Present Pipeline
 		auto& present = m_graphics_pipelines[pipeline_present];
-		present = std::make_unique<PresentPipeline>(m_context, m_render_pass, subpass_present);
+		present = new PresentPipeline(m_context, m_render_pass, subpass_present);
 	}
 	
 }} // namespace Albedo::Runtime

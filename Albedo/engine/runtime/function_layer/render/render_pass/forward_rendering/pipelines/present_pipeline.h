@@ -17,7 +17,7 @@ namespace Runtime
 			MAX_SHADER_COUNT
 		};
 	public:
-		virtual void Draw(std::shared_ptr<RHI::CommandBuffer> command_buffer) override;
+		virtual void Bind(std::shared_ptr<RHI::CommandBuffer> command_buffer) override;
 
 	public:
 		PresentPipeline() = delete;

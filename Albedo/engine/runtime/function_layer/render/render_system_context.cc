@@ -61,8 +61,6 @@ namespace Runtime
 	{
 		m_command_pool_resetable.reset();
 		m_descriptor_pool.reset();
-
-		m_frame_states.clear();
 	}
 
 }} // namespace Albedo::Runtime
