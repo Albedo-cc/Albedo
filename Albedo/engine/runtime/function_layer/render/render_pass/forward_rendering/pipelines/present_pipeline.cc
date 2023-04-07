@@ -17,10 +17,9 @@ namespace Runtime
 
 		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 
-		// Descriptor Set
 		VkDescriptorSet descriptorSets = *(frame_state.m_global_descriptor_set);
-		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 
-														0, 1, &descriptorSets, 0, nullptr);
+		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout,
+			0, 1, &descriptorSets, 0, nullptr);
 	}
 
 	PresentPipeline::PresentPipeline(
