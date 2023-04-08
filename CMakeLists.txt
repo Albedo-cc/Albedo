@@ -19,9 +19,10 @@ include(target_put_into_folder)
 target_put_into_folder(Albedo "Albedo")
 
 target_put_into_folder(AlbedoRHI "Albedo/Extern/AlbedoRHI")
-    target_put_into_folder(glfw "Albedo/Extern/AlbedoRHI/Library/GLFW3") 
+    target_put_into_folder(glfw "Albedo/Extern/AlbedoRHI/Library/GLFW3")
         target_put_into_folder(update_mappings "Albedo/Extern/AlbedoRHI/Library/GLFW3") 
     target_put_into_folder(VulkanMemoryAllocator "Albedo/Extern/AlbedoRHI/Library/VMA")
+    target_put_into_folder(spirv-reflect-static "Albedo/Extern/AlbedoRHI/Library/SPIRV-Reflect")
 
 target_put_into_folder(AlbedoLog "Albedo/Extern/AlbedoLog")
     target_put_into_folder(spdlog "Albedo/Extern/AlbedoLog/Library/spdlog")

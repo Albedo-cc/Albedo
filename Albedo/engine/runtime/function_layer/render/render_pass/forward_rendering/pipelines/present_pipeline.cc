@@ -12,14 +12,15 @@ namespace Runtime
 		assert(command_buffer->IsRecording() && "You cannot Bind() before beginning the command buffer!");
 
 		auto& frame_state = RenderSystemContext::GetCurrentFrameState();
-
+		// Dynamic Stages
 		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
 
 		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 
-		VkDescriptorSet descriptorSets = *(frame_state.m_global_descriptor_set);
+		// Descriptor Set
+		VkDescriptorSet descriptorSets[] = { *(frame_state.m_global_descriptor_set) };
 		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout,
-			0, 1, &descriptorSets, 0, nullptr);
+			0, 1, descriptorSets, 0, nullptr);
 	}
 
 	PresentPipeline::PresentPipeline(
@@ -33,36 +34,20 @@ namespace Runtime
 		Initialize();
 	}
 
-	std::vector<VkPipelineShaderStageCreateInfo>	 PresentPipeline::
-		prepare_shader_stage_state()
+	std::array<std::string, PresentPipeline::MAX_SHADER_COUNT> PresentPipeline::
+		prepare_shader_files()
 	{
-		std::vector<VkPipelineShaderStageCreateInfo> shaderInfos(MAX_SHADER_COUNT);
-
-		// Vertex Shader
-		auto vertex_shader = create_shader_module("resource/shader/default.vert.spv");
-		auto& vertex_shader_info = shaderInfos[vertex_shader_present];
-		vertex_shader_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vertex_shader_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertex_shader_info.module = vertex_shader;
-		vertex_shader_info.pName = "main";
-
-		// Fragment Shader
-		auto fragment_shader = create_shader_module("resource/shader/default.frag.spv");
-		auto& fragment_shader_info = shaderInfos[fragment_shader_present];
-		fragment_shader_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		fragment_shader_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragment_shader_info.module = fragment_shader;
-		fragment_shader_info.pName = "main";
-
-		return shaderInfos;
+		std::array<std::string, PresentPipeline::MAX_SHADER_COUNT> shaders;
+		shaders[PresentPipeline::vertex_shader]			= "resource/shader/default.vert.spv";
+		shaders[PresentPipeline::fragment_shader]	= "resource/shader/default.frag.spv";
+		return shaders;
 	}
 
-	std::vector<VkDescriptorSetLayout> PresentPipeline::prepare_descriptor_layouts()
-	{
-		auto& layout_global_descriptor_set = RenderSystemContext::GetCurrentFrameState().m_global_descriptor_set->GetDescriptorSetLayout();
-		
-		return { layout_global_descriptor_set };
-	}
+	//std::vector<VkDescriptorSetLayout> PresentPipeline::prepare_descriptor_layouts()
+	//{
+	//	auto& layout_global_descriptor_set = RenderSystemContext::GetCurrentFrameState().m_global_descriptor_set->GetDescriptorSetLayout();
+	//	return { layout_global_descriptor_set };
+	//}
 
 	VkPipelineVertexInputStateCreateInfo	 PresentPipeline::
 		prepare_vertex_input_state()

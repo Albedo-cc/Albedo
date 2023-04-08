@@ -24,12 +24,14 @@ namespace Runtime
 			MAX_SUBPASS_COUNT
 		};
 
+	public:
 		enum Pipelines : uint32_t
 		{
 			pipeline_present,
 
 			MAX_PIPELINE_COUNT
 		};
+
 	public:
 		ForwardRenderPass() = delete;
 		ForwardRenderPass(std::shared_ptr<RHI::VulkanContext> vulkan_context);

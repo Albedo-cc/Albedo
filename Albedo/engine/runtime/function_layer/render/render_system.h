@@ -9,6 +9,8 @@
 #include <runtime/asset_layer/asset_manager.h>
 #include <runtime/function_layer/window/window_system.h>
 
+#include "render_pass/forward_rendering/forward_render_pass.h"
+
 namespace Albedo {
 namespace Runtime
 {
@@ -71,18 +73,17 @@ namespace Runtime
 
 				current_commandbuffer->Begin();
 				{
-					for (auto& render_pass : m_render_passes)
+					m_render_passes[render_pass_forward]->Begin(current_commandbuffer);
 					{
-						render_pass->Begin(current_commandbuffer);
-						auto& pipelines = render_pass->GetGraphicsPipelines();
-						for (auto& pipeline : pipelines)
+						auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
+
+						pipelines[ForwardRenderPass::pipeline_present]->Bind(current_commandbuffer);
+						for (auto& model : m_models)
 						{
-							pipeline->Bind(current_commandbuffer);
-							for (auto& model : m_models) 
-								model.Draw(*current_commandbuffer);
+							model.Draw(*current_commandbuffer);
 						}
-						render_pass->End(current_commandbuffer);
 					}
+					m_render_passes[render_pass_forward]->End(current_commandbuffer);
 				}
 				current_commandbuffer->End();
 

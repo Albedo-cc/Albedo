@@ -1,7 +1,5 @@
 #include "render_system.h"
 
-#include "render_pass/forward_rendering/forward_render_pass.h"
-
 namespace Albedo {
 namespace Runtime
 {
