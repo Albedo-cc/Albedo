@@ -20,7 +20,7 @@ namespace Runtime
 		std::unique_ptr<RHI::Fence>			m_fence_in_flight;
 		std::unique_ptr<RHI::Semaphore>	m_semaphore_image_available;
 		std::unique_ptr<RHI::Semaphore>	m_semaphore_render_finished;
-		std::shared_ptr<RHI::CommandBuffer> m_command_buffer; // [Q]: Using Reference caused a bug!
+		std::shared_ptr<RHI::CommandBuffer> m_command_buffer;
 		// Global Descriptor Set
 		std::shared_ptr<RHI::DescriptorSet> m_global_descriptor_set;
 		std::shared_ptr<RHI::VMA::Buffer> m_uniform_buffer;

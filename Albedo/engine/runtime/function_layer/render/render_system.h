@@ -24,7 +24,7 @@ namespace Runtime
 	public:
 		RenderSystem() = delete;
 		RenderSystem(std::weak_ptr<WindowSystem> window_system);
-		~RenderSystem() { m_vulkan_context->WaitDeviceIdle(); RenderSystemContext::Stop(); }
+		~RenderSystem() { m_vulkan_context->WaitDeviceIdle(); }
 
 		void Update()
 		{

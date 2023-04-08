@@ -3,15 +3,27 @@
 namespace Albedo {
 namespace Runtime
 {
-	
-	void Canvas::Render(SID scene_id, RHI::GraphicsPipeline* pipeline)
+
+	Canvas::Canvas(std::shared_ptr<RHI::VulkanContext> vulkan_context) :
+		m_vulkan_context{ std::move(vulkan_context) }
 	{
-		pipeline->Bind(m_command_buffer);
+		m_fence_in_flight = m_vulkan_context->CreateFence(VK_FENCE_CREATE_SIGNALED_BIT);
+		m_semaphore_image_available = m_vulkan_context->CreateSemaphore(0x0);
+		m_semaphore_render_finished = m_vulkan_context->CreateSemaphore(0x0);
+	}
+	
+	void Canvas::Render(SID scene_id, std::shared_ptr<RHI::CommandBuffer> commandBuffer, RHI::GraphicsPipeline* pipeline)
+	{
+		m_fence_in_flight->Wait();
+		m_vulkan_context->NextSwapChainImageIndex(*m_semaphore_image_available, VK_NULL_HANDLE);
+		m_fence_in_flight->Reset();
+
+		pipeline->Bind(commandBuffer);
 		// vkCmdBindDescriptorSets
 		auto& scene = m_scenes[scene_id];
 	}
 
-	void Canvas::LoadScene(std::shared_ptr<SModel> scene_data)
+	Canvas::SID Canvas::LoadScene(std::shared_ptr<SModel> scene_data, std::shared_ptr<RHI::DescriptorPool> descriptorPool)
 	{
 		auto& new_scene = m_scenes.emplace_back();
 
@@ -43,6 +55,8 @@ namespace Runtime
 							image.width, image.height, image.channel,
 							VK_FORMAT_R8G8B8A8_SRGB);
 			texture->BindSampler(sampler); // Q: All images in gtTF are used as textures(with a sampler)?
+
+			return m_scenes.size() - 1;
 		}
 		
 		auto commandBuffer = m_vulkan_context->GetOneTimeCommandBuffer();

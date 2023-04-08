@@ -57,10 +57,4 @@ namespace Runtime
 		}
 	}
 
-	void RenderSystemContext::Stop()
-	{
-		m_command_pool_resetable.reset();
-		m_descriptor_pool.reset();
-	}
-
 }} // namespace Albedo::Runtime

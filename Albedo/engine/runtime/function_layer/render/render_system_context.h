@@ -32,7 +32,6 @@ namespace Runtime
 
 	private: // Interfaces for RenderSystem
 		static void Initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context);
-		static void Stop();
 		static void SwitchToNextFrame() { m_current_frame = (m_current_frame + 1) % MAX_FRAME_IN_FLIGHT; }
 	};
 

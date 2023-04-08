@@ -18,13 +18,9 @@ namespace Runtime
 		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 
 		// Descriptor Set
-		std::vector<VkDescriptorSet> descriptorSets
-		{ 
-			*(frame_state.m_global_descriptor_set)
-		};
+		VkDescriptorSet descriptorSets = *(frame_state.m_global_descriptor_set);
 		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 
-														0, descriptorSets.size(), descriptorSets.data(),
-														0, nullptr);
+														0, 1, &descriptorSets, 0, nullptr);
 	}
 
 	PresentPipeline::PresentPipeline(
