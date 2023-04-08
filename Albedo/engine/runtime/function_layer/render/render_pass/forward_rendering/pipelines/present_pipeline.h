@@ -26,7 +26,7 @@ namespace Runtime
 									 VkPipeline base_pipeline = VK_NULL_HANDLE, int32_t base_pipeline_index = -1);
 
 	private:
-		//virtual std::vector<VkDescriptorSetLayout>  						prepare_descriptor_layouts() override;
+		//virtual std::vector<VkDescriptorSetLayout>  					prepare_descriptor_layouts() override;
 		//virtual std::vector<VkPushConstantRange>						prepare_push_constant_state()  override;
 		virtual std::array<std::string, MAX_SHADER_COUNT>		prepare_shader_files() override;
 		virtual VkPipelineVertexInputStateCreateInfo						prepare_vertex_input_state() override;
