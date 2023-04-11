@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
+
 #include <core/math/math.h>
 
 #include <memory>
@@ -34,11 +36,13 @@ namespace Runtime
 		~Image();
 	};
 
-	class SModel // glTF (https://github.com/SaschaWillems/Vulkan/blob/master/examples/gltfloading/gltfloading.cpp)
+	class Model // glTF (https://github.com/SaschaWillems/Vulkan/blob/master/examples/gltfloading/gltfloading.cpp)
 	{
 		friend class ModelLoader;
 	public:
 		using VertexIndex = uint32_t; // VK_INDEX_TYPE_UINT32
+
+		std::vector<VkVertexInputAttributeDescription> GetAttributeDescription(uint32_t binding);
 
 		size_t GetVertexBufferSize() { return vertices.size() * sizeof(Vertex); }
 		size_t GetIndexBufferSize() { return indices.size() * sizeof(VertexIndex); }

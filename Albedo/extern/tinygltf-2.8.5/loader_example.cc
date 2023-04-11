@@ -418,7 +418,7 @@ static void DumpPbrMetallicRoughness(const tinygltf::PbrMetallicRoughness &pbr,
   std::cout << PrintValue("extras", pbr.extras, indent + 1) << "\n";
 }
 
-static void Dump(const tinygltf::Model &model) {
+static void Dump(const tinygltf::TempModel &model) {
   std::cout << "=== Dump glTF ===" << std::endl;
   std::cout << "asset.copyright          : " << model.asset.copyright
             << std::endl;
@@ -864,7 +864,7 @@ int main(int argc, char **argv) {
     store_original_json_for_extras_and_extensions = true;
   }
 
-  tinygltf::Model model;
+  tinygltf::TempModel model;
   tinygltf::TinyGLTF gltf_ctx;
   std::string err;
   std::string warn;

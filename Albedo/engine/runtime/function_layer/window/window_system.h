@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include <functional>
+
 namespace Albedo {
 namespace Runtime
 {
@@ -17,11 +19,11 @@ namespace Runtime
 		};
 	public:
 		void Update() { glfwPollEvents(); }
+		bool ShouldClose() const { return glfwWindowShouldClose(m_window); }
 
+		static void SetFramebufferResizeCallback(const std::function<void()>& callback){ frame_buffer_resize_callback = callback; }
 		GLFWwindow* GetWindow() const { return m_window; }
 		const Configuration& GetConfiguration() const { return m_config; }
-		bool ShouldClose() const { return glfwWindowShouldClose(m_window); }
-		bool IsResized(bool reset = false) { bool res = m_is_resized;  if (reset) m_is_resized = false; return res; }
 
 		WindowSystem();
 		~WindowSystem();
@@ -29,10 +31,10 @@ namespace Runtime
 	private:
 		GLFWwindow* m_window;
 		Configuration m_config;
-		bool m_is_resized = false;
 
 	private: // Callback Functions
 		static void on_frame_buffer_resize(GLFWwindow* window, int width, int height);
+		static std::function<void()> frame_buffer_resize_callback;
 	};
 
 }} // namespace Albedo::Runtime

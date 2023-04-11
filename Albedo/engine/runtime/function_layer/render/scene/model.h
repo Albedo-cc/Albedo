@@ -8,7 +8,7 @@ namespace Albedo {
 namespace Runtime
 {
 
-	class Model
+	class TempModel
 	{
 	public:
 		Matrix4f GetModelMatrix() const
@@ -32,8 +32,8 @@ namespace Runtime
 		}
 
 	public:
-		Model() = delete;
-		Model(std::shared_ptr<RHI::VulkanContext> vulkan_context,
+		TempModel() = delete;
+		TempModel(std::shared_ptr<RHI::VulkanContext> vulkan_context,
 			std::vector<ModelVertex>& vertices,
 			std::vector<ModelVertexIndex>& indices,
 			uint32_t binding) :

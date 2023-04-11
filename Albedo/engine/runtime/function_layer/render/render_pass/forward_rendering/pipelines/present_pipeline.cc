@@ -1,8 +1,8 @@
 #include "present_pipeline.h"
-#include <runtime/function_layer/render/render_system_context.h>
-#include <runtime/function_layer/render/model/model.h>
 
+#include <runtime/function_layer/render/scene/model_vertex.h>
 #include <AlbedoRHI.hpp>
+#include <runtime/asset_layer/asset_manager.h>
 
 namespace Albedo {
 namespace Runtime
@@ -11,7 +11,6 @@ namespace Runtime
 	{
 		assert(command_buffer->IsRecording() && "You cannot Bind() before beginning the command buffer!");
 
-		auto& frame_state = RenderSystemContext::GetCurrentFrameState();
 		// Dynamic Stages
 		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
 
@@ -33,8 +32,8 @@ namespace Runtime
 		prepare_shader_files()
 	{
 		std::array<std::string, PresentPipeline::MAX_SHADER_COUNT> shaders;
-		shaders[PresentPipeline::vertex_shader]			= "resource/shader/default.vert.spv";
-		shaders[PresentPipeline::fragment_shader]	= "resource/shader/default.frag.spv";
+		shaders[PresentPipeline::vertex_shader]			= AssetManager::get_asset_path_shader() + "default.vert.spv";
+		shaders[PresentPipeline::fragment_shader]	= AssetManager::get_asset_path_shader() + "default.frag.spv";
 		return shaders;
 	}
 

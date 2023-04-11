@@ -3,6 +3,7 @@
 namespace Albedo {
 namespace Runtime
 {
+	std::function<void()> WindowSystem::frame_buffer_resize_callback = nullptr;
 
 	WindowSystem::WindowSystem()
 	{
@@ -28,8 +29,8 @@ namespace Runtime
 	
 	void WindowSystem::on_frame_buffer_resize(GLFWwindow* window, int width, int height)
 	{
-		auto* window_config = reinterpret_cast<WindowSystem*>(glfwGetWindowUserPointer(window));
-		window_config->m_is_resized = true;
+		auto* _window = reinterpret_cast<WindowSystem*>(glfwGetWindowUserPointer(window));
+		if (frame_buffer_resize_callback) _window->frame_buffer_resize_callback();
 	}
 
 }} // namespace Albedo::Runtime

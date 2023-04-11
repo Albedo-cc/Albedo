@@ -2,6 +2,10 @@
 
 #include <AlbedoRHI.hpp>
 
+#include "../scene/model.h" // TEST
+
+#include "palette.h"
+
 namespace Albedo {
 namespace Runtime
 {
@@ -10,25 +14,14 @@ namespace Runtime
 	{
 		friend class Easel;
 	public:
-		std::shared_ptr<RHI::CommandBuffer> BeginPainting() 
-		{ 
-			m_command_buffer->Begin();
-			return m_command_buffer; 
-		}
-		void EndPainting()
-		{
-			m_command_buffer->End();
-			m_command_buffer->Submit(false, *syncmeta.fence_in_flight,
-				{ *syncmeta.semaphore_image_available },
-				{ *syncmeta.semaphore_render_finished },
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-		}
+		std::shared_ptr<RHI::CommandBuffer>	BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass);
+		void																	Paint(RHI::GraphicsPipeline* brush, TempModel& scene); // TEST
+		void																	EndPainting(std::shared_ptr<RHI::RenderPass> renderPass);
+		
+		Palette& GetPalette() { return m_palette; } // Modify Render Data
 
-	private:
+	public:
 		Canvas() = default; // Created and initialized by the Easel
-
-	private:
-		std::shared_ptr<RHI::CommandBuffer> m_command_buffer;
 
 		struct SyncMeta
 		{
@@ -37,6 +30,11 @@ namespace Runtime
 			std::unique_ptr<RHI::Semaphore>	semaphore_render_finished;
 		};
 		SyncMeta syncmeta; // Used by Easel
+
+	private:
+		std::shared_ptr<RHI::VulkanContext> m_vulkan_context;
+		std::shared_ptr<RHI::CommandBuffer> m_command_buffer;
+		Palette m_palette;
 	};
 	
 

@@ -18,23 +18,23 @@
 namespace Albedo {
 namespace Runtime
 {
-	std::shared_ptr<SModel> ModelLoader::
-		LoadModel(std::string_view model_path, AssetUsageFlags usage)
+	std::shared_ptr<Model> ModelLoader::
+		LoadModel(std::string_view model_path)
 	{
 		auto suffix = model_path.substr(model_path.rfind('.'));
 		if (".gltf" == suffix)
 		{
-			return load_model_glTF(model_path, usage);
+			return load_model_glTF(model_path);
 		}
 		else throw std::runtime_error("Failed to load the model - Unsupported Model Format!");
 
 		return nullptr;
 	}
 
-	std::shared_ptr<SModel> ModelLoader::
-		load_model_glTF(std::string_view model_path, AssetUsageFlags usage)
+	std::shared_ptr<Model> ModelLoader::
+		load_model_glTF(std::string_view model_path)
 	{
-		auto model = std::make_shared<SModel>();
+		auto model = std::make_shared<Model>();
 		tinygltf::TinyGLTF glTFContext;
 		tinygltf::Model glTFModel;
 		std::string error, warning;
@@ -46,9 +46,9 @@ namespace Runtime
 
 			// 0. Load Nodes
 			static auto func_load_node =
-				[&](const tinygltf::Node& src_node, std::shared_ptr<SModel::Node> parent, auto&& _func_load_node)->void
+				[&](const tinygltf::Node& src_node, std::shared_ptr<Model::Node> parent, auto&& _func_load_node)->void
 			{
-				auto node = std::make_shared<SModel::Node>();
+				auto node = std::make_shared<Model::Node>();
 				node->parent = parent;
 				node->matrix.setIdentity();
 				auto node_matrix_linear_block = node->matrix.block(0, 0, 3, 3);
@@ -94,7 +94,7 @@ namespace Runtime
 					{
 						auto& primitive = mesh.primitives[i];
 						// Load all of Vertices and Indices in 2 separate buffers.
-						SModel::VertexIndex first_index = static_cast<SModel::VertexIndex>(model->indices.size());
+						Model::VertexIndex first_index = static_cast<Model::VertexIndex>(model->indices.size());
 						uint32_t vertex_start = static_cast<uint32_t>(model->vertices.size());
 						size_t index_count = 0;
 
@@ -192,61 +192,58 @@ namespace Runtime
 				func_load_node(node, nullptr, func_load_node);
 			}
 
-			if (ASSET_USAGE_RENDER_BIT & usage)
+			// 1. Load Images
+			model->images.resize(glTFModel.images.size());
+			for (size_t i = 0; i < glTFModel.images.size(); ++i)
 			{
-				// 1. Load Images
-				model->images.resize(glTFModel.images.size());
-				for (size_t i = 0; i < glTFModel.images.size(); ++i)
-				{
-					auto& src_image = glTFModel.images[i];
-					auto& dst_image = model->images[i];
-					dst_image.width		= src_image.width;
-					dst_image.height		= src_image.height;
-					dst_image.channel	= src_image.component;
-					size_t image_area = static_cast<VkDeviceSize>(dst_image.width) * dst_image.height;
-					VkDeviceSize buffer_size = image_area * 4;
+				auto& src_image = glTFModel.images[i];
+				auto& dst_image = model->images[i];
+				dst_image.width		= src_image.width;
+				dst_image.height		= src_image.height;
+				dst_image.channel	= src_image.component;
+				size_t image_area = static_cast<VkDeviceSize>(dst_image.width) * dst_image.height;
+				VkDeviceSize buffer_size = image_area * 4;
 					
-					dst_image.data = new uint8_t[buffer_size];
-					unsigned char* dst_data = dst_image.data;
-					unsigned char* src_data = src_image.image.data();
-					if (src_image.component != 4)
-					{
-						for (size_t i = 0; i < image_area; ++i)
-						{
-							memcpy(dst_data, src_data, sizeof(uint8_t) * src_image.component);
-							dst_data += 4; // RGBA
-							src_data += src_image.component;
-						}
-					}
-					else memcpy(dst_data, src_data, buffer_size);
-				}
-
-				// 2. Load Materials
-				model->materials.resize(glTFModel.materials.size());
-				for (size_t i = 0; i < glTFModel.materials.size(); ++i)
+				dst_image.data = new uint8_t[buffer_size];
+				unsigned char* dst_data = dst_image.data;
+				unsigned char* src_data = src_image.image.data();
+				if (src_image.component != 4)
 				{
-					auto& material = glTFModel.materials[i];
-					// Get base color factor
-					if (material.values.find("baseColorFactor") != material.values.end())
+					for (size_t i = 0; i < image_area; ++i)
 					{
-						auto base_color_factor = material.values["baseColorFactor"].ColorFactor();
-						std::vector<float> baseColor(base_color_factor.begin(), base_color_factor.end());
-						model->materials[i].base_color_factor = Vector4f(baseColor.data());
-					}
-					// Get base color texture index
-					if (material.values.find("baseColorTexture") != material.values.end())
-					{
-						model->materials[i].base_color_texture_index = material.values["baseColorTexture"].TextureIndex();
+						memcpy(dst_data, src_data, sizeof(uint8_t) * src_image.component);
+						dst_data += 4; // RGBA
+						src_data += src_image.component;
 					}
 				}
+				else memcpy(dst_data, src_data, buffer_size);
+			}
 
-				// 3. Load Textures
-				model->textures.resize(glTFModel.textures.size());
-				for (size_t i = 0; i < glTFModel.textures.size(); ++i)
+			// 2. Load Materials
+			model->materials.resize(glTFModel.materials.size());
+			for (size_t i = 0; i < glTFModel.materials.size(); ++i)
+			{
+				auto& material = glTFModel.materials[i];
+				// Get base color factor
+				if (material.values.find("baseColorFactor") != material.values.end())
 				{
-					auto& texture = glTFModel.textures[i];
-					model->textures[i].imageIndex = texture.source;
+					auto base_color_factor = material.values["baseColorFactor"].ColorFactor();
+					std::vector<float> baseColor(base_color_factor.begin(), base_color_factor.end());
+					model->materials[i].base_color_factor = Vector4f(baseColor.data());
 				}
+				// Get base color texture index
+				if (material.values.find("baseColorTexture") != material.values.end())
+				{
+					model->materials[i].base_color_texture_index = material.values["baseColorTexture"].TextureIndex();
+				}
+			}
+
+			// 3. Load Textures
+			model->textures.resize(glTFModel.textures.size());
+			for (size_t i = 0; i < glTFModel.textures.size(); ++i)
+			{
+				auto& texture = glTFModel.textures[i];
+				model->textures[i].imageIndex = texture.source;
 			}
 		}
 		else throw std::runtime_error("Failed to load model!\nError: " + error + "\nWarn: " + warning);
