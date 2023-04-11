@@ -9,13 +9,15 @@ namespace Runtime
 	class PresentPipeline  final :
 		public RHI::GraphicsPipeline
 	{
-		enum Shader
+	public:
+		enum Shaders
 		{
 			vertex_shader_present,
 			fragment_shader_present,
 
 			MAX_SHADER_COUNT
 		};
+
 	public:
 		virtual void Bind(std::shared_ptr<RHI::CommandBuffer> command_buffer) override;
 

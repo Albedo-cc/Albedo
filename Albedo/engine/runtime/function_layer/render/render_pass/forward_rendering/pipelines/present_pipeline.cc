@@ -16,11 +16,6 @@ namespace Runtime
 		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
 
 		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
-
-		// Descriptor Set
-		VkDescriptorSet descriptorSets[] = { *(frame_state.m_global_descriptor_set) };
-		vkCmdBindDescriptorSets(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout,
-			0, 1, descriptorSets, 0, nullptr);
 	}
 
 	PresentPipeline::PresentPipeline(
@@ -42,12 +37,6 @@ namespace Runtime
 		shaders[PresentPipeline::fragment_shader]	= "resource/shader/default.frag.spv";
 		return shaders;
 	}
-
-	//std::vector<VkDescriptorSetLayout> PresentPipeline::prepare_descriptor_layouts()
-	//{
-	//	auto& layout_global_descriptor_set = RenderSystemContext::GetCurrentFrameState().m_global_descriptor_set->GetDescriptorSetLayout();
-	//	return { layout_global_descriptor_set };
-	//}
 
 	VkPipelineVertexInputStateCreateInfo	 PresentPipeline::
 		prepare_vertex_input_state()
