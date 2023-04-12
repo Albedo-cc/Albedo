@@ -6,70 +6,53 @@ namespace Albedo {
 namespace Runtime
 {
 
-	std::shared_ptr<RHI::CommandBuffer> Canvas::
-		BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass)
+	void Canvas::BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass)
 	{
-		m_command_buffer->Begin();
-		renderPass->Begin(m_command_buffer);
-		return m_command_buffer;
+		command_buffer->Begin();
+		renderPass->Begin(command_buffer);
+		//return command_buffer;
 	}
 
-	void Canvas::Paint(RHI::GraphicsPipeline* brush, TempModel& scene)
+	void	Canvas::Paint(RHI::GraphicsPipeline* brush, Scene& scene)
 	{
-		brush->Bind(m_command_buffer);
+		brush->Bind(command_buffer);
 
-		// TEST (IMAGE)
-		static auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
-		static auto image_data = AssetManager::instance().LoadTexture2D("watch_tower_512x512.png");
+		VkBuffer VBO = *scene.m_vertices;
+		VkBuffer IBO = *scene.m_indices;
+		VkDeviceSize offsets[1] = { 0 };
+		vkCmdBindVertexBuffers(*command_buffer, 0, 1, &VBO, offsets);
+		vkCmdBindIndexBuffer(*command_buffer, IBO, 0, VK_INDEX_TYPE_UINT32);
 
-		static bool k = false;
-		static auto m_image = m_vulkan_context->m_memory_allocator->
-			AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
-				VK_IMAGE_USAGE_SAMPLED_BIT,
-				image_data->width, image_data->height, image_data->channel,
-				VK_FORMAT_R8G8B8A8_SRGB);
-		if (!k)
-		{
-			k = true;
-			m_image->Write(image_data->data);
-			m_image->BindSampler(sampler);
-		}
-
-		// Update UBO (set = 0)
-		m_palette.S0B0_camera_matrics->Write(&m_palette.GetCameraMatrics());
-		m_palette.SET0_ubo->WriteBuffer(
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			Palette::binding_camera_matrics,
-			m_palette.S0B0_camera_matrics);
-
-		// Update Textures (set = 0) [TEST]-=>S"DL:S"DLadwfghewafsdrsfgh
-		m_palette.SET0_ubo->WriteImage(
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			1,
-			m_image);
-
+		// Bind Descriptor Sets
 		std::vector<VkDescriptorSet> boundSets
 		{
-			*m_palette.SET0_ubo // set = 0 (UBO)
+			*palette.SET0_ubo,
+			*palette.SET1_texture
 		};
 
-		vkCmdBindDescriptorSets(*m_command_buffer, 
-			VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			brush->GetPipelineLayout(), 
+		vkCmdBindDescriptorSets(*command_buffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			brush->GetPipelineLayout(),
 			0, boundSets.size(), boundSets.data(),
 			0, nullptr);
 
-		scene.Draw(*m_command_buffer);
+		// Paint Scene
+
 	}
 
 	void Canvas::EndPainting(std::shared_ptr<RHI::RenderPass> renderPass)
 	{
-		renderPass->End(m_command_buffer);
-		m_command_buffer->End();
-		m_command_buffer->Submit(false, *syncmeta.fence_in_flight,
+		renderPass->End(command_buffer);
+		command_buffer->End();
+		command_buffer->Submit(false, *syncmeta.fence_in_flight,
 			{ *syncmeta.semaphore_image_available },
 			{ *syncmeta.semaphore_render_finished },
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	}
+
+	void Canvas::paint_model_node(RHI::GraphicsPipeline* brush, std::shared_ptr<Model::Node> model_node)
+	{
+
 	}
 
 }} // namespace Albedo::Runtime

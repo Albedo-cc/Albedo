@@ -3,6 +3,7 @@
 #include <AlbedoRHI.hpp>
 
 #include "../scene/model.h" // TEST
+#include "../scene/scene.h"
 
 #include "palette.h"
 
@@ -14,14 +15,18 @@ namespace Runtime
 	{
 		friend class Easel;
 	public:
-		std::shared_ptr<RHI::CommandBuffer>	BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass);
-		void																	Paint(RHI::GraphicsPipeline* brush, TempModel& scene); // TEST
-		void																	EndPainting(std::shared_ptr<RHI::RenderPass> renderPass);
-		
-		Palette& GetPalette() { return m_palette; } // Modify Render Data
+		void	BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass);
+		void	Paint(RHI::GraphicsPipeline* brush, Scene& scene);
+		void	EndPainting(std::shared_ptr<RHI::RenderPass> renderPass);
+
+		Palette& GetPalette() { return palette; }
 
 	public:
 		Canvas() = default; // Created and initialized by the Easel
+
+	private:
+		std::shared_ptr<RHI::CommandBuffer> command_buffer;
+		Palette palette;
 
 		struct SyncMeta
 		{
@@ -32,9 +37,7 @@ namespace Runtime
 		SyncMeta syncmeta; // Used by Easel
 
 	private:
-		std::shared_ptr<RHI::VulkanContext> m_vulkan_context;
-		std::shared_ptr<RHI::CommandBuffer> m_command_buffer;
-		Palette m_palette;
+		void paint_model_node(RHI::GraphicsPipeline* brush, std::shared_ptr<Model::Node> model_node);
 	};
 	
 

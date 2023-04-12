@@ -14,6 +14,9 @@ namespace Runtime
 			.projection_mode = mode,
 			.aspect_ratio = static_cast<float>(extent.width) / extent.height
 		};
+
+		m_camera_matrix_buffer = m_vulkan_context->m_memory_allocator->AllocateBuffer(
+			sizeof(CameraMatrics), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
 	}
 
 	Matrix4f Camera::GetViewingMatrix(bool update/* = false*/)

@@ -14,20 +14,21 @@ namespace Runtime
 	public:
 		using CID = size_t; // Canvas ID
 		static constexpr CID MAX_CANVAS_COUNT = 2; // MAX IN-FLIGHT FRAMES
+
 		struct Scene
 		{
 			std::shared_ptr<RHI::VMA::Buffer> vertices;
 			std::shared_ptr<RHI::VMA::Buffer> indices;
-			//std::vector<std::shared_ptr<RHI::Sampler>> samplers; // Future
-			std::vector<std::shared_ptr<RHI::VMA::Image>> textures;
+			//std::vector<std::shared_ptr<RHI::Sampler>> samplers;	[ Future: now all of images share one default sampler ]
+			std::vector<std::shared_ptr<RHI::VMA::Image>>images;
+			std::vector<Model::Texture> textures;
 			std::vector<Model::Material> materials;
-			//std::vector<
 		};
 
 	public:
 		// You must get or present canvas via an easel.
-		Canvas& GetCanvas() throw (RHI::VulkanContext::swapchain_error);
-
+		void SetupTheScene(std::shared_ptr<Model> scene);
+		Canvas& WaitCanvas() throw (RHI::VulkanContext::swapchain_error);
 		void PresentCanvas(bool switch_canvas = true) throw (RHI::VulkanContext::swapchain_error);
 
 	public:
@@ -39,7 +40,7 @@ namespace Runtime
 		std::shared_ptr<RHI::CommandPool> m_command_pool; // Resetable
 		std::shared_ptr<RHI::DescriptorPool> m_descriptor_pool;
 
-		Scene m_scene;
+		std::unique_ptr<Scene> m_scene;
 
 		CID m_current_canvas = 0;
 		std::vector<Canvas> m_canvases;

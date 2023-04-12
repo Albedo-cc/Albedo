@@ -10,29 +10,33 @@ namespace Runtime
 	{
 		try
 		{
-			auto& canvas = m_easel.GetCanvas(); // Wait for Next Canvas
+			auto& canvas = m_easel.WaitCanvas(); // Wait for Next Canvas
 			auto& palette = canvas.GetPalette();
-			
+
 			static time::StopWatch timer{};
 
-			auto& camera_data = palette.GetCameraMatrics();
-			camera_data.matrix_model = glm::rotate(glm::mat4x4(1.0f),
-													0.1f * (float)ONE_DEGREE * static_cast<float>(timer.split().milliseconds()),
-													glm::vec3(0.0f, 0.0f, 1.0f));
+			// Update Camera
+			{
+				auto& camera_data = m_camera.Camera_Matrics;
+				camera_data.matrix_model = glm::rotate(glm::mat4x4(1.0f),
+					0.1f * (float)ONE_DEGREE * static_cast<float>(timer.split().milliseconds()),
+					glm::vec3(0.0f, 0.0f, 1.0f));
 
-			//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
-			camera_data.matrix_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
-																	glm::vec3(0.0f, 0.0f, 0.0f),
-																	glm::vec3(0.0f, 0.0f, 1.0f));
-			//m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
-			camera_data.matrix_projection = glm::perspective(glm::radians(45.0f),
-														(float)m_vulkan_context->m_swapchain_current_extent.width /
-														(float)m_vulkan_context->m_swapchain_current_extent.height,
-														0.1f,
-														10.0f);
-			camera_data.matrix_projection[1][1] *= -1.0f;
+				//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
+				camera_data.matrix_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
+					glm::vec3(0.0f, 0.0f, 0.0f),
+					glm::vec3(0.0f, 0.0f, 1.0f));
+				//m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
+				camera_data.matrix_projection = glm::perspective(glm::radians(45.0f),
+					(float)m_vulkan_context->m_swapchain_current_extent.width /
+					(float)m_vulkan_context->m_swapchain_current_extent.height,
+					0.1f,
+					10.0f);
+				camera_data.matrix_projection[1][1] *= -1.0f;
+			}
+			canvas.GetPalette().SetupCameraMatrics(m_camera.GetCameraMatrics());
 
-			auto cmdbuffer = canvas.BeginPainting(m_render_passes[render_pass_forward]);
+			canvas.BeginPainting(m_render_passes[render_pass_forward]);
 			{
 				auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
 

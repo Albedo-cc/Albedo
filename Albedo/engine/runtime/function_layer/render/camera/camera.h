@@ -28,6 +28,21 @@ namespace Runtime
 		};
 		Camera(std::shared_ptr<RHI::VulkanContext> vulkan_context, ProjectionMode mode = ProjectionMode::PERSPECTIVE);
 
+		// TEST Temp
+		struct CameraMatrics
+		{
+			glm::mat4x4 matrix_model;
+			glm::mat4x4 matrix_view;
+			glm::mat4x4 matrix_projection;
+		};
+		CameraMatrics Camera_Matrics;
+
+		std::shared_ptr<RHI::VMA::Buffer> GetCameraMatrics() 
+		{ 
+			m_camera_matrix_buffer->Write(&Camera_Matrics);
+			return m_camera_matrix_buffer; 
+		}
+
 		void SetProjectionMode(ProjectionMode mode) { m_parameters.projection_mode = mode; GetViewingMatrix(true); }
 		Matrix4f GetViewingMatrix(bool update = false); // = M_Projection * M_View
 		Matrix4f GetViewMatrix();
@@ -38,6 +53,8 @@ namespace Runtime
 		ProjectionMode m_projection_mode;
 		Parameter m_parameters;
 		bool m_is_moved = true;
+
+		std::shared_ptr<RHI::VMA::Buffer> m_camera_matrix_buffer;
 	};
 
 }} // namespace Albedo::Runtime

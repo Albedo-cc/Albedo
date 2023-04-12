@@ -42,20 +42,79 @@ namespace Runtime
 		for (size_t i = 0; i < MAX_CANVAS_COUNT; ++i)
 		{
 			auto& canvas = m_canvases[i];
-			/*---------------0987TEST78986587----------*/ canvas.m_vulkan_context = m_vulkan_context;
-			canvas.m_command_buffer = m_command_pool->AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+			canvas.command_buffer = m_command_pool->AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 			// Descriptor Sets
-			canvas.m_palette.Initialize(m_vulkan_context, m_descriptor_pool);
+			canvas.palette.Initialize(m_vulkan_context, m_descriptor_pool);
 			// Sync Meta
 			canvas.syncmeta.fence_in_flight = m_vulkan_context->CreateFence(VK_FENCE_CREATE_SIGNALED_BIT);
 			canvas.syncmeta.semaphore_image_available = m_vulkan_context->CreateSemaphore(0x0);
 			canvas.syncmeta.semaphore_render_finished = m_vulkan_context->CreateSemaphore(0x0);
 		}
-
-
 	}
 
-	Canvas& Easel::GetCanvas() throw (RHI::VulkanContext::swapchain_error)
+	void Easel::SetupTheScene(std::shared_ptr<Model> scene)
+	{
+		m_scene = std::make_unique<Scene>();
+
+		m_scene->textures = scene->textures;
+		m_scene->materials = scene->materials;
+
+		// Load Data from Scene
+		{
+			// Vertex Buffer
+			auto& vertex_buffer = scene->vertices;
+			m_scene->vertices = m_vulkan_context->m_memory_allocator->
+				AllocateBuffer(scene->GetVertexBufferSize(),
+					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+					VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+			auto staging_buffer_vertex = m_vulkan_context->m_memory_allocator->
+				AllocateStagingBuffer(scene->GetVertexBufferSize());
+			staging_buffer_vertex->Write(vertex_buffer.data());
+
+			// Index Buffer
+			auto& index_buffer = scene->indices;
+			m_scene->indices = m_vulkan_context->m_memory_allocator->
+				AllocateBuffer(scene->GetIndexBufferSize(),
+					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+					VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+			auto staging_buffer_index = m_vulkan_context->m_memory_allocator->
+				AllocateStagingBuffer(scene->GetIndexBufferSize());
+			staging_buffer_index->Write(index_buffer.data());
+
+			// Images
+			static  auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
+			auto& images = scene->images;
+			for (const auto& image : images)
+			{
+				auto texture = m_vulkan_context->m_memory_allocator->
+					AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_SAMPLED_BIT,
+						image.width, image.height, image.channel, VK_FORMAT_R8G8B8A8_SRGB);
+				texture->BindSampler(sampler);
+				m_scene->images.emplace_back(texture);
+			}
+
+			auto commandBuffer = m_vulkan_context->GetOneTimeCommandBuffer();
+			commandBuffer->Begin();
+			vkCmdCopyBuffer(*commandBuffer, *staging_buffer_vertex, *m_scene->vertices, 1, &staging_buffer_vertex->GetCopyInfo());
+			vkCmdCopyBuffer(*commandBuffer, *staging_buffer_index, *m_scene->indices, 1, &staging_buffer_index->GetCopyInfo());
+			for (size_t i = 0; i < m_scene->images.size(); ++i) m_scene->images[i]->WriteCommand(commandBuffer, images[i].data);
+			commandBuffer->End();
+			commandBuffer->Submit(true); // Must wait for transfer operation
+		}
+		
+		// Update Descriptor Sets
+		{
+			for (auto& canvas : m_canvases)
+			{
+				for (auto& image : m_scene->images)
+				{
+					canvas.palette.SetupPBRBaseColor(image);
+				}
+			}
+		} // End Update Descriptor Sets
+	}
+
+	Canvas& Easel::WaitCanvas() throw (RHI::VulkanContext::swapchain_error)
 	{
 		auto& canvas = m_canvases[m_current_canvas];
 		// Sync
@@ -74,52 +133,5 @@ namespace Runtime
 
 		m_current_canvas = (m_current_canvas + switch_canvas) % MAX_CANVAS_COUNT;
 	}
-
-	//void Easel::SetScene(std::shared_ptr<Model> scene_data)
-	//{
-	//		// Create VBO & IBO
-	//		m_scene.vertices = m_vulkan_context->m_memory_allocator->
-	//													AllocateBuffer(scene_data->GetVertexBufferSize(),	
-	//																				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-	//																				VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-	//		auto staging_buffer_vertex = m_vulkan_context->m_memory_allocator->AllocateStagingBuffer(m_scene.vertices->Size());
-	//		auto vertices_copy_info = m_scene.vertices->GetCopyInfo();
-
-	//		m_scene.indices = m_vulkan_context->m_memory_allocator->
-	//													AllocateBuffer(scene_data->GetIndexBufferSize(),
-	//																				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-	//																				VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-	//		auto staging_buffer_index = m_vulkan_context->m_memory_allocator->AllocateStagingBuffer(m_scene.vertices->Size());
-	//		auto indices_copy_info = m_scene.indices->GetCopyInfo();
-
-	//		// Create Textures
-	//		auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
-	//		m_scene.textures.resize(scene_data->images.size());
-	//		for (size_t i = 0; i < scene_data->images.size(); ++i)
-	//		{
-	//			auto& image = scene_data->images[i];
-	//			auto& texture = m_scene.textures[i];
-	//			texture = m_vulkan_context->m_memory_allocator->
-	//							AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
-	//							VK_IMAGE_USAGE_SAMPLED_BIT,
-	//							image.width, image.height, image.channel,
-	//							VK_FORMAT_R8G8B8A8_SRGB);
-	//			texture->BindSampler(sampler); // Q: All images in gtTF are used as textures(with a sampler)?
-	//		}
-	//
-	//		auto commandBuffer = m_vulkan_context->GetOneTimeCommandBuffer();
-	//		commandBuffer->Begin();
-	//		{
-	//			for (size_t i = 0; i < scene_data->images.size(); ++i)
-	//				m_scene.textures[i]->WriteCommand(commandBuffer, scene_data->images[i].data);
-	//			vkCmdCopyBuffer(*commandBuffer, *staging_buffer_vertex, *m_scene.vertices, 1, &vertices_copy_info);
-	//			vkCmdCopyBuffer(*commandBuffer, *staging_buffer_index, *m_scene.indices, 1, &indices_copy_info);
-	//		}
-	//		commandBuffer->End();
-	//		commandBuffer->Submit(true);
-
-	//		// Allocate Descriptor Sets
-
-	//}
 
 }} // namespace Albedo::Runtime
