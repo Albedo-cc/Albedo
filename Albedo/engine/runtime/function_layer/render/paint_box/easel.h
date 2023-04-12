@@ -23,6 +23,7 @@ namespace Runtime
 			std::vector<std::shared_ptr<RHI::VMA::Image>>images;
 			std::vector<Model::Texture> textures;
 			std::vector<Model::Material> materials;
+			std::vector<std::shared_ptr<Model::Node>> nodes;
 		};
 
 	public:

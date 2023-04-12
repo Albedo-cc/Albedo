@@ -1,4 +1,5 @@
 #include "canvas.h"
+#include "easel.h"
 
 #include <runtime/asset_layer/asset_manager.h>
 
@@ -13,12 +14,12 @@ namespace Runtime
 		//return command_buffer;
 	}
 
-	void	Canvas::Paint(RHI::GraphicsPipeline* brush, Scene& scene)
+	void	Canvas::Paint(RHI::GraphicsPipeline* brush, Easel::Scene& scene)
 	{
 		brush->Bind(command_buffer);
 
-		VkBuffer VBO = *scene.m_vertices;
-		VkBuffer IBO = *scene.m_indices;
+		VkBuffer VBO = *scene.vertices;
+		VkBuffer IBO = *scene.indices;
 		VkDeviceSize offsets[1] = { 0 };
 		vkCmdBindVertexBuffers(*command_buffer, 0, 1, &VBO, offsets);
 		vkCmdBindIndexBuffer(*command_buffer, IBO, 0, VK_INDEX_TYPE_UINT32);
@@ -52,7 +53,40 @@ namespace Runtime
 
 	void Canvas::paint_model_node(RHI::GraphicsPipeline* brush, std::shared_ptr<Model::Node> model_node)
 	{
+		if (model_node->mesh.primitives.size() > 0) {
+			// Pass the node's matrix via push constants
+			// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
+			auto& nodeMatrix = model_node->matrix;
+			auto currentParent = model_node->parent.lock();
 
+			while (currentParent) 
+			{
+				nodeMatrix = currentParent->matrix * nodeMatrix;
+				currentParent = currentParent->parent.lock();
+			}
+
+			// Pass the final matrix to the vertex shader using push constants
+			/*vkCmdPushConstants(command_buffer, 
+				brush->GetDescriptorSetLayout(), 
+				VK_SHADER_STAGE_VERTEX_BIT, 
+				0, sizeof(glm::mat4), &nodeMatrix);*/
+
+			for (auto& primitive : model_node->mesh.primitives) 
+			{
+				if (primitive.index_count > 0) 
+				{
+					// Get the texture index for this primitive
+					if (!textures.empty())
+					{
+						VulkanglTFModel::Texture texture = textures[materials[primitive.materialIndex].baseColorTextureIndex];
+						// Bind the descriptor for the current primitive's texture
+						vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &images[texture.imageIndex].descriptorSet, 0, nullptr);
+					}
+					vkCmdDrawIndexed(command_buffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+				}
+			}
+		}
+		for (auto& child : model_node->children) paint_model_node(brush, child);
 	}
 
 }} // namespace Albedo::Runtime

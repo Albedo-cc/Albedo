@@ -58,6 +58,7 @@ namespace Runtime
 
 		m_scene->textures = scene->textures;
 		m_scene->materials = scene->materials;
+		m_scene->nodes = scene->nodes;
 
 		// Load Data from Scene
 		{

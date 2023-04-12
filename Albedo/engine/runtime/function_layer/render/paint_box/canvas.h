@@ -2,9 +2,6 @@
 
 #include <AlbedoRHI.hpp>
 
-#include "../scene/model.h" // TEST
-#include "../scene/scene.h"
-
 #include "palette.h"
 
 namespace Albedo {
@@ -16,7 +13,7 @@ namespace Runtime
 		friend class Easel;
 	public:
 		void	BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass);
-		void	Paint(RHI::GraphicsPipeline* brush, Scene& scene);
+		void	Paint(RHI::GraphicsPipeline* brush, Easel::Scene& scene);
 		void	EndPainting(std::shared_ptr<RHI::RenderPass> renderPass);
 
 		Palette& GetPalette() { return palette; }
