@@ -10,44 +10,47 @@ namespace Runtime
 	{
 		try
 		{
-			auto& canvas = m_easel.WaitCanvas(); // Wait for Next Canvas
+			auto& canvas = m_easel->WaitCanvas(); // Wait for Next Canvas
 			auto& palette = canvas.GetPalette();
 
 			static time::StopWatch timer{};
 
 			// Update Camera
 			{
-				auto& camera_data = m_camera.Camera_Matrics;
-				camera_data.matrix_model = glm::rotate(glm::mat4x4(1.0f),
+				auto& camera_data = m_camera->Camera_Matrics;
+			/*	camera_data.matrix_model = glm::rotate(glm::mat4x4(1.0f),
 					0.1f * (float)ONE_DEGREE * static_cast<float>(timer.split().milliseconds()),
-					glm::vec3(0.0f, 0.0f, 1.0f));
+					glm::vec3(0.0f, 0.0f, 1.0f));*/
 
 				//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
 				camera_data.matrix_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
-					glm::vec3(0.0f, 0.0f, 0.0f),
+					glm::vec3(0.0f, -0.1f, -1.0f),
 					glm::vec3(0.0f, 0.0f, 1.0f));
 				//m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
-				camera_data.matrix_projection = glm::perspective(glm::radians(45.0f),
+				camera_data.matrix_projection = glm::perspective(glm::radians(80.0f),
 					(float)m_vulkan_context->m_swapchain_current_extent.width /
 					(float)m_vulkan_context->m_swapchain_current_extent.height,
 					0.1f,
 					10.0f);
-				camera_data.matrix_projection[1][1] *= -1.0f;
+				camera_data.matrix_projection[1][1] *= -1.0f; // Y-Flip
+
+				auto& light_data = m_camera->Light_Parameters;
+				light_data.light_position = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
+				light_data.view_position = glm::vec4(0.0f, -0.1f, -1.0f, 0.0f);
 			}
-			canvas.GetPalette().SetupCameraMatrics(m_camera.GetCameraMatrics());
+			canvas.GetPalette().SetupCameraMatrics(m_camera->GetCameraMatrics());
+			canvas.GetPalette().SetupLightParameters(m_camera->m_light_parameter_buffer);
 
 			canvas.BeginPainting(m_render_passes[render_pass_forward]);
 			{
 				auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
-
-				for (auto& model : m_models)
-				{
-					canvas.Paint(pipelines[ForwardRenderPass::pipeline_present], model);
-				}
+				canvas.Paint(pipelines[ForwardRenderPass::pipeline_present], m_scene);
 			}
 			canvas.EndPainting(m_render_passes[render_pass_forward]);
 
-			m_easel.PresentCanvas();
+			m_easel->PresentCanvas();
+		/*	std::this_thread::sleep_for(std::chrono::seconds(1));
+			log::debug("Wait 1 s \n\n");*/
 		}
 		catch (RHI::VulkanContext::swapchain_error& swapchian_recreation)
 		{
@@ -58,16 +61,21 @@ namespace Runtime
 	RenderSystem::RenderSystem(std::weak_ptr<WindowSystem> window_system) :
 		m_vulkan_context{ RHI::VulkanContext::Create(window_system.lock()->GetWindow()) },
 		m_window_system{ std::move(window_system) },
-		m_camera{ m_vulkan_context },
-		m_easel{ m_vulkan_context }
+		m_camera{ std::make_shared<Camera>(m_vulkan_context) },
+		m_easel{ std::make_shared<Easel>(m_vulkan_context) },
+		m_scene{ std::make_shared<Scene>(m_vulkan_context) }
 	{
+		//auto scene_future = AssetManager::instance().AsyncLoadModel("FlightHelmet/FlightHelmet.gltf");
+		//auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
+		auto scene_future = AssetManager::instance().AsyncLoadModel("Teapot/Teapot.gltf");
+
 		// Window
 		WindowSystem::SetFramebufferResizeCallback([this]() { handle_window_resize(); });
 
 		// Render Passes
 		create_render_passes();
 
-		load_models();
+		m_scene->Sketch(scene_future->WaitResult());
 	}
 
 	void RenderSystem::create_render_passes()
@@ -77,37 +85,12 @@ namespace Runtime
 		m_render_passes[render_pass_forward] = std::make_shared<ForwardRenderPass>(m_vulkan_context);
 	}
 
-	void RenderSystem::load_models()
-	{
-		static std::vector<ModelVertexIndex>
-		triangle_indices
-		{
-			0, 1, 2, 2, 3, 0,
-			4, 5, 6, 6, 7, 4
-		};
-
-		static std::vector<ModelVertex> 
-		triangle_vertices
-		{	// [ X		Y		  Z ]		[ R		G		  B ]	  [ U		   V]
-			{ {-0.5f, -0.5f, 0.0f},	{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f} },
-			{ {0.5f, -0.5f, 0.0f},		{0.0f, 1.0f, 0.0f}, {0.0f, 0.0f} },
-			{ {0.5f, 0.5f, 0.0f},		{0.0f, 0.0f, 1.0f}, {0.0f, 1.0f} },
-			{ {-0.5f, 0.5f, 0.0f},		{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f} },
-
-			{ {-0.5f, -0.5f, -0.5f},	{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f} },
-			{ {0.5f, -0.5f, -0.5f},	{0.0f, 1.0f, 0.0f}, {0.0f, 0.0f} },
-			{ {0.5f, 0.5f, -0.5f},		{0.0f, 0.0f, 1.0f}, {0.0f, 1.0f} },
-			{ {-0.5f, 0.5f, -0.5f},	{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f} }
-		};
-		m_models.emplace_back(m_vulkan_context, triangle_vertices, triangle_indices, 0);
-	}
-
 	void RenderSystem::handle_window_resize()
 	{
 		log::warn("Window Resized!");
 		m_vulkan_context->RecreateSwapChain();
 		create_render_passes();		 // Recreate Render Passes
-		m_camera.GetViewingMatrix(true); // Update
+		m_camera->GetViewingMatrix(true); // Update
 	}
 
 }} // namespace Albedo::Runtime

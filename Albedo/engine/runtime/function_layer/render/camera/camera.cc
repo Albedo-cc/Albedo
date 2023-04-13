@@ -15,8 +15,12 @@ namespace Runtime
 			.aspect_ratio = static_cast<float>(extent.width) / extent.height
 		};
 
-		m_camera_matrix_buffer = m_vulkan_context->m_memory_allocator->AllocateBuffer(
-			sizeof(CameraMatrics), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
+		m_camera_matrix_buffer = m_vulkan_context->m_memory_allocator->
+			AllocateBuffer(sizeof(CameraMatrics), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
+		log::debug("C Size {} ", m_camera_matrix_buffer->Size());
+		m_light_parameter_buffer = m_vulkan_context->m_memory_allocator->
+			AllocateBuffer(sizeof(LightParameters), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
+		log::debug("L Size {} ", m_light_parameter_buffer->Size());
 	}
 
 	Matrix4f Camera::GetViewingMatrix(bool update/* = false*/)
@@ -38,7 +42,7 @@ namespace Runtime
 
 	Matrix4f Camera::GetViewMatrix()
 	{
-		return make_look_at_matrix(m_parameters.position, m_parameters.target, m_parameters.upward);;
+		return make_look_at_matrix(m_parameters.position, m_parameters.target, m_parameters.upward);
 	}
 
 	Matrix4f Camera::GetProjectionMatrix()

@@ -3,6 +3,16 @@
 namespace Albedo {
 namespace Runtime
 {
+	VkVertexInputBindingDescription Model::
+		GetBindingDescription(uint32_t binding)
+	{
+		return VkVertexInputBindingDescription
+		{
+			.binding = binding,
+			.stride = sizeof(Model::Vertex),
+			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+		};
+	}
 	
 	std::vector<VkVertexInputAttributeDescription> Model::
 		GetAttributeDescription(uint32_t binding)

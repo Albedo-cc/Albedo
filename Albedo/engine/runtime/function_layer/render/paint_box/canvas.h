@@ -3,6 +3,7 @@
 #include <AlbedoRHI.hpp>
 
 #include "palette.h"
+#include "scene.h"
 
 namespace Albedo {
 namespace Runtime
@@ -13,7 +14,7 @@ namespace Runtime
 		friend class Easel;
 	public:
 		void	BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass);
-		void	Paint(RHI::GraphicsPipeline* brush, Easel::Scene& scene);
+		void	Paint(RHI::GraphicsPipeline* brush, std::shared_ptr<Scene> scene);
 		void	EndPainting(std::shared_ptr<RHI::RenderPass> renderPass);
 
 		Palette& GetPalette() { return palette; }
@@ -22,6 +23,7 @@ namespace Runtime
 		Canvas() = default; // Created and initialized by the Easel
 
 	private:
+		std::weak_ptr<Scene> last_scene;
 		std::shared_ptr<RHI::CommandBuffer> command_buffer;
 		Palette palette;
 
@@ -34,7 +36,7 @@ namespace Runtime
 		SyncMeta syncmeta; // Used by Easel
 
 	private:
-		void paint_model_node(RHI::GraphicsPipeline* brush, std::shared_ptr<Model::Node> model_node);
+		void paint_model_node(RHI::GraphicsPipeline* brush, Scene& scene, std::shared_ptr<Model::Node> model_node);
 	};
 	
 

@@ -1,6 +1,5 @@
 #include "present_pipeline.h"
 
-#include <runtime/function_layer/render/scene/model_vertex.h>
 #include <AlbedoRHI.hpp>
 #include <runtime/asset_layer/asset_manager.h>
 
@@ -40,8 +39,9 @@ namespace Runtime
 	VkPipelineVertexInputStateCreateInfo	 PresentPipeline::
 		prepare_vertex_input_state()
 	{
-		auto& bind_description = ModelVertex::GetBindingDescription(0);
-		auto& attribute_description = ModelVertex::GetAttributeDescription(0);
+		static auto bind_description = Model::GetBindingDescription(0);
+		static auto attribute_description = Model::GetAttributeDescription(0);
+
 		return VkPipelineVertexInputStateCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,

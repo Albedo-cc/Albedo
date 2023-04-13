@@ -12,6 +12,14 @@ namespace Runtime
 			matrics);
 	}
 
+	void Palette::SetupLightParameters(std::shared_ptr<RHI::VMA::Buffer> light_parameters)
+	{
+		SET0_ubo->WriteBuffer(
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			binding_light_parameters,
+			light_parameters);
+	}
+
 	void Palette::SetupPBRBaseColor(std::shared_ptr<RHI::VMA::Image> base_color)
 	{
 		SET1_texture->WriteImage(
@@ -20,13 +28,20 @@ namespace Runtime
 			base_color);
 	}
 
-	void Palette::Initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, std::shared_ptr<RHI::DescriptorPool> descriptorPool)
+	void Palette::initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, std::shared_ptr<RHI::DescriptorPool> descriptorPool)
 	{
 		// Allocate Descriptor Sets
 		SET0_ubo = descriptorPool->AllocateDescriptorSet({
 			VkDescriptorSetLayoutBinding
 			{
 				.binding = binding_camera_matrics,
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.descriptorCount = 1, // Not Array
+				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			},
+			VkDescriptorSetLayoutBinding
+			{
+				.binding = binding_light_parameters,
 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.descriptorCount = 1, // Not Array
 				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,

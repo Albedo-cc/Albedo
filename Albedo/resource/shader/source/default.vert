@@ -1,22 +1,43 @@
 #version 450
 
-layout(set = 0, binding = 0) uniform UniformBufferObject
+layout (location = 0) in vec3 inPos;
+layout (location = 1) in vec3 inNormal;
+layout (location = 2) in vec2 inUV;
+layout (location = 3) in vec3 inColor;
+
+layout(push_constant) uniform PushConstants
 {
-    mat4x4 model;
-    mat4x4 view;
-    mat4x4 projection;
-} ubo;
+	mat4x4 model;
+} primitive;
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec2 inTexCoord;
+layout (set = 0, binding = 0) uniform UBOScene
+{
+	mat4 projection;
+	mat4 view;
+} uboScene;
 
-layout(location = 0) out vec3 fragColor;
-layout(location = 1) out vec2 fragTexCoord;
+layout (set = 0, binding = 1) uniform UBOLight
+{
+	vec4 lightPos;
+	vec4 viewPos;
+} uboLight;
+
+layout (location = 0) out vec3 outNormal;
+layout (location = 1) out vec3 outColor;
+layout (location = 2) out vec2 outUV;
+layout (location = 3) out vec3 outViewVec;
+layout (location = 4) out vec3 outLightVec;
 
 void main()
 {
-    gl_Position =  ubo.projection * ubo.view * ubo.model * vec4(inPosition, 1.0);
-    fragColor = inColor;
-    fragTexCoord = inTexCoord;
+    outNormal = inNormal;
+	outColor = inColor;
+	outUV = inUV;
+	gl_Position = uboScene.projection * uboScene.view * primitive.model * vec4(inPos.xyz, 1.0);
+
+	vec4 pos = uboScene.view * vec4(inPos, 1.0);
+	outNormal = mat3(uboScene.view) * inNormal;
+	vec3 lPos = mat3(uboScene.view) * uboLight.lightPos.xyz;
+	outLightVec = uboLight.lightPos.xyz - pos.xyz;
+	outViewVec = uboLight.viewPos.xyz - pos.xyz;	
 }

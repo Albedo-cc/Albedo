@@ -234,7 +234,8 @@ namespace Runtime
 				// Get base color texture index
 				if (material.values.find("baseColorTexture") != material.values.end())
 				{
-					model->materials[i].base_color_texture_index = material.values["baseColorTexture"].TextureIndex();
+					model->PBR_parameters.Base_Color_Index = material.values["baseColorTexture"].TextureIndex();
+					model->materials[i].base_color_texture_index = model->PBR_parameters.Base_Color_Index.value();
 				}
 			}
 

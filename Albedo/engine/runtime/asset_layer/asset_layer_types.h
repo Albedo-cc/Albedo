@@ -5,6 +5,7 @@
 #include <core/math/math.h>
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <algorithm>
 #include <string_view>
@@ -40,9 +41,17 @@ namespace Runtime
 	{
 		friend class ModelLoader;
 	public:
+		struct PBRParameters
+		{
+			std::optional<uint32_t> Base_Color_Index;
+		};
+		PBRParameters PBR_parameters;
+
+	public:
 		using VertexIndex = uint32_t; // VK_INDEX_TYPE_UINT32
 
-		std::vector<VkVertexInputAttributeDescription> GetAttributeDescription(uint32_t binding);
+		static VkVertexInputBindingDescription GetBindingDescription(uint32_t binding);
+		static std::vector<VkVertexInputAttributeDescription> GetAttributeDescription(uint32_t binding);
 
 		size_t GetVertexBufferSize() { return vertices.size() * sizeof(Vertex); }
 		size_t GetIndexBufferSize() { return indices.size() * sizeof(VertexIndex); }
