@@ -1,38 +1,30 @@
 #pragma once
 
+#include <AlbedoRHI.hpp>
 #include <AlbedoTime.hpp>
-
-#include "runtime_context.h"
-#include "function_layer/function_layer.h"
+#include <AlbedoPattern.hpp>
 
 namespace Albedo {
 namespace Runtime
 {
+	class WindowSystem;
+	class RenderSystem;
+	class UISystem;
 
 	class RuntimeModule:
 		public pattern::Singleton<RuntimeModule>
 	{
 		friend class pattern::Singleton<RuntimeModule>;
-		RuntimeModule() 
-		{ 
-			m_runtime_context.m_is_running = true;  // Startup Context
-			// Register Layers
-			m_runtime_layers.emplace_back(std::make_unique<FunctionLayer>(m_runtime_context));
-		}
-	
+		RuntimeModule();
+
 	public:
-		void Run()
-		{
-			while (m_runtime_context.IsRunning())
-			{
-				for (auto& runtime_layer : m_runtime_layers)
-					runtime_layer->Update();
-			}
-		}
+		void Run();
 
 	private:
-		RuntimeContext m_runtime_context;
-		std::vector<std::unique_ptr<RuntimeLayer>> m_runtime_layers;
+		std::shared_ptr<RHI::VulkanContext> m_vulkan_context;
+		std::shared_ptr<WindowSystem> m_window_system;
+		std::shared_ptr<RenderSystem> m_render_system;
+		std::shared_ptr<UISystem>  m_ui_system;
 	};
 
 }} // namespace Albedo::Runtime

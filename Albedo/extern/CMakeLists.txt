@@ -46,7 +46,16 @@ if (NOT TARGET tinygltf)
     target_link_libraries(AlbedoExternalLibraries INTERFACE tinygltf)
 endif()
 
-###DELETE
+# Dear ImGui
+if (NOT TARGET imgui)
+    message(STATUS "\nLoading Dear ImGui (imgui)")
+    add_subdirectory(imgui-1.89.5)
+    target_link_libraries(imgui AlbedoRHI)
+
+    target_link_libraries(AlbedoExternalLibraries INTERFACE imgui)
+endif()
+
+#DELETE
 add_subdirectory(glm)
 target_include_directories(glm INTERFACE glm)
 target_link_libraries(AlbedoExternalLibraries INTERFACE glm)

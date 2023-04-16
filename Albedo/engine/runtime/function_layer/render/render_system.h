@@ -1,42 +1,44 @@
 #pragma once
+#include <AlbedoRHI.hpp>
 #include <AlbedoTime.hpp>
-
-#include <core/math/math.h>
-#include <runtime/asset_layer/asset_manager.h>
-#include <runtime/function_layer/window/window_system.h>
-
-#include "camera/camera.h"
-#include "paint_box/easel.h"
 
 namespace Albedo {
 namespace Runtime
 {
+	class Camera;
+	class Easel;
+	class Scene;
+	class UISystem;
 
 	class RenderSystem
 	{
+		friend class RuntimeModule;
 		enum RenderPasses
 		{
 			render_pass_forward,
+			render_pass_UI,
 
 			MAX_RENDER_PASS_COUNT
 		};
-	public:
 
+	public:
 		RenderSystem() = delete;
-		RenderSystem(std::weak_ptr<WindowSystem> window_system);
+		RenderSystem(std::shared_ptr<RHI::VulkanContext> vulkan_context);
 		~RenderSystem() { m_vulkan_context->WaitDeviceIdle(); }
 
 		void Update();
+		void ConnectUISystem(std::shared_ptr<UISystem> UI);
 
 	private:
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context; // Make sure that vulkan context will be released at last.
-		std::weak_ptr<WindowSystem> m_window_system;
 
 		std::shared_ptr<Camera> m_camera;
 		std::shared_ptr<Easel> m_easel;
 		std::shared_ptr<Scene> m_scene;
 
 		std::vector<std::shared_ptr<RHI::RenderPass>> m_render_passes;
+
+		std::weak_ptr<UISystem> wp_system_UI;
 
 	private:
 		void create_render_passes();

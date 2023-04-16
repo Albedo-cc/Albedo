@@ -1,7 +1,16 @@
 #include "render_system.h"
 
+#include <AlbedoTime.hpp>
+
+#include "camera/camera.h"
+#include "paint_box/easel.h"
 
 #include "render_pass/forward_rendering/forward_render_pass.h"
+#include "render_pass/UI_rendering/UI_render_pass.h"
+
+#include <core/math/math.h>
+#include <runtime/asset_layer/asset_manager.h>
+#include <runtime/function_layer/UI/UI_system.h>
 
 namespace Albedo {
 namespace Runtime
@@ -41,6 +50,7 @@ namespace Runtime
 			canvas.GetPalette().SetupCameraMatrics(m_camera->GetCameraMatrics());
 			canvas.GetPalette().SetupLightParameters(m_camera->m_light_parameter_buffer);
 
+			// Render Scene
 			canvas.BeginPainting(m_render_passes[render_pass_forward]);
 			{
 				auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
@@ -48,9 +58,17 @@ namespace Runtime
 			}
 			canvas.EndPainting(m_render_passes[render_pass_forward]);
 
+			// Render UI
+			if (!wp_system_UI.expired()) // Future:: One-time Command Buffer
+			{
+				canvas.BeginPainting(m_render_passes[render_pass_UI]);
+				wp_system_UI.lock()->Render();
+				canvas.EndPainting(m_render_passes[render_pass_UI]);
+			}
+
 			m_easel->PresentCanvas();
-		/*	std::this_thread::sleep_for(std::chrono::seconds(1));
-			log::debug("Wait 1 s \n\n");*/
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			log::debug("Wait 1 s \n\n");
 		}
 		catch (RHI::VulkanContext::swapchain_error& swapchian_recreation)
 		{
@@ -58,19 +76,14 @@ namespace Runtime
 		}
 	}
 
-	RenderSystem::RenderSystem(std::weak_ptr<WindowSystem> window_system) :
-		m_vulkan_context{ RHI::VulkanContext::Create(window_system.lock()->GetWindow()) },
-		m_window_system{ std::move(window_system) },
+	RenderSystem::RenderSystem(std::shared_ptr<RHI::VulkanContext> vulkan_context) :
+		m_vulkan_context{ std::move(vulkan_context)},
 		m_camera{ std::make_shared<Camera>(m_vulkan_context) },
 		m_easel{ std::make_shared<Easel>(m_vulkan_context) },
 		m_scene{ std::make_shared<Scene>(m_vulkan_context) }
 	{
 		//auto scene_future = AssetManager::instance().AsyncLoadModel("FlightHelmet/FlightHelmet.gltf");
-		//auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
-		auto scene_future = AssetManager::instance().AsyncLoadModel("Teapot/Teapot.gltf");
-
-		// Window
-		WindowSystem::SetFramebufferResizeCallback([this]() { handle_window_resize(); });
+		auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
 
 		// Render Passes
 		create_render_passes();
@@ -83,11 +96,19 @@ namespace Runtime
 		m_render_passes.clear();
 		m_render_passes.resize(MAX_RENDER_PASS_COUNT);
 		m_render_passes[render_pass_forward] = std::make_shared<ForwardRenderPass>(m_vulkan_context);
+		m_render_passes[render_pass_UI] = std::make_shared<UIRenderPass>(m_vulkan_context);
+	}
+
+	void RenderSystem::ConnectUISystem(std::shared_ptr<UISystem> UI)
+	{
+		UI->Initialize(m_render_passes[render_pass_UI], UIRenderPass::subpass_UI);
+		wp_system_UI = UI;
 	}
 
 	void RenderSystem::handle_window_resize()
 	{
-		log::warn("Window Resized!");
+		log::info("Window Resized");
+
 		m_vulkan_context->RecreateSwapChain();
 		create_render_passes();		 // Recreate Render Passes
 		m_camera->GetViewingMatrix(true); // Update

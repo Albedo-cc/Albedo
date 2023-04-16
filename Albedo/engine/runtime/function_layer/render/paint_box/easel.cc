@@ -9,7 +9,7 @@ namespace Runtime
 	{
 		// Command Pool
 		m_command_pool	=	m_vulkan_context->CreateCommandPool(
-												m_vulkan_context->m_device_queue_graphics.value(),
+												m_vulkan_context->m_device_queue_family_graphics.value(),
 												VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
 		// Descriptor Pool

@@ -17,6 +17,9 @@ add_subdirectory(Albedo)
 # Put targets into Folders
 include(target_put_into_folder)
 target_put_into_folder(Albedo "Albedo")
+target_put_into_folder(AlbedoShader "Albedo")
+
+target_put_into_folder(imgui "Albedo/Extern/Dear_ImGUI")
 
 target_put_into_folder(AlbedoRHI "Albedo/Extern/AlbedoRHI")
     target_put_into_folder(glfw "Albedo/Extern/AlbedoRHI/Library/GLFW3")
