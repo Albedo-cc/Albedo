@@ -6,15 +6,9 @@ namespace Albedo {
 namespace Runtime
 {
 
-	void Canvas::BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass)
+	void	Canvas::Paint(std::shared_ptr<RHI::CommandBuffer> commandBuffer, RHI::GraphicsPipeline* brush, std::shared_ptr<Scene> scene)
 	{
-		command_buffer->Begin();
-		renderPass->Begin(command_buffer);
-		//return command_buffer;
-	}
-
-	void	Canvas::Paint(RHI::GraphicsPipeline* brush, std::shared_ptr<Scene> scene)
-	{
+		assert(commandBuffer->IsRecording() && "You must Begin() command Buffer before Paint()!");
 		// Update Scene
 		if (last_scene.expired() || last_scene.lock() != scene)
 		{
@@ -23,26 +17,16 @@ namespace Runtime
 				palette.SetupPBRBaseColor(scene->images[scene->pbr_parameters.Base_Color_Index.value()]);
 		}
 
-		brush->Bind(command_buffer);
+		brush->Bind(commandBuffer);
 
 		VkBuffer VBO = *scene->vertices;
 		VkBuffer IBO = *scene->indices;
 		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(*command_buffer, 0, 1, &VBO, offsets);
-		vkCmdBindIndexBuffer(*command_buffer, IBO, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindVertexBuffers(*commandBuffer, 0, 1, &VBO, offsets);
+		vkCmdBindIndexBuffer(*commandBuffer, IBO, 0, VK_INDEX_TYPE_UINT32);
 
 		// Paint Scene
 		for (auto& node : scene->nodes) paint_model_node(brush, *scene, node);
-	}
-
-	void Canvas::EndPainting(std::shared_ptr<RHI::RenderPass> renderPass)
-	{
-		renderPass->End(command_buffer);
-		command_buffer->End();
-		command_buffer->Submit(false, *syncmeta.fence_in_flight,
-			{ *syncmeta.semaphore_image_available },
-			{ *syncmeta.semaphore_render_finished },
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 	}
 
 	void Canvas::paint_model_node(RHI::GraphicsPipeline* brush, Scene& scene, std::shared_ptr<Model::Node> model_node)
@@ -60,7 +44,7 @@ namespace Runtime
 			}
 
 			// Pass the final matrix to the vertex shader using push constants
-			vkCmdPushConstants(*command_buffer, 
+			vkCmdPushConstants(*cmd_buffer_front, 
 				brush->GetPipelineLayout(),
 				VK_SHADER_STAGE_VERTEX_BIT, 
 				0, sizeof(glm::mat4), &nodeMatrix);
@@ -76,13 +60,13 @@ namespace Runtime
 						*palette.SET1_texture
 					};
 
-					vkCmdBindDescriptorSets(*command_buffer,
+					vkCmdBindDescriptorSets(*cmd_buffer_front,
 						brush->GetPipelineBindPoint(),
 						brush->GetPipelineLayout(),
 						0, boundSets.size(), boundSets.data(),
 						0, nullptr);
 
-					vkCmdDrawIndexed(*command_buffer, primitive.index_count, 1, primitive.first_index, 0, 0);
+					vkCmdDrawIndexed(*cmd_buffer_front, primitive.index_count, 1, primitive.first_index, 0, 0);
 				}
 			}
 		}

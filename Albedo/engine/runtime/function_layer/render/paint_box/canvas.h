@@ -13,27 +13,28 @@ namespace Runtime
 	{
 		friend class Easel;
 	public:
-		void	BeginPainting(std::shared_ptr<RHI::RenderPass> renderPass);
-		void	Paint(RHI::GraphicsPipeline* brush, std::shared_ptr<Scene> scene);
-		void	EndPainting(std::shared_ptr<RHI::RenderPass> renderPass);
-
-		Palette& GetPalette() { return palette; }
-
-	public:
-		Canvas() = default; // Created and initialized by the Easel
-
-	private:
-		std::weak_ptr<Scene> last_scene;
-		std::shared_ptr<RHI::CommandBuffer> command_buffer;
-		Palette palette;
-
 		struct SyncMeta
 		{
 			std::unique_ptr<RHI::Fence>			fence_in_flight;
 			std::unique_ptr<RHI::Semaphore>	semaphore_image_available;
 			std::unique_ptr<RHI::Semaphore>	semaphore_render_finished;
 		};
-		SyncMeta syncmeta; // Used by Easel
+
+	public:
+		void	Paint(std::shared_ptr<RHI::CommandBuffer> commandBuffer,
+			RHI::GraphicsPipeline* brush, 
+			std::shared_ptr<Scene> scene);
+
+		Palette			palette;
+		SyncMeta		syncmeta;
+		std::shared_ptr<RHI::CommandBuffer> cmd_buffer_front;
+		std::shared_ptr<RHI::CommandBuffer> cmd_buffer_ui;
+
+	public:
+		Canvas() = default; // Created and initialized by the Easel
+
+	private:
+		std::weak_ptr<Scene> last_scene;
 
 	private:
 		void paint_model_node(RHI::GraphicsPipeline* brush, Scene& scene, std::shared_ptr<Model::Node> model_node);

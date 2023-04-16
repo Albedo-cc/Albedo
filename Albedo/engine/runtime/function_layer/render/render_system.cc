@@ -20,7 +20,7 @@ namespace Runtime
 		try
 		{
 			auto& canvas = m_easel->WaitCanvas(); // Wait for Next Canvas
-			auto& palette = canvas.GetPalette();
+			auto& palette = canvas.palette;
 
 			static time::StopWatch timer{};
 
@@ -47,28 +47,52 @@ namespace Runtime
 				light_data.light_position = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
 				light_data.view_position = glm::vec4(0.0f, -0.1f, -1.0f, 0.0f);
 			}
-			canvas.GetPalette().SetupCameraMatrics(m_camera->GetCameraMatrics());
-			canvas.GetPalette().SetupLightParameters(m_camera->m_light_parameter_buffer);
+			palette.SetupCameraMatrics(m_camera->GetCameraMatrics());
+			palette.SetupLightParameters(m_camera->m_light_parameter_buffer);
 
 			// Render Scene
-			canvas.BeginPainting(m_render_passes[render_pass_forward]);
+			canvas.cmd_buffer_front->Begin();
+			m_render_passes[render_pass_forward]->Begin(canvas.cmd_buffer_front);
 			{
 				auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
-				canvas.Paint(pipelines[ForwardRenderPass::pipeline_present], m_scene);
+				canvas.Paint(canvas.cmd_buffer_front, pipelines[ForwardRenderPass::pipeline_present], m_scene);
 			}
-			canvas.EndPainting(m_render_passes[render_pass_forward]);
+			m_render_passes[render_pass_forward]->End(canvas.cmd_buffer_front);
+			canvas.cmd_buffer_front->End();
 
 			// Render UI
 			if (!wp_system_UI.expired()) // Future:: One-time Command Buffer
 			{
-				canvas.BeginPainting(m_render_passes[render_pass_UI]);
-				wp_system_UI.lock()->Render();
-				canvas.EndPainting(m_render_passes[render_pass_UI]);
+				canvas.cmd_buffer_ui->Begin();
+				m_render_passes[render_pass_UI]->Begin(canvas.cmd_buffer_ui);
+				wp_system_UI.lock()->Render(canvas.cmd_buffer_ui);
+				m_render_passes[render_pass_UI]->End(canvas.cmd_buffer_ui);
+				canvas.cmd_buffer_ui->End();
 			}
 
-			m_easel->PresentCanvas();
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-			log::debug("Wait 1 s \n\n");
+			// Submit Command
+			std::vector<VkCommandBuffer> commandBuffers{ *canvas.cmd_buffer_front, *canvas.cmd_buffer_ui };
+			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			std::vector<VkSemaphore> wait_semaphores{ *canvas.syncmeta.semaphore_image_available };
+			std::vector<VkSemaphore> signal_semaphores{ *canvas.syncmeta.semaphore_render_finished };
+			VkSubmitInfo submitInfo
+			{
+				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size()),
+				.pWaitSemaphores = wait_semaphores.data(),
+				.pWaitDstStageMask = &wait_stage,
+				.commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
+				.pCommandBuffers = commandBuffers.data(),
+				.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
+				.pSignalSemaphores = signal_semaphores.data()
+			};
+
+			auto submit_queue = m_vulkan_context->GetQueue(m_vulkan_context->m_device_queue_family_graphics);
+			if (vkQueueSubmit(submit_queue, 1, &submitInfo, *canvas.syncmeta.fence_in_flight) != VK_SUCCESS)
+				throw std::runtime_error("Failed to submit the Vulkan Command Buffer!");
+
+			m_easel->PresentCanvas({ *canvas.syncmeta.semaphore_render_finished });
+			//std::this_thread::sleep_for(std::chrono::seconds(1)); log::debug("Wait 1 s \n\n");
 		}
 		catch (RHI::VulkanContext::swapchain_error& swapchian_recreation)
 		{

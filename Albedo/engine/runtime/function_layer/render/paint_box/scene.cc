@@ -46,7 +46,8 @@ namespace Runtime
 				image_buffers[i]->Write(current_image.data);
 			}
 
-			auto commandBuffer = m_vulkan_context->GetOneTimeCommandBuffer();
+			auto commandBuffer = m_vulkan_context->
+				CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
 			commandBuffer->Begin();
 			staging_buffer_vertex->CopyCommand(commandBuffer, vertices);
 			staging_buffer_index->CopyCommand(commandBuffer, indices);

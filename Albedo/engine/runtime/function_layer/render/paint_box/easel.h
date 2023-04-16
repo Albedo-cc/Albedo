@@ -15,7 +15,7 @@ namespace Runtime
 	public:
 		// You must get or present canvas via an easel.
 		Canvas& WaitCanvas() throw (RHI::VulkanContext::swapchain_error);
-		void PresentCanvas(bool switch_canvas = true) throw (RHI::VulkanContext::swapchain_error);
+		void PresentCanvas(std::vector<VkSemaphore> wait_semaphores, bool switch_canvas = true) throw (RHI::VulkanContext::swapchain_error);
 
 	public:
 		Easel() = delete;
@@ -23,7 +23,6 @@ namespace Runtime
 
 	private:
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context;
-		std::shared_ptr<RHI::CommandPool> m_command_pool; // Resetable
 		std::shared_ptr<RHI::DescriptorPool> m_descriptor_pool;
 
 		CID m_current_canvas = 0;

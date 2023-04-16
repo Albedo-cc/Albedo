@@ -27,13 +27,13 @@ namespace Runtime
 
 	void UISystem::Initialize(std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass)
 	{
-		uint32_t graphics_queue_family = m_vulkan_context->m_device_queue_family_graphics.value();
+		auto& graphics_queue_family = m_vulkan_context->m_device_queue_family_graphics;
 		ImGui_ImplVulkan_InitInfo ImGui_InitInfo
 		{
 			.Instance = m_vulkan_context->m_instance,
 			.PhysicalDevice = m_vulkan_context->m_physical_device,
 			.Device = m_vulkan_context->m_device,
-			.QueueFamily = graphics_queue_family,
+			.QueueFamily = graphics_queue_family.value(),
 			.Queue = m_vulkan_context->GetQueue(graphics_queue_family),
 			.PipelineCache = VK_NULL_HANDLE,
 			.DescriptorPool = *m_descriptor_pool,
@@ -50,7 +50,8 @@ namespace Runtime
 		ImGui_ImplVulkan_Init(&ImGui_InitInfo, *render_pass);
 		ImGui_ImplGlfw_InitForVulkan(m_vulkan_context->m_window, true); // 2nd para: auto install callbacks via ImGUI
 
-		auto commandBuffer = m_vulkan_context->GetOneTimeCommandBuffer();
+		auto commandBuffer = m_vulkan_context->
+			CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
 		commandBuffer->Begin();
 		ImGui_ImplVulkan_CreateFontsTexture(*commandBuffer);
 		commandBuffer->End();
@@ -68,6 +69,7 @@ namespace Runtime
 		{
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
 
 			ImGui::ShowDemoWindow();
 			ImGui::Render(); // Prepare the data for rendering so you can call GetDrawData()
@@ -79,7 +81,7 @@ namespace Runtime
 	{
 		uint32_t oversize = 100;
 		m_descriptor_pool = m_vulkan_context->CreateDescriptorPool(
-			std::vector<VkDescriptorPoolSize>
+		std::vector<VkDescriptorPoolSize>
 		{
 			{ VK_DESCRIPTOR_TYPE_SAMPLER, oversize },
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, oversize },

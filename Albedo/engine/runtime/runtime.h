@@ -16,6 +16,7 @@ namespace Runtime
 	{
 		friend class pattern::Singleton<RuntimeModule>;
 		RuntimeModule();
+		~RuntimeModule(){ m_vulkan_context->WaitDeviceIdle(); }
 
 	public:
 		void Run();

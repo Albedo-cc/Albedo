@@ -24,7 +24,6 @@ namespace Runtime
 	public:
 		RenderSystem() = delete;
 		RenderSystem(std::shared_ptr<RHI::VulkanContext> vulkan_context);
-		~RenderSystem() { m_vulkan_context->WaitDeviceIdle(); }
 
 		void Update();
 		void ConnectUISystem(std::shared_ptr<UISystem> UI);
