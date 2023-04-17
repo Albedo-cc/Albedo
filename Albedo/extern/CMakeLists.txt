@@ -49,7 +49,7 @@ endif()
 # Dear ImGui
 if (NOT TARGET imgui)
     message(STATUS "\nLoading Dear ImGui (imgui)")
-    add_subdirectory(imgui-1.89.5)
+    add_subdirectory(imgui-1.89.5-docking)
     target_link_libraries(imgui AlbedoRHI)
 
     target_link_libraries(AlbedoExternalLibraries INTERFACE imgui)

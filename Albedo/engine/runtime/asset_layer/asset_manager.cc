@@ -16,6 +16,18 @@ namespace Runtime
 		return std::make_shared<ImageFuture>(get_asset_path_texture() + texture_name);
 	}
 
+	std::shared_ptr<Image> AssetManager::
+		LoadIcon(std::string icon_name)
+	{
+		return ImageLoader::LoadTexture2D(get_asset_path_icon() + icon_name);
+	}
+
+	std::shared_ptr<ImageFuture> AssetManager::
+		AsyncLoadIcon(std::string icon_name)
+	{
+		return std::make_shared<ImageFuture>(get_asset_path_icon() + icon_name);
+	}
+
 	std::shared_ptr<Model> AssetManager::
 		LoadModel(std::string model_name)
 	{

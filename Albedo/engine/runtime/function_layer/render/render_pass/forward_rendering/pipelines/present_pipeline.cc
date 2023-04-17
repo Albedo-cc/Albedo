@@ -12,7 +12,6 @@ namespace Runtime
 
 		// Dynamic Stages
 		vkCmdSetViewport(*command_buffer, 0, m_viewports.size(), m_viewports.data());
-
 		vkCmdBindPipeline(*command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 	}
 

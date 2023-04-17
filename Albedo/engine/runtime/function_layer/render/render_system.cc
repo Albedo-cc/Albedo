@@ -60,6 +60,7 @@ namespace Runtime
 				auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
 				canvas.Paint(canvas.cmd_buffer_front, pipelines[ForwardRenderPass::pipeline_present], m_scene);
 			}
+	
 			m_render_passes[render_pass_forward]->End(canvas.cmd_buffer_front);
 			canvas.cmd_buffer_front->End();
 

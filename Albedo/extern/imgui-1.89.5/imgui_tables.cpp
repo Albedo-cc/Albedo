@@ -252,7 +252,7 @@ Index of this file:
 // - TableSetupScrollFreeze()
 //-----------------------------------------------------------------------------
 
-// Configuration
+// Parameters
 static const int TABLE_DRAW_CHANNEL_BG0 = 0;
 static const int TABLE_DRAW_CHANNEL_BG2_FROZEN = 1;
 static const int TABLE_DRAW_CHANNEL_NOCLIP = 2;                     // When using ImGuiTableFlags_NoClip (this becomes the last visible channel)

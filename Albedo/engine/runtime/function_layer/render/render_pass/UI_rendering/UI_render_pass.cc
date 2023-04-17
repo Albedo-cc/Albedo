@@ -49,11 +49,11 @@ namespace Runtime
 			auto& ui = m_attachment_descriptions[attachment_UI_color];
 			ui.format = m_context->m_swapchain_image_format;
 			ui.samples = VK_SAMPLE_COUNT_1_BIT;
-			ui.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // [M]
+			ui.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // [M]: Don't care because Scene will render to ImGui Image
 			ui.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			ui.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			ui.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			ui.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // [M]
+			ui.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // [M]: UI may not be rendered so scene can display directly
 			ui.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 			auto& present_ref = m_attachment_references[attachment_UI_color];

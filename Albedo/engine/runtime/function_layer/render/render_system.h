@@ -13,6 +13,8 @@ namespace Runtime
 	class RenderSystem
 	{
 		friend class RuntimeModule;
+		void Update();
+
 		enum RenderPasses
 		{
 			render_pass_forward,
@@ -24,8 +26,6 @@ namespace Runtime
 	public:
 		RenderSystem() = delete;
 		RenderSystem(std::shared_ptr<RHI::VulkanContext> vulkan_context);
-
-		void Update();
 
 	private:
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context; // Make sure that vulkan context will be released at last.

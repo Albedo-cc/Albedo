@@ -43,9 +43,10 @@ namespace Runtime
 
 		// Initialize Dear ImGUI
 		ImGui::CreateContext();
+		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
 		ImGui_ImplVulkan_Init(&ImGui_InitInfo, *render_pass);
-		ImGui_ImplGlfw_InitForVulkan(m_vulkan_context->m_window, true); // 2nd para: auto install callbacks via ImGUI
+		ImGui_ImplGlfw_InitForVulkan(m_vulkan_context->m_window, true); // Install callbacks via ImGUI
 
 		auto commandBuffer = m_vulkan_context->
 			CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
@@ -67,9 +68,16 @@ namespace Runtime
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
+			
+			{ // TEST
+				ImGui::Begin("Docking Window", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking);
+				ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+				ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+				ImGui::End();
+			}
 
 			ImGui::ShowDemoWindow();
-			for (const auto& [owner, draw_call] : m_draw_calls)
+			for (const auto& [name, draw_call] : m_draw_calls)
 			{
 				draw_call();
 			}

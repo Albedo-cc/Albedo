@@ -10,27 +10,28 @@ namespace Runtime
 	
 	class WindowSystem
 	{
+		friend class RuntimeModule;
+		void Update() { glfwPollEvents(); }
 	public:
-		struct Configuration
+		struct Parameters
 		{
 			const char* title = "Albedo";
 			int width = 1080;
 			int height = 720;
 		};
 	public:
-		void Update() { glfwPollEvents(); }
 		bool ShouldClose() const { return glfwWindowShouldClose(m_window); }
 
 		static void SetFramebufferResizeCallback(const std::function<void()>& callback){ frame_buffer_resize_callback = callback; }
 		GLFWwindow* GetWindow() const { return m_window; }
-		const Configuration& GetConfiguration() const { return m_config; }
+		const Parameters& GetParameters() const { return m_config; }
 
 		WindowSystem();
 		~WindowSystem();
 
 	private:
-		GLFWwindow* m_window;
-		Configuration m_config;
+		GLFWwindow* m_window = NULL;
+		Parameters m_config;
 
 	private: // Callback Functions
 		static void on_frame_buffer_resize(GLFWwindow* window, int width, int height);

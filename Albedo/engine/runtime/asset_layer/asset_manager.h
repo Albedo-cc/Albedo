@@ -22,6 +22,8 @@ namespace Runtime
 		// Load Image Asset
 		std::shared_ptr<Image> LoadTexture2D(std::string texture_name);
 		std::shared_ptr<ImageFuture> AsyncLoadTexture2D(std::string texture_name);
+		std::shared_ptr<Image> LoadIcon(std::string icon_name);
+		std::shared_ptr<ImageFuture> AsyncLoadIcon(std::string icon_name);
 
 		// Load TempModel Asset
 		std::shared_ptr<Model> LoadModel(std::string model_name);
@@ -37,6 +39,7 @@ namespace Runtime
 
 	public: // Path (Future: Load from Platform Layer)
 		static const std::string& get_asset_path_texture() { static const std::string path = "resource/texture/";  return path; }
+		static const std::string& get_asset_path_icon() { static const std::string path = "resource/icon/";  return path; }
 		static const std::string& get_asset_path_model() { static const std::string path = "resource/model/";  return path; }
 		static const std::string& get_asset_path_shader() { static const std::string path = "resource/shader/";  return path; }
 	};
