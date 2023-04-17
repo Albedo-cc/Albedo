@@ -21,6 +21,7 @@ namespace Runtime
 		{
 			auto& canvas = m_easel->WaitCanvas(); // Wait for Next Canvas
 			auto& palette = canvas.palette;
+			std::vector<VkCommandBuffer> commandBuffers{ *canvas.cmd_buffer_front };
 
 			static time::StopWatch timer{};
 
@@ -33,8 +34,8 @@ namespace Runtime
 
 				//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
 				camera_data.matrix_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
-					glm::vec3(0.0f, -0.1f, -1.0f),
-					glm::vec3(0.0f, 0.0f, 1.0f));
+																						glm::vec3(0.0f, -0.1f, -1.0f),
+																						glm::vec3(0.0f, 0.0f, 1.0f));
 				//m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
 				camera_data.matrix_projection = glm::perspective(glm::radians(80.0f),
 					(float)m_vulkan_context->m_swapchain_current_extent.width /
@@ -44,8 +45,10 @@ namespace Runtime
 				camera_data.matrix_projection[1][1] *= -1.0f; // Y-Flip
 
 				auto& light_data = m_camera->Light_Parameters;
-				light_data.light_position = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
-				light_data.view_position = glm::vec4(0.0f, -0.1f, -1.0f, 0.0f);
+				/*light_data.light_position = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
+				light_data.view_position = glm::vec4(0.0f, -0.1f, -1.0f, 0.0f);*/
+				light_data.light_position = Vector4f(0.1, 0.1, 0.1, 1.0);
+				light_data.view_position = Vector4f(0.0f, -0.1f, -0.1f, 0.0f);
 			}
 			palette.SetupCameraMatrics(m_camera->GetCameraMatrics());
 			palette.SetupLightParameters(m_camera->m_light_parameter_buffer);
@@ -61,17 +64,18 @@ namespace Runtime
 			canvas.cmd_buffer_front->End();
 
 			// Render UI
-			if (!wp_system_UI.expired()) // Future:: One-time Command Buffer
+			if (UISystem::instance().ShouldRender()) // Future:: One-time Command Buffer
 			{
 				canvas.cmd_buffer_ui->Begin();
 				m_render_passes[render_pass_UI]->Begin(canvas.cmd_buffer_ui);
-				wp_system_UI.lock()->Render(canvas.cmd_buffer_ui);
+				UISystem::instance().Render(canvas.cmd_buffer_ui);
 				m_render_passes[render_pass_UI]->End(canvas.cmd_buffer_ui);
 				canvas.cmd_buffer_ui->End();
+
+				commandBuffers.push_back(*canvas.cmd_buffer_ui);
 			}
 
 			// Submit Command
-			std::vector<VkCommandBuffer> commandBuffers{ *canvas.cmd_buffer_front, *canvas.cmd_buffer_ui };
 			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			std::vector<VkSemaphore> wait_semaphores{ *canvas.syncmeta.semaphore_image_available };
 			std::vector<VkSemaphore> signal_semaphores{ *canvas.syncmeta.semaphore_render_finished };
@@ -107,10 +111,15 @@ namespace Runtime
 		m_scene{ std::make_shared<Scene>(m_vulkan_context) }
 	{
 		//auto scene_future = AssetManager::instance().AsyncLoadModel("FlightHelmet/FlightHelmet.gltf");
+		//auto scene_future = AssetManager::instance().AsyncLoadModel("ABeautifulGame/glTF/ABeautifulGame.gltf");
 		auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
+		//auto scene_future = AssetManager::instance().AsyncLoadModel("WaterBottle/glTF/WaterBottle.gltf");
 
 		// Render Passes
 		create_render_passes();
+
+		// UI System
+		UISystem::instance().Initialize(m_vulkan_context, m_render_passes[render_pass_UI], UIRenderPass::subpass_UI);
 
 		m_scene->Sketch(scene_future->WaitResult());
 	}
@@ -123,11 +132,6 @@ namespace Runtime
 		m_render_passes[render_pass_UI] = std::make_shared<UIRenderPass>(m_vulkan_context);
 	}
 
-	void RenderSystem::ConnectUISystem(std::shared_ptr<UISystem> UI)
-	{
-		UI->Initialize(m_render_passes[render_pass_UI], UIRenderPass::subpass_UI);
-		wp_system_UI = UI;
-	}
 
 	void RenderSystem::handle_window_resize()
 	{

@@ -39,8 +39,8 @@ namespace Runtime
 
 		struct LightParameters
 		{
-			glm::vec4 light_position;
-			glm::vec4 view_position;
+			Vector4f light_position;
+			Vector4f view_position;
 		};
 		LightParameters Light_Parameters;
 		std::shared_ptr<RHI::VMA::Buffer> m_light_parameter_buffer;

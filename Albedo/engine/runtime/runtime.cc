@@ -13,10 +13,8 @@ namespace Runtime
 	{
 		m_vulkan_context = RHI::VulkanContext::Create(m_window_system->GetWindow());
 		m_render_system = std::make_shared<RenderSystem>(m_vulkan_context);
-		m_ui_system = std::make_shared<UISystem>(m_vulkan_context);
-		
+
 		WindowSystem::SetFramebufferResizeCallback([this]() { m_render_system->handle_window_resize(); });
-		m_render_system->ConnectUISystem(m_ui_system);
 	}
 
 	void RuntimeModule::Run()

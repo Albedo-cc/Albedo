@@ -14,7 +14,9 @@ namespace Runtime
 		{
 			last_scene = scene;
 			if (scene->pbr_parameters.Base_Color_Index.has_value())
+			{
 				palette.SetupPBRBaseColor(scene->images[scene->pbr_parameters.Base_Color_Index.value()]);
+			}
 		}
 
 		brush->Bind(commandBuffer);

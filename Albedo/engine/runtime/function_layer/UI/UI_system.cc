@@ -8,12 +8,6 @@ namespace Albedo {
 namespace Runtime
 {
 
-	UISystem::UISystem(std::shared_ptr<RHI::VulkanContext> vulkan_context) :
-		m_vulkan_context{ std::move(vulkan_context) } 
-	{
-		create_descriptor_pool();
-	}
-
 	UISystem::~UISystem()
 	{
 		if (m_should_render.has_value())
@@ -22,11 +16,14 @@ namespace Runtime
 			ImGui_ImplGlfw_Shutdown();
 			ImGui::DestroyContext();
 		}
-		else log::critical("UI System did not been initialized!");
+		else log::critical("System did not been initialized!");
 	}
 
-	void UISystem::Initialize(std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass)
+	void UISystem::Initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass)
 	{
+		assert(m_vulkan_context == nullptr && "You cannot reinitialize UI System!");
+		m_vulkan_context = std::move(vulkan_context);
+
 		auto& graphics_queue_family = m_vulkan_context->m_device_queue_family_graphics;
 		ImGui_ImplVulkan_InitInfo ImGui_InitInfo
 		{
@@ -36,7 +33,7 @@ namespace Runtime
 			.QueueFamily = graphics_queue_family.value(),
 			.Queue = m_vulkan_context->GetQueue(graphics_queue_family),
 			.PipelineCache = VK_NULL_HANDLE,
-			.DescriptorPool = *m_descriptor_pool,
+			.DescriptorPool = *m_vulkan_context->GetGlobalDescriptorPool(),
 			.Subpass = subpass,
 			.MinImageCount = m_vulkan_context->m_swapchain_image_count,
 			.ImageCount = m_vulkan_context->m_swapchain_image_count,
@@ -64,7 +61,7 @@ namespace Runtime
 
 	void UISystem::Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer)
 	{
-		assert(m_should_render.has_value() && "You must call Initialize() before Render()!");
+		assert(m_vulkan_context != nullptr && "You must call Initialize() before Render()!");
 		if (m_should_render)
 		{
 			ImGui_ImplVulkan_NewFrame();
@@ -72,30 +69,14 @@ namespace Runtime
 			ImGui::NewFrame();
 
 			ImGui::ShowDemoWindow();
+			for (const auto& [owner, draw_call] : m_draw_calls)
+			{
+				draw_call();
+			}
+		
 			ImGui::Render(); // Prepare the data for rendering so you can call GetDrawData()
 			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *commandBuffer);
 		}
-	}
-
-	void UISystem::create_descriptor_pool()
-	{
-		uint32_t oversize = 100;
-		m_descriptor_pool = m_vulkan_context->CreateDescriptorPool(
-		std::vector<VkDescriptorPoolSize>
-		{
-			{ VK_DESCRIPTOR_TYPE_SAMPLER, oversize },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, oversize },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, oversize },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, oversize },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, oversize },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, oversize },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, oversize },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, oversize },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, oversize },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, oversize },
-			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, oversize }
-		}, oversize);
-
 	}
 
 }} // namespace Albedo::Runtime

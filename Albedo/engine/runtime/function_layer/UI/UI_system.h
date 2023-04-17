@@ -2,30 +2,33 @@
 
 #include <AlbedoLog.hpp>
 #include <AlbedoRHI.hpp>
+#include <AlbedoPattern.hpp>
 
 namespace Albedo {
 namespace Runtime
 {
 
-	class UISystem
+	class UISystem : public pattern::Singleton<UISystem>
 	{
-	public:
-		void Initialize(std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass);
-		void Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer); // Call in Render System
+		friend class pattern::Singleton<UISystem>;
+	public: // Interface
+		
 
-	public:
-		UISystem() = delete;
-		UISystem(std::shared_ptr<RHI::VulkanContext> vulkan_context);
+	private: // Call in Render System
+		friend class RenderSystem;
+		void Initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass);
+		bool ShouldRender() const { return m_should_render.value(); }
+		void Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer);
+
+	private:
+		UISystem() = default;
 		~UISystem();
 
 	private:
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context;
-		std::shared_ptr<RHI::DescriptorPool> m_descriptor_pool;
+		std::unordered_map<std::string, std::function<void()>> m_draw_calls;
 
 		std::optional<bool> m_should_render; // Init after calling Initialize()
-
-	private:
-		void create_descriptor_pool();
 	};
 
 }} // namespace Albedo::Runtime
