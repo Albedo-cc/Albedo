@@ -53,7 +53,7 @@ namespace Runtime
 			ui.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			ui.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			ui.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			ui.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // [M]: UI may not be rendered so scene can display directly
+			ui.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // [M]
 			ui.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 			auto& present_ref = m_attachment_references[attachment_UI_color];

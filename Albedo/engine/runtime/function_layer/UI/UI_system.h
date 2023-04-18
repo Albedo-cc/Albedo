@@ -1,10 +1,9 @@
 #pragma once
 
 #include <AlbedoLog.hpp>
-#include <AlbedoRHI.hpp>
 #include <AlbedoPattern.hpp>
 
-#include "UI_parameters.h"
+#include "UI_widget.h"
 
 namespace Albedo {
 namespace Runtime
@@ -14,7 +13,7 @@ namespace Runtime
 	{
 		friend class pattern::Singleton<UISystem>;
 	public: // Interface
-
+		std::shared_ptr<UIWidget::Texture> CreateWidgetTexture(std::shared_ptr<RHI::VMA::Image> image);
 
 	private:
 		friend class RenderSystem; // Call in Render System

@@ -65,11 +65,22 @@ namespace Runtime
 			canvas.cmd_buffer_front->End();
 
 			// Render UI
-			if (UISystem::instance().ShouldRender()) // Future:: One-time Command Buffer
+			auto& UI = UISystem::instance();
+			if (UI.ShouldRender()) // Future:: One-time Command Buffer
 			{
+				auto& swapchain_extent = m_vulkan_context->m_swapchain_current_extent;
+				auto screentshot = m_vulkan_context->m_memory_allocator->
+					AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
+						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						swapchain_extent.width, swapchain_extent.height, 4, 
+						VK_FORMAT_R8G8B8A8_SRGB);
+				screentshot->Write(m_vulkan_context->Screenshot());
+
+				static auto scene = UI.CreateWidgetTexture(screentshot);
+
 				canvas.cmd_buffer_ui->Begin();
 				m_render_passes[render_pass_UI]->Begin(canvas.cmd_buffer_ui);
-				UISystem::instance().Render(canvas.cmd_buffer_ui);
+				UI.Render(canvas.cmd_buffer_ui);
 				m_render_passes[render_pass_UI]->End(canvas.cmd_buffer_ui);
 				canvas.cmd_buffer_ui->End();
 
@@ -97,7 +108,8 @@ namespace Runtime
 				throw std::runtime_error("Failed to submit the Vulkan Command Buffer!");
 
 			m_easel->PresentCanvas({ *canvas.syncmeta.semaphore_render_finished });
-			//std::this_thread::sleep_for(std::chrono::seconds(1)); log::debug("Wait 1 s \n\n");
+
+			std::this_thread::sleep_for(std::chrono::seconds(1)); log::debug("Wait 1 s \n\n");
 		}
 		catch (RHI::VulkanContext::swapchain_error& swapchian_recreation)
 		{

@@ -31,7 +31,7 @@ namespace Runtime
 	void Palette::initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, std::shared_ptr<RHI::DescriptorPool> descriptorPool)
 	{
 		// Allocate Descriptor Sets
-		SET0_ubo = descriptorPool->AllocateDescriptorSet({
+		auto SET0_layout = vulkan_context->CreateDescripotrSetLayout({
 			VkDescriptorSetLayoutBinding
 			{
 				.binding = binding_camera_matrics,
@@ -47,7 +47,7 @@ namespace Runtime
 				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			} });
 
-		SET1_texture = descriptorPool->AllocateDescriptorSet({
+		auto SET1_layout = vulkan_context->CreateDescripotrSetLayout({
 			VkDescriptorSetLayoutBinding
 			{
 				.binding = binding_pbr_base_color,
@@ -55,6 +55,9 @@ namespace Runtime
 				.descriptorCount = 1,
 				.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 			} });
+
+		SET0_ubo = descriptorPool->AllocateDescriptorSet(SET0_layout);
+		SET1_texture = descriptorPool->AllocateDescriptorSet(SET1_layout);
 	}
 	
 }} // namespace Albedo::Runtime

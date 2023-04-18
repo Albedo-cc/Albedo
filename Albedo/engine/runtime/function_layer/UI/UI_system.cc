@@ -1,6 +1,5 @@
 #include "UI_system.h"
 
-#include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
@@ -60,8 +59,22 @@ namespace Runtime
 		m_should_render = true;
 	}
 
+	std::shared_ptr<UIWidget::Texture> UISystem::
+		CreateWidgetTexture(std::shared_ptr<RHI::VMA::Image> image)
+	{
+		static auto imgui_texture_set_layout = m_vulkan_context->
+			CreateDescripotrSetLayout({ {
+			0,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1,
+			VK_SHADER_STAGE_FRAGMENT_BIT} });
+
+		return std::make_shared<UIWidget::Texture>(m_vulkan_context->CreateDescriptorSet(imgui_texture_set_layout));
+	}
+
 	void UISystem::Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer)
 	{
+
 		assert(m_vulkan_context != nullptr && "You must call Initialize() before Render()!");
 		if (m_should_render)
 		{
