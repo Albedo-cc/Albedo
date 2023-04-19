@@ -49,7 +49,7 @@ namespace Runtime
 			auto& ui = m_attachment_descriptions[attachment_UI_color];
 			ui.format = m_context->m_swapchain_image_format;
 			ui.samples = VK_SAMPLE_COUNT_1_BIT;
-			ui.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // [M]: Don't care because Scene will render to ImGui Image
+			ui.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // [M]: Scene will render to ImGui Image
 			ui.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			ui.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			ui.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

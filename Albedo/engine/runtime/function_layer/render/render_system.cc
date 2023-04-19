@@ -21,8 +21,6 @@ namespace Runtime
 		{
 			auto& canvas = m_easel->WaitCanvas(); // Wait for Next Canvas
 			auto& palette = canvas.palette;
-			std::vector<VkCommandBuffer> commandBuffers{ *canvas.cmd_buffer_front };
-
 			static time::StopWatch timer{};
 
 			// Update Camera
@@ -63,53 +61,40 @@ namespace Runtime
 	
 			m_render_passes[render_pass_forward]->End(canvas.cmd_buffer_front);
 			canvas.cmd_buffer_front->End();
+			canvas.cmd_buffer_front->Submit(false, nullptr, 
+				{ *canvas.syncmeta.semaphore_image_available }, 
+				{ *canvas.syncmeta.semaphore_render_finished },
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 			// Render UI
 			auto& UI = UISystem::instance();
-			if (UI.ShouldRender()) // Future:: One-time Command Buffer
+			if (UI.ShouldRender()) // Future:: Transfer Queue Family
 			{
+				// Render Main Scene to UI System
 				auto& swapchain_extent = m_vulkan_context->m_swapchain_current_extent;
-				auto screentshot = m_vulkan_context->m_memory_allocator->
-					AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
-						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						swapchain_extent.width, swapchain_extent.height, 4, 
-						VK_FORMAT_R8G8B8A8_SRGB);
-				screentshot->Write(m_vulkan_context->Screenshot());
 
-				static auto scene = UI.CreateWidgetTexture(screentshot);
+				m_vulkan_context->Screenshot(UI.main_scene_image,
+					{ *canvas.syncmeta.semaphore_render_finished },
+					{ *canvas.syncmeta.semaphore_screenshot_finished });
+
+				//UI.main_scene_image->Write(screenshot);
+				UI.main_scene->Update(UI.main_scene_image);
 
 				canvas.cmd_buffer_ui->Begin();
 				m_render_passes[render_pass_UI]->Begin(canvas.cmd_buffer_ui);
 				UI.Render(canvas.cmd_buffer_ui);
 				m_render_passes[render_pass_UI]->End(canvas.cmd_buffer_ui);
 				canvas.cmd_buffer_ui->End();
-
-				commandBuffers.push_back(*canvas.cmd_buffer_ui);
+				canvas.cmd_buffer_ui->Submit(false, 
+					*canvas.syncmeta.fence_in_flight,
+					{ *canvas.syncmeta.semaphore_screenshot_finished },
+					{ *canvas.syncmeta.semaphore_ui_finished },
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 			}
 
-			// Submit Command
-			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			std::vector<VkSemaphore> wait_semaphores{ *canvas.syncmeta.semaphore_image_available };
-			std::vector<VkSemaphore> signal_semaphores{ *canvas.syncmeta.semaphore_render_finished };
-			VkSubmitInfo submitInfo
-			{
-				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-				.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size()),
-				.pWaitSemaphores = wait_semaphores.data(),
-				.pWaitDstStageMask = &wait_stage,
-				.commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
-				.pCommandBuffers = commandBuffers.data(),
-				.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
-				.pSignalSemaphores = signal_semaphores.data()
-			};
+			m_easel->PresentCanvas({ *canvas.syncmeta.semaphore_ui_finished });
 
-			auto submit_queue = m_vulkan_context->GetQueue(m_vulkan_context->m_device_queue_family_graphics);
-			if (vkQueueSubmit(submit_queue, 1, &submitInfo, *canvas.syncmeta.fence_in_flight) != VK_SUCCESS)
-				throw std::runtime_error("Failed to submit the Vulkan Command Buffer!");
-
-			m_easel->PresentCanvas({ *canvas.syncmeta.semaphore_render_finished });
-
-			std::this_thread::sleep_for(std::chrono::seconds(1)); log::debug("Wait 1 s \n\n");
+			//std::this_thread::sleep_for(std::chrono::seconds(1)); log::debug("Wait 1 s \n\n");
 		}
 		catch (RHI::VulkanContext::swapchain_error& swapchian_recreation)
 		{

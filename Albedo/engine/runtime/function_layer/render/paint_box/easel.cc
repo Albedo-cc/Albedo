@@ -34,6 +34,9 @@ namespace Runtime
 			canvas.syncmeta.fence_in_flight = m_vulkan_context->CreateFence(VK_FENCE_CREATE_SIGNALED_BIT);
 			canvas.syncmeta.semaphore_image_available = m_vulkan_context->CreateSemaphore(0x0);
 			canvas.syncmeta.semaphore_render_finished = m_vulkan_context->CreateSemaphore(0x0);
+
+			canvas.syncmeta.semaphore_screenshot_finished = m_vulkan_context->CreateSemaphore(0x0);
+			canvas.syncmeta.semaphore_ui_finished = m_vulkan_context->CreateSemaphore(0x0);
 		}
 	}
 

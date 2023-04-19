@@ -18,6 +18,9 @@ namespace Runtime
 			std::unique_ptr<RHI::Fence>			fence_in_flight;
 			std::unique_ptr<RHI::Semaphore>	semaphore_image_available;
 			std::unique_ptr<RHI::Semaphore>	semaphore_render_finished;
+
+			std::unique_ptr<RHI::Semaphore>	semaphore_screenshot_finished;
+			std::unique_ptr<RHI::Semaphore>	semaphore_ui_finished;
 		};
 
 	public:

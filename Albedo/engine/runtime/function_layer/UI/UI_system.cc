@@ -40,6 +40,19 @@ namespace Runtime
 			.Allocator = m_vulkan_context->m_memory_allocation_callback
 		};
 
+		// Create Main Scene
+		auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
+		auto& swapchain_extent = m_vulkan_context->m_swapchain_current_extent;
+		main_scene_image = m_vulkan_context->m_memory_allocator->
+			AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
+				VK_IMAGE_USAGE_SAMPLED_BIT,
+				400, 400, 4,
+				//swapchain_extent.width, swapchain_extent.height, 4,
+				VK_FORMAT_R8G8B8A8_SRGB);
+		main_scene_image->BindSampler(sampler);
+		main_scene = CreateWidgetTexture(main_scene_image);
+		RegisterUIEvent("Main Scene", [this]()->void {ImGui::Image(*main_scene, { 400, 400 }); });
+
 		// Initialize Dear ImGUI
 		ImGui::CreateContext();
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -48,8 +61,10 @@ namespace Runtime
 		ImGui_ImplGlfw_InitForVulkan(m_vulkan_context->m_window, true); // Install callbacks via ImGUI
 
 		auto commandBuffer = m_vulkan_context->
-			CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
+			CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_transfer);
 		commandBuffer->Begin();
+		main_scene_image->TransitionLayoutCommand(commandBuffer, 
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		ImGui_ImplVulkan_CreateFontsTexture(*commandBuffer);
 		commandBuffer->End();
 		commandBuffer->Submit(true);
@@ -57,6 +72,17 @@ namespace Runtime
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 		m_should_render = true;
+	}
+
+	void UISystem::RegisterUIEvent(std::string name, UIEvent event)
+	{
+		auto target = m_ui_events.find(name);
+		if (target == m_ui_events.end())
+		{
+			log::info("Albedo UI System: Registered a new UI event {}", name);
+			m_ui_events[name] = std::move(event);
+		}
+		else log::warn("Albedo UI System: Failed to register UI event {}", name);
 	}
 
 	std::shared_ptr<UIWidget::Texture> UISystem::
@@ -90,9 +116,9 @@ namespace Runtime
 			}
 
 			ImGui::ShowDemoWindow();
-			for (const auto& [name, draw_call] : m_draw_calls)
+			for (const auto& [name, ui_event] : m_ui_events)
 			{
-				draw_call();
+				ui_event();
 			}
 		
 			ImGui::Render(); // Prepare the data for rendering so you can call GetDrawData()
