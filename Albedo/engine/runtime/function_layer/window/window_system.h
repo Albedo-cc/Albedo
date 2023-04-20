@@ -16,8 +16,9 @@ namespace Runtime
 		struct Parameters
 		{
 			const char* title = "Albedo";
-			int width = 1080;
-			int height = 720;
+			int width		=	1280;		// If Zero: Auto Monitor Size
+			int height	=	800;			// If Zero: Auto Monitor Size
+			bool maximize = true;
 		};
 	public:
 		bool ShouldClose() const { return glfwWindowShouldClose(m_window); }

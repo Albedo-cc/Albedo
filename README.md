@@ -1,6 +1,7 @@
 # Albedo
  
-## Optimization
+## TODO
 1. Create pipelines by group.
 2. Pipeline Cache
-3. VMA::Image::Write (Combine commands into a single command buffer)
+3. Recreate Render Passes for UI Rendering
+4. CreateSampler Hash & Cache

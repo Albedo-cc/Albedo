@@ -3,6 +3,8 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
+#include "UI_window/UI_window.h";
+
 namespace Albedo {
 namespace Runtime
 {
@@ -41,27 +43,48 @@ namespace Runtime
 		};
 
 		// Create Main Scene
+		float width = 1000, height = 600;
 		auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
 		auto& swapchain_extent = m_vulkan_context->m_swapchain_current_extent;
 		main_scene_image = m_vulkan_context->m_memory_allocator->
 			AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
 				VK_IMAGE_USAGE_SAMPLED_BIT,
-				400, 400, 4,
+				width, height, 4,
 				//swapchain_extent.width, swapchain_extent.height, 4,
 				VK_FORMAT_R8G8B8A8_SRGB);
 		main_scene_image->BindSampler(sampler);
 		main_scene = CreateWidgetTexture(main_scene_image);
-		RegisterUIEvent("Main Scene", [this]()->void {ImGui::Image(*main_scene, { 400, 400 }); });
+		RegisterUIEvent(
+			"Main Scene",
+			[this]()->void 
+			{
+				float width = 1000, height = 600;
+				ImGui::SetNextWindowSize({ width, height });
+				//ImGui::SetNextWindowPos({200, 200 });
+				ImGui::Begin("Main Scene", nullptr, 
+					ImGuiWindowFlags_NoResize |
+					ImGuiWindowFlags_NoCollapse |
+					ImGuiWindowFlags_NoScrollbar |
+					ImGuiWindowFlags_NoScrollWithMouse);
+				ImGui::Image(*main_scene, { width, height });
+				auto pos = ImGui::GetWindowPos();
+				ImGui::SetCursorPos(pos);
+				ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+
+				ImGui::End();
+			});
 
 		// Initialize Dear ImGUI
 		ImGui::CreateContext();
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		auto& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 		ImGui_ImplVulkan_Init(&ImGui_InitInfo, *render_pass);
 		ImGui_ImplGlfw_InitForVulkan(m_vulkan_context->m_window, true); // Install callbacks via ImGUI
 
 		auto commandBuffer = m_vulkan_context->
-			CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_transfer);
+			CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
 		commandBuffer->Begin();
 		main_scene_image->TransitionLayoutCommand(commandBuffer, 
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -109,10 +132,8 @@ namespace Runtime
 			ImGui::NewFrame();
 			
 			{ // TEST
-				ImGui::Begin("Docking Window", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking);
-				ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-				ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
-				ImGui::End();
+				static UIWindow main_window{};
+				main_window.Render();
 			}
 
 			ImGui::ShowDemoWindow();

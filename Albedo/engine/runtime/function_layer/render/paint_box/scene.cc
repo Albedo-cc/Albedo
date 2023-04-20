@@ -52,7 +52,9 @@ namespace Runtime
 			staging_buffer_vertex->CopyCommand(commandBuffer, vertices);
 			staging_buffer_index->CopyCommand(commandBuffer, indices);
 			for (size_t i = 0; i < images.size(); ++i)
-				images[i]->WriteCommand(commandBuffer, image_buffers[i]);
+			{
+				images[i]->WriteAndTransitionCommand(commandBuffer, image_buffers[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
 			commandBuffer->End();
 			commandBuffer->Submit(true); // Must wait for transfer operation
 		}

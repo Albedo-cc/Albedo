@@ -3,7 +3,7 @@
 #include <AlbedoLog.hpp>
 #include <AlbedoPattern.hpp>
 
-#include "UI_widget.h"
+#include "UI_widget/UI_widget.h"
 
 namespace Albedo {
 namespace Runtime
@@ -20,12 +20,16 @@ namespace Runtime
 		std::shared_ptr<UIWidget::Texture> CreateWidgetTexture(std::shared_ptr<RHI::VMA::Image> image);
 
 	private:
-		friend class RenderSystem; // Call in Render System
-		void Initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass);
+		//--------------------------------------------------------------------------------------------------------------
+		/*Call in Render System*/ friend class RenderSystem;
+		//--------------------------------------------------------------------------------------------------------------
+		void Initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, 
+			std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass);
 		bool ShouldRender() const { return m_should_render.value(); }
 		void Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer);
 		std::shared_ptr<RHI::VMA::Image> main_scene_image;
 		std::shared_ptr<UIWidget::Texture> main_scene;
+		//--------------------------------------------------------------------------------------------------------------
 
 	private:
 		UISystem() = default;

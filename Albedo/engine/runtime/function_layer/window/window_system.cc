@@ -13,7 +13,17 @@ namespace Runtime
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-		m_window = glfwCreateWindow(m_config.width, m_config.height, m_config.title, nullptr, nullptr);
+		if (!m_config.width || !m_config.height)
+		{
+			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+			m_config.width = mode->width;
+			m_config.height = mode->height;
+		}
+
+		m_window = glfwCreateWindow(m_config.width, m_config.height, m_config.title, NULL, NULL);
+		if (!m_window) throw std::runtime_error("Failed to create GLFWwindow!");
+		if (m_config.maximize) glfwMaximizeWindow(m_window);
 
 		//GLFW does not know how to properly call a member function with the right pointer
 		glfwSetWindowUserPointer(m_window, this);
