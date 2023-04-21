@@ -27,6 +27,7 @@ namespace Runtime
 			std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass);
 		bool ShouldRender() const { return m_should_render.value(); }
 		void Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer);
+		std::shared_ptr<RHI::Sampler> main_scene_sampler;
 		std::shared_ptr<RHI::VMA::Image> main_scene_image;
 		std::shared_ptr<UIWidget::Texture> main_scene;
 		//--------------------------------------------------------------------------------------------------------------
@@ -40,6 +41,11 @@ namespace Runtime
 
 		std::unordered_map<std::string, UIEvent> m_ui_events;
 		std::optional<bool> m_should_render; // Init after calling Initialize()
+
+	private:
+		void register_control_events();
+		void initialize_imgui_context();
+		void create_main_window();
 	};
 
 }} // namespace Albedo::Runtime

@@ -1,9 +1,10 @@
 #include "UI_system.h"
+#include "UI_window/UI_window.h";
 
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
-#include "UI_window/UI_window.h";
+#include <runtime/function_layer/control/control_system.h>
 
 namespace Albedo {
 namespace Runtime
@@ -25,6 +26,10 @@ namespace Runtime
 		assert(m_vulkan_context == nullptr && "You cannot reinitialize UI System!");
 		m_vulkan_context = std::move(vulkan_context);
 
+		create_main_window();
+		register_control_events();
+
+		// Initialize Dear ImGUI
 		auto& graphics_queue_family = m_vulkan_context->m_device_queue_family_graphics;
 		ImGui_ImplVulkan_InitInfo ImGui_InitInfo
 		{
@@ -42,39 +47,6 @@ namespace Runtime
 			.Allocator = m_vulkan_context->m_memory_allocation_callback
 		};
 
-		// Create Main Scene
-		float width = 1000, height = 600;
-		auto sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
-		auto& swapchain_extent = m_vulkan_context->m_swapchain_current_extent;
-		main_scene_image = m_vulkan_context->m_memory_allocator->
-			AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
-				VK_IMAGE_USAGE_SAMPLED_BIT,
-				width, height, 4,
-				//swapchain_extent.width, swapchain_extent.height, 4,
-				VK_FORMAT_R8G8B8A8_SRGB);
-		main_scene_image->BindSampler(sampler);
-		main_scene = CreateWidgetTexture(main_scene_image);
-		RegisterUIEvent(
-			"Main Scene",
-			[this]()->void 
-			{
-				float width = 1000, height = 600;
-				ImGui::SetNextWindowSize({ width, height });
-				//ImGui::SetNextWindowPos({200, 200 });
-				ImGui::Begin("Main Scene", nullptr, 
-					ImGuiWindowFlags_NoResize |
-					ImGuiWindowFlags_NoCollapse |
-					ImGuiWindowFlags_NoScrollbar |
-					ImGuiWindowFlags_NoScrollWithMouse);
-				ImGui::Image(*main_scene, { width, height });
-				auto pos = ImGui::GetWindowPos();
-				ImGui::SetCursorPos(pos);
-				ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-
-				ImGui::End();
-			});
-
-		// Initialize Dear ImGUI
 		ImGui::CreateContext();
 		auto& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -132,19 +104,70 @@ namespace Runtime
 			ImGui::NewFrame();
 			
 			{ // TEST
-				static UIWindow main_window{};
+				static UIWindow main_window{m_vulkan_context};
 				main_window.Render();
+				ImGui::ShowDemoWindow();
 			}
 
-			ImGui::ShowDemoWindow();
-			for (const auto& [name, ui_event] : m_ui_events)
-			{
-				ui_event();
-			}
+			for (const auto& [name, ui_event] : m_ui_events) { ui_event(); }
 		
 			ImGui::Render(); // Prepare the data for rendering so you can call GetDrawData()
 			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *commandBuffer);
 		}
+	}
+
+	void UISystem::initialize_imgui_context()
+	{
+
+	}
+
+	void UISystem::register_control_events()
+	{
+		
+	}
+
+	void UISystem::create_main_window()
+	{
+		// Create Main Scene
+		main_scene_sampler = m_vulkan_context->CreateSampler(VK_SAMPLER_ADDRESS_MODE_REPEAT);
+		auto& swapchain_extent = m_vulkan_context->m_swapchain_current_extent;
+		main_scene_image = m_vulkan_context->m_memory_allocator->
+				AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
+											VK_IMAGE_USAGE_SAMPLED_BIT,
+											swapchain_extent.width, swapchain_extent.height, 4, 
+											// Same Size will better vkBlitImage performance
+											VK_FORMAT_R8G8B8A8_SRGB);
+		main_scene_image->BindSampler(main_scene_sampler);
+		main_scene = CreateWidgetTexture(main_scene_image);
+
+		RegisterUIEvent(
+			"Main Scene",
+			[this]()->void
+			{
+				auto& swapchain_extent = m_vulkan_context->m_swapchain_current_extent;
+				if (swapchain_extent.width != main_scene_image->Width() ||
+					swapchain_extent.height != main_scene_image->Height())
+				{
+					main_scene_image = m_vulkan_context->m_memory_allocator->
+						AllocateImage(VK_IMAGE_ASPECT_COLOR_BIT,
+							VK_IMAGE_USAGE_SAMPLED_BIT,
+							swapchain_extent.width, swapchain_extent.height, 4,
+							VK_FORMAT_R8G8B8A8_SRGB,
+							VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					main_scene_image->BindSampler(main_scene_sampler);
+					main_scene->Update(main_scene_image);
+				}
+				static auto window_size = ImGui::GetWindowSize();
+				ImGui::SetNextWindowSize({ window_size.x, window_size.y });
+				ImGui::Begin("Main Scene", nullptr,
+					ImGuiWindowFlags_NoCollapse |
+					ImGuiWindowFlags_NoScrollbar |
+					ImGuiWindowFlags_NoScrollWithMouse);
+				ImGui::Image(*main_scene, { window_size.x, window_size.y });
+
+				window_size = ImGui::GetWindowSize();
+				ImGui::End();
+			});
 	}
 
 }} // namespace Albedo::Runtime

@@ -31,7 +31,25 @@ namespace Runtime
 					glm::vec3(0.0f, 0.0f, 1.0f));*/
 
 				//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
-				camera_data.matrix_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f),
+				static auto eye = glm::vec3(2.0f, 2.0f, 2.0f);
+				static bool registered = false;
+				if (!registered)
+				{
+					UISystem::instance().RegisterUIEvent(
+						"Camera", [&]()
+						{
+							ImGui::Begin("Eye");
+
+							ImGui::InputFloat("Eye_X", &eye.x);
+							ImGui::InputFloat("Eye_Y", &eye.y);
+							ImGui::InputFloat("Eye_Z", &eye.z);
+
+							ImGui::End();
+						}
+					);
+					registered = true;
+				}
+				camera_data.matrix_view = glm::lookAt(eye,
 																						glm::vec3(0.0f, -0.1f, -1.0f),
 																						glm::vec3(0.0f, 0.0f, 1.0f));
 				//m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
