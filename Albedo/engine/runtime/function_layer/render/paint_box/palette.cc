@@ -4,7 +4,9 @@ namespace Albedo {
 namespace Runtime
 {
 
-	void Palette::SetupCameraMatrics(std::shared_ptr<RHI::VMA::Buffer> matrics)
+	void Palette::SetupCameraMatrics(
+		std::shared_ptr<RHI::DescriptorSet>	 SET0_ubo,
+		std::shared_ptr<RHI::VMA::Buffer> matrics)
 	{
 		SET0_ubo->WriteBuffer(
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -12,7 +14,9 @@ namespace Runtime
 			matrics);
 	}
 
-	void Palette::SetupLightParameters(std::shared_ptr<RHI::VMA::Buffer> light_parameters)
+	void Palette::SetupLightParameters(
+		std::shared_ptr<RHI::DescriptorSet>	 SET0_ubo,
+		std::shared_ptr<RHI::VMA::Buffer> light_parameters)
 	{
 		SET0_ubo->WriteBuffer(
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -20,44 +24,42 @@ namespace Runtime
 			light_parameters);
 	}
 
-	void Palette::SetupPBRBaseColor(std::shared_ptr<RHI::VMA::Image> base_color)
+	void Palette::BindDescriptorSetUBO(
+		std::shared_ptr<RHI::CommandBuffer> commandBuffer,
+		RHI::GraphicsPipeline* pipeline,
+		std::shared_ptr<RHI::DescriptorSet> ubo_set)
 	{
-		SET1_texture->WriteImage(
+		VkDescriptorSet boundSets[1]{ *ubo_set };
+
+		vkCmdBindDescriptorSets(*commandBuffer,
+			pipeline->GetPipelineBindPoint(),
+			pipeline->GetPipelineLayout(),
+			set_uniform_buffers, 1, boundSets,
+			0, nullptr);
+	}
+
+	void Palette::SetupPBRBaseColor(
+		std::shared_ptr<RHI::DescriptorSet>	 SET1_textures,
+		std::shared_ptr<RHI::VMA::Image> base_color)
+	{
+		SET1_textures->WriteImage(
 			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			binding_pbr_base_color, 
 			base_color);
 	}
 
-	void Palette::initialize(std::shared_ptr<RHI::VulkanContext> vulkan_context, std::shared_ptr<RHI::DescriptorPool> descriptorPool)
+	void Palette::BindDescriptorSetMaterial(
+		std::shared_ptr<RHI::CommandBuffer> commandBuffer,
+		RHI::GraphicsPipeline* pipeline,
+		std::shared_ptr<RHI::DescriptorSet> material_set)
 	{
-		// Allocate Descriptor Sets
-		auto SET0_layout = vulkan_context->CreateDescripotrSetLayout({
-			VkDescriptorSetLayoutBinding
-			{
-				.binding = binding_camera_matrics,
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1, // Not Array
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			},
-			VkDescriptorSetLayoutBinding
-			{
-				.binding = binding_light_parameters,
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1, // Not Array
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			} });
+		VkDescriptorSet boundSets[1]{ *material_set };
 
-		auto SET1_layout = vulkan_context->CreateDescripotrSetLayout({
-			VkDescriptorSetLayoutBinding
-			{
-				.binding = binding_pbr_base_color,
-				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-			} });
-
-		SET0_ubo = descriptorPool->AllocateDescriptorSet(SET0_layout);
-		SET1_texture = descriptorPool->AllocateDescriptorSet(SET1_layout);
+		vkCmdBindDescriptorSets(*commandBuffer,
+			pipeline->GetPipelineBindPoint(),
+			pipeline->GetPipelineLayout(),
+			set_materials, 1, boundSets,
+			0, nullptr);
 	}
-	
+
 }} // namespace Albedo::Runtime

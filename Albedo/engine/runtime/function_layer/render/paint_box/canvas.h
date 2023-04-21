@@ -25,19 +25,16 @@ namespace Runtime
 
 	public:
 		void	Paint(std::shared_ptr<RHI::CommandBuffer> commandBuffer,
-			RHI::GraphicsPipeline* brush, 
+			RHI::GraphicsPipeline* brush,
 			std::shared_ptr<Scene> scene);
 
-		Palette			palette;
 		SyncMeta		syncmeta;
+		// Command Buffers
 		std::shared_ptr<RHI::CommandBuffer> cmd_buffer_front;
 		std::shared_ptr<RHI::CommandBuffer> cmd_buffer_ui;
 
 	public:
 		Canvas() = default; // Created and initialized by the Easel
-
-	private:
-		std::weak_ptr<Scene> last_scene;
 
 	private:
 		void paint_model_node(RHI::GraphicsPipeline* brush, Scene& scene, std::shared_ptr<Model::Node> model_node);

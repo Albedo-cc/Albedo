@@ -23,20 +23,9 @@ namespace Runtime
 
 	private:
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context;
-		std::shared_ptr<RHI::DescriptorPool> m_descriptor_pool;
 
 		CID m_current_canvas = 0;
 		std::vector<Canvas> m_canvases;
-
-	private:
-		static constexpr size_t MAX_DESCRIPTOR_POOL_SET_COUNT
-		{ Easel::MAX_CANVAS_COUNT * Palette::MAX_SET_COUNT };
-
-		static constexpr size_t MAX_DESCRIPTOR_POOL_SIZE_UBO
-		{ Easel::MAX_CANVAS_COUNT * Palette::MAX_UNIFORM_BUFFER_COUNT };
-
-		static constexpr size_t MAX_DESCRIPTOR_POOL_SIZE_TEXTURE
-		{ Easel::MAX_CANVAS_COUNT * Palette::MAX_TEXTURE_COUNT };
 	};
 
 }} // namespace Albedo::Runtime

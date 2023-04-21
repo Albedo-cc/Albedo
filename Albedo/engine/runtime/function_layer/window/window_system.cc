@@ -5,7 +5,6 @@
 namespace Albedo {
 namespace Runtime
 {
-	std::function<void()> WindowSystem::frame_buffer_resize_callback = nullptr;
 
 	WindowSystem::WindowSystem()
 	{
@@ -23,7 +22,15 @@ namespace Runtime
 
 		m_window = glfwCreateWindow(m_config.width, m_config.height, m_config.title, NULL, NULL);
 		if (!m_window) throw std::runtime_error("Failed to create GLFWwindow!");
+
+		// Set Window Position
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+		glfwSetWindowPos(m_window,
+			(mode->width - m_config.width) >> 1,		// Mid
+			(mode->height - m_config.height) >> 1);	// Mid
 		if (m_config.maximize) glfwMaximizeWindow(m_window);
+
 
 		//GLFW does not know how to properly call a member function with the right pointer
 		glfwSetWindowUserPointer(m_window, this);
@@ -54,6 +61,7 @@ namespace Runtime
 
 		_window->m_config.height = height;
 		_window->m_config.width = width;
+		log::info("Current Window Size {}, {}", width, height);
 
 		if (frame_buffer_resize_callback) _window->frame_buffer_resize_callback();
 	}

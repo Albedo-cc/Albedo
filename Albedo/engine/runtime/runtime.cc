@@ -14,6 +14,7 @@ namespace Runtime
 	{
 		m_vulkan_context = RHI::VulkanContext::Create(m_window_system->GetWindow());
 		ControlSystem::instance().Initialize(m_window_system->GetWindow()); 
+		WindowSystem::SetFramebufferResizeCallback([this]() { m_render_system->handle_window_resize(); });
 		// Must init Render System after Control System (GLFW callbacks)
 		m_render_system = std::make_shared<RenderSystem>(m_vulkan_context); 
 
@@ -24,7 +25,6 @@ namespace Runtime
 				.action = Action::Press,
 				.function = [] () {log::info("Pressed Space!"); }
 			});
-		WindowSystem::SetFramebufferResizeCallback([this]() { m_render_system->handle_window_resize(); });
 	}
 
 	void RuntimeModule::Run()

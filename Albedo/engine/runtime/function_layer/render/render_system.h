@@ -29,9 +29,9 @@ namespace Runtime
 
 	private:
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context; // Make sure that vulkan context will be released at last.
-
-		std::shared_ptr<Camera> m_camera;
+		
 		std::shared_ptr<Easel> m_easel;
+		std::shared_ptr<Camera> m_camera;
 		std::shared_ptr<Scene> m_scene;
 
 		std::vector<std::shared_ptr<RHI::RenderPass>> m_render_passes;

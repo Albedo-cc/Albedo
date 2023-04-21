@@ -9,15 +9,6 @@ namespace Runtime
 	void	Canvas::Paint(std::shared_ptr<RHI::CommandBuffer> commandBuffer, RHI::GraphicsPipeline* brush, std::shared_ptr<Scene> scene)
 	{
 		assert(commandBuffer->IsRecording() && "You must Begin() command Buffer before Paint()!");
-		// Update Scene
-		if (last_scene.expired() || last_scene.lock() != scene)
-		{
-			last_scene = scene;
-			if (scene->pbr_parameters.Base_Color_Index.has_value())
-			{
-				palette.SetupPBRBaseColor(scene->images[scene->pbr_parameters.Base_Color_Index.value()]);
-			}
-		}
 
 		brush->Bind(commandBuffer);
 
@@ -56,17 +47,10 @@ namespace Runtime
 				if (primitive.index_count > 0) 
 				{
 					// Bind Descriptor Sets
-					std::vector<VkDescriptorSet> boundSets
-					{
-						*palette.SET0_ubo,
-						*palette.SET1_texture
-					};
-
-					vkCmdBindDescriptorSets(*cmd_buffer_front,
-						brush->GetPipelineBindPoint(),
-						brush->GetPipelineLayout(),
-						0, boundSets.size(), boundSets.data(),
-						0, nullptr);
+					Palette::BindDescriptorSetMaterial(
+						cmd_buffer_front, 
+						brush, 
+						scene.m_descriptor_set_materials[primitive.material_index]);
 
 					vkCmdDrawIndexed(*cmd_buffer_front, primitive.index_count, 1, primitive.first_index, 0, 0);
 				}

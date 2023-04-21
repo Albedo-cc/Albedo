@@ -234,8 +234,7 @@ namespace Runtime
 				// Get base color texture index
 				if (material.values.find("baseColorTexture") != material.values.end())
 				{
-					model->PBR_parameters.Base_Color_Index = material.values["baseColorTexture"].TextureIndex();
-					model->materials[i].base_color_texture_index = model->PBR_parameters.Base_Color_Index.value();
+					model->materials[i].base_color_texture_index = material.values["baseColorTexture"].TextureIndex();
 				}
 			}
 
@@ -249,6 +248,38 @@ namespace Runtime
 		}
 		else throw std::runtime_error("Failed to load model!\nError: " + error + "\nWarn: " + warning);
 
+		// [TODO] Get from file
+		// Bounding Box
+		model->bounding_box.max_position = { -99999, -99999 ,-99999 };
+		model->bounding_box.min_position = { 99999, 99999, 99999 };
+		for (const auto& vertex : model->vertices)
+		{
+			auto& pos = vertex.position;
+
+			if (pos.x() > model->bounding_box.max_position.x())
+				model->bounding_box.max_position[0] = pos.x();
+			if (pos.y() > model->bounding_box.max_position.y())
+				model->bounding_box.max_position[1] = pos.y();
+			if (pos.z() > model->bounding_box.max_position.z())
+				model->bounding_box.max_position[2] = pos.z();
+
+			if (pos.x() < model->bounding_box.min_position.x())
+				model->bounding_box.min_position[0] = pos.x();
+			if (pos.y() < model->bounding_box.min_position.y())
+				model->bounding_box.min_position[1] = pos.y();
+			if (pos.z() < model->bounding_box.min_position.z())
+				model->bounding_box.min_position[2] = pos.z();
+		}
+
+
+		log::debug("MAX POS: {} {} {}",
+			model->bounding_box.max_position.x(),
+			model->bounding_box.max_position.y(),
+			model->bounding_box.max_position.z());
+		log::debug("MIN POS: {} {} {}",
+			model->bounding_box.min_position.x(),
+			model->bounding_box.min_position.y(),
+			model->bounding_box.min_position.z());
 		return model;
 	}
 

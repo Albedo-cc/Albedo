@@ -25,9 +25,9 @@ namespace Runtime
 		std::shared_ptr<RHI::VMA::Buffer> vertices;
 		std::shared_ptr<RHI::VMA::Buffer> indices;
 		//std::vector<std::shared_ptr<RHI::Sampler>> samplers;	[ Future: now all of images share one default sampler ]
-		Model::PBRParameters pbr_parameters;
 		std::vector<std::shared_ptr<RHI::VMA::Image>>images;
 		std::vector<Model::Texture> textures;
+		std::vector<std::shared_ptr<RHI::DescriptorSet>> m_descriptor_set_materials;
 		std::vector<Model::Material> materials;
 		std::vector<std::shared_ptr<Model::Node>> nodes;
 	};

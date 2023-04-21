@@ -1,5 +1,7 @@
 #include "camera.h"
 
+#include <runtime/function_layer/render/paint_box/palette.h>
+
 namespace Albedo {
 namespace Runtime
 {
@@ -15,12 +17,11 @@ namespace Runtime
 			.aspect_ratio = static_cast<float>(extent.width) / extent.height
 		};
 
+		descriptor_set_ubo = m_vulkan_context->CreateDescriptorSet(Palette::SET0_UBO_Layout);
 		m_camera_matrix_buffer = m_vulkan_context->m_memory_allocator->
 			AllocateBuffer(sizeof(CameraMatrics), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
-		log::debug("C Size {} ", m_camera_matrix_buffer->Size());
 		m_light_parameter_buffer = m_vulkan_context->m_memory_allocator->
 			AllocateBuffer(sizeof(LightParameters), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true, true, false, true); // Persistent Memory
-		log::debug("L Size {} ", m_light_parameter_buffer->Size());
 	}
 
 	Matrix4f Camera::GetViewingMatrix(bool update/* = false*/)

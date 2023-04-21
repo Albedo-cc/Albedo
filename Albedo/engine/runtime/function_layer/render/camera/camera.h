@@ -29,6 +29,7 @@ namespace Runtime
 		Camera(std::shared_ptr<RHI::VulkanContext> vulkan_context, ProjectionMode mode = ProjectionMode::PERSPECTIVE);
 
 		// TEST Temp
+		std::shared_ptr<RHI::DescriptorSet> descriptor_set_ubo;
 		struct CameraMatrics
 		{
 			glm::mat4x4 matrix_projection;

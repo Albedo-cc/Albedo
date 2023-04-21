@@ -20,7 +20,6 @@ namespace Runtime
 		try
 		{
 			auto& canvas = m_easel->WaitCanvas(); // Wait for Next Canvas
-			auto& palette = canvas.palette;
 			static time::StopWatch timer{};
 
 			// Update Camera
@@ -31,18 +30,27 @@ namespace Runtime
 					glm::vec3(0.0f, 0.0f, 1.0f));*/
 
 				//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
-				static auto eye = glm::vec3(2.0f, 2.0f, 2.0f);
+				//static auto eye = glm::vec3(2.0f, 2.0f, 2.0f);  // Cube
+				static auto eye = glm::vec3(0.06f, 0.13f, 0.3f); // bottle
+				auto& light_data = m_camera->Light_Parameters;
 				static bool registered = false;
 				if (!registered)
 				{
+					light_data.light_position = Vector4f(0.1, 0.1, 0.1, 1.0);
+					light_data.view_position = Vector4f(0.0f, -0.1f, -0.1f, 0.0f);
+
 					UISystem::instance().RegisterUIEvent(
 						"Camera", [&]()
 						{
-							ImGui::Begin("Eye");
+							ImGui::Begin("UBP");
 
 							ImGui::InputFloat("Eye_X", &eye.x);
 							ImGui::InputFloat("Eye_Y", &eye.y);
 							ImGui::InputFloat("Eye_Z", &eye.z);
+							ImGui::Separator();
+							ImGui::InputFloat("Light_X", &light_data.light_position[0]);
+							ImGui::InputFloat("Light_Y", &light_data.light_position[1]);
+							ImGui::InputFloat("Light_Z", &light_data.light_position[2]);
 
 							ImGui::End();
 						}
@@ -59,21 +67,19 @@ namespace Runtime
 					0.1f,
 					10.0f);
 				camera_data.matrix_projection[1][1] *= -1.0f; // Y-Flip
-
-				auto& light_data = m_camera->Light_Parameters;
-				/*light_data.light_position = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
-				light_data.view_position = glm::vec4(0.0f, -0.1f, -1.0f, 0.0f);*/
-				light_data.light_position = Vector4f(0.1, 0.1, 0.1, 1.0);
-				light_data.view_position = Vector4f(0.0f, -0.1f, -0.1f, 0.0f);
 			}
-			palette.SetupCameraMatrics(m_camera->GetCameraMatrics());
-			palette.SetupLightParameters(m_camera->m_light_parameter_buffer);
+			Palette::SetupCameraMatrics(m_camera->descriptor_set_ubo, m_camera->GetCameraMatrics());
+			m_camera->m_light_parameter_buffer->Write(&m_camera->Light_Parameters);
+			Palette::SetupLightParameters(m_camera->descriptor_set_ubo, m_camera->m_light_parameter_buffer);
 
 			// Render Scene
 			canvas.cmd_buffer_front->Begin();
 			m_render_passes[render_pass_forward]->Begin(canvas.cmd_buffer_front);
 			{
 				auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
+				Palette::BindDescriptorSetUBO(canvas.cmd_buffer_front,
+					pipelines[ForwardRenderPass::pipeline_present],
+					m_camera->descriptor_set_ubo);
 				canvas.Paint(canvas.cmd_buffer_front, pipelines[ForwardRenderPass::pipeline_present], m_scene);
 			}
 	
@@ -122,14 +128,14 @@ namespace Runtime
 
 	RenderSystem::RenderSystem(std::shared_ptr<RHI::VulkanContext> vulkan_context) :
 		m_vulkan_context{ std::move(vulkan_context)},
-		m_camera{ std::make_shared<Camera>(m_vulkan_context) },
 		m_easel{ std::make_shared<Easel>(m_vulkan_context) },
+		m_camera{ std::make_shared<Camera>(m_vulkan_context) },
 		m_scene{ std::make_shared<Scene>(m_vulkan_context) }
 	{
-		//auto scene_future = AssetManager::instance().AsyncLoadModel("FlightHelmet/FlightHelmet.gltf");
+		//auto scene_future = AssetManager::instance().AsyncLoadModel("FlightHelmet/glTF/FlightHelmet.gltf");
 		//auto scene_future = AssetManager::instance().AsyncLoadModel("ABeautifulGame/glTF/ABeautifulGame.gltf");
-		auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
-		//auto scene_future = AssetManager::instance().AsyncLoadModel("WaterBottle/glTF/WaterBottle.gltf");
+		//auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
+		auto scene_future = AssetManager::instance().AsyncLoadModel("WaterBottle/glTF/WaterBottle.gltf");
 
 		// Render Passes
 		create_render_passes();
@@ -151,11 +157,17 @@ namespace Runtime
 
 	void RenderSystem::handle_window_resize()
 	{
-		log::info("Window Resized");
+		static bool RECREATING = false;
+		if (RECREATING) return;
+		RECREATING = true;
+		{
+			log::info("Window Resized");
 
-		m_vulkan_context->RecreateSwapChain();
-		create_render_passes();		 // Recreate Render Passes
-		m_camera->GetViewingMatrix(true); // Update
+			m_vulkan_context->RecreateSwapChain();
+			create_render_passes();		 // Recreate Render Passes
+			m_camera->GetViewingMatrix(true); // Update
+		}
+		RECREATING = false;
 	}
 
 }} // namespace Albedo::Runtime

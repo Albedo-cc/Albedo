@@ -41,13 +41,6 @@ namespace Runtime
 	{
 		friend class ModelLoader;
 	public:
-		struct PBRParameters
-		{
-			std::optional<uint32_t> Base_Color_Index;
-		};
-		PBRParameters PBR_parameters;
-
-	public:
 		using VertexIndex = uint32_t; // VK_INDEX_TYPE_UINT32
 
 		static VkVertexInputBindingDescription GetBindingDescription(uint32_t binding);
@@ -64,6 +57,13 @@ namespace Runtime
 			alignas(16) Vector2f uv;
 			alignas(16) Vector4f color;
 		};
+		
+		struct BoundingBox
+		{
+			Vector3f max_position;
+			Vector3f min_position;
+		};
+		BoundingBox bounding_box;
 
 		// The following structures roughly represent the glTF scene structure
 		// To keep things simple, they only contain those properties that are required for this sample
@@ -95,7 +95,7 @@ namespace Runtime
 		struct Material
 		{
 			Vector4f base_color_factor{ 1.0, 1.0, 1.0, 1.0 };
-			uint32_t base_color_texture_index;
+			std::optional<uint32_t> base_color_texture_index;
 		};
 
 		// A glTF texture stores a reference to the image and a sampler

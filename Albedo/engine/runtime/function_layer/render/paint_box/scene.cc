@@ -1,11 +1,12 @@
 #include "scene.h"
 
+#include "palette.h"
+
 namespace Albedo {
 namespace Runtime
 {
 	void Scene::Sketch(std::shared_ptr<Model> model)
 	{
-		pbr_parameters = model->PBR_parameters;
 		textures = model->textures;
 		materials = model->materials;
 		nodes = model->nodes;
@@ -46,6 +47,8 @@ namespace Runtime
 				image_buffers[i]->Write(current_image.data);
 			}
 
+
+			// Submit
 			auto commandBuffer = m_vulkan_context->
 				CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
 			commandBuffer->Begin();
@@ -57,6 +60,20 @@ namespace Runtime
 			}
 			commandBuffer->End();
 			commandBuffer->Submit(true); // Must wait for transfer operation
+
+			// Material Descriptor Set
+			m_descriptor_set_materials.resize(materials.size());
+			for (size_t i = 0; i < materials.size(); ++i)
+			{
+				m_descriptor_set_materials[i] = m_vulkan_context->CreateDescriptorSet(Palette::SET1_Materials_Layout);
+
+				if (materials[i].base_color_texture_index.has_value())
+				{
+					Palette::SetupPBRBaseColor(m_descriptor_set_materials[i],
+						images[textures[materials[i].base_color_texture_index.value()].imageIndex]);
+				}
+				else log::warn("Current Primitive has no PBR Base Color Textures!");
+			}
 		}
 	}
 
