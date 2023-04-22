@@ -1,6 +1,6 @@
 #pragma once
 
-#include <runtime/asset_layer/asset_layer_types.h>
+#include <runtime/asset_layer/asset_types.h>
 
 namespace Albedo {
 namespace Runtime

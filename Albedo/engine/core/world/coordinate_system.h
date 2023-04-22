@@ -11,10 +11,10 @@ namespace Core
 	- The X axis increasing to the right
 	- The Y axis increasing downwards
 	- The Z axis increasing into the screen
-	- The Origin at the top-left corner of the screen
-	- The Depth range from 0 to 1
+	- The Origin at the top-left corner of the screen (Viewport)
+	- The Depth range from 0 to 1 (Clip Space / NDC)
 	*
-	* This means that Vulkan's coordinate system is left-handed and
+	* This means that Vulkan's coordinate system is right-handed and
 	   Y-inverted compared to the standard Cartesian coordinate system. 
 	*/
 

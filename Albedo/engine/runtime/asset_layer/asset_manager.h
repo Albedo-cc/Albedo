@@ -4,7 +4,7 @@
 
 #include <core/thread/async_task.h>
 
-#include "asset_layer_types.h"
+#include "asset_types.h"
 #include "image/image_loader.h"
 #include "model/model_loader.h"
 

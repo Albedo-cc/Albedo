@@ -15,17 +15,17 @@ namespace Runtime
 	private:
 		enum Layout // Same order as shaders
 		{
-			MAX_SET_COUNT = 2,
+			// Push Constant (glTF Local Matrix)
 			// layout(set = 0) Descriptor Set UBO
+			SET_UBO_MAX_BINGING					=	2,
 			set_uniform_buffers							=	0,
 				binding_camera_matrics					=	0,
 				binding_light_parameters				=	1,
-				MAX_UNIFORM_BUFFER_COUNT	=	1 + 1,
 
 			// layout(set = 1) Material
+			SET_MATERIALS_MAX_BINGING		=	1,
 			set_materials										=	1,
 				binding_pbr_base_color					=	0,
-				MAX_TEXTURE_COUNT					=	1,
 		};
 
 	public:

@@ -1,11 +1,11 @@
 #include "scene.h"
 
-#include "palette.h"
+#include "../paintbox/palette.h"
 
 namespace Albedo {
 namespace Runtime
 {
-	void Scene::Sketch(std::shared_ptr<Model> model)
+	void Scene::Load(std::shared_ptr<Model> model)
 	{
 		textures = model->textures;
 		materials = model->materials;

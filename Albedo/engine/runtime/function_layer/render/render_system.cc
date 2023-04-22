@@ -3,10 +3,12 @@
 #include <AlbedoTime.hpp>
 
 #include "camera/camera.h"
-#include "paint_box/easel.h"
+#include "paintbox/easel.h"
+#include "environment/light.h"
+#include "environment/scene.h"
 
-#include "render_pass/forward_rendering/forward_render_pass.h"
-#include "render_pass/UI_rendering/UI_render_pass.h"
+#include "renderpass/forward_rendering/forward_render_pass.h"
+#include "renderpass/UI_rendering/UI_render_pass.h"
 
 #include <core/math/math.h>
 #include <runtime/asset_layer/asset_manager.h>
@@ -22,55 +24,10 @@ namespace Runtime
 			auto& canvas = m_easel->WaitCanvas(); // Wait for Next Canvas
 			static time::StopWatch timer{};
 
-			// Update Camera
-			{
-				auto& camera_data = m_camera->Camera_Matrics;
-			/*	camera_data.matrix_model = glm::rotate(glm::mat4x4(1.0f),
-					0.1f * (float)ONE_DEGREE * static_cast<float>(timer.split().milliseconds()),
-					glm::vec3(0.0f, 0.0f, 1.0f));*/
-
-				//make_rotation_matrix(WORLD_AXIS_Z,  * timer.split().milliseconds()).setIdentity();
-				//static auto eye = glm::vec3(2.0f, 2.0f, 2.0f);  // Cube
-				static auto eye = glm::vec3(0.06f, 0.13f, 0.3f); // bottle
-				auto& light_data = m_camera->Light_Parameters;
-				static bool registered = false;
-				if (!registered)
-				{
-					light_data.light_position = Vector4f(0.1, 0.1, 0.1, 1.0);
-					light_data.view_position = Vector4f(0.0f, -0.1f, -0.1f, 0.0f);
-
-					UISystem::instance().RegisterUIEvent(
-						"Camera", [&]()
-						{
-							ImGui::Begin("UBP");
-
-							ImGui::InputFloat("Eye_X", &eye.x);
-							ImGui::InputFloat("Eye_Y", &eye.y);
-							ImGui::InputFloat("Eye_Z", &eye.z);
-							ImGui::Separator();
-							ImGui::InputFloat("Light_X", &light_data.light_position[0]);
-							ImGui::InputFloat("Light_Y", &light_data.light_position[1]);
-							ImGui::InputFloat("Light_Z", &light_data.light_position[2]);
-
-							ImGui::End();
-						}
-					);
-					registered = true;
-				}
-				camera_data.matrix_view = glm::lookAt(eye,
-																						glm::vec3(0.0f, -0.1f, -1.0f),
-																						glm::vec3(0.0f, 0.0f, 1.0f));
-				//m_camera.GetViewMatrix();//m_camera.GetViewingMatrix();
-				camera_data.matrix_projection = glm::perspective(glm::radians(80.0f),
-					(float)m_vulkan_context->m_swapchain_current_extent.width /
-					(float)m_vulkan_context->m_swapchain_current_extent.height,
-					0.1f,
-					10.0f);
-				camera_data.matrix_projection[1][1] *= -1.0f; // Y-Flip
-			}
-			Palette::SetupCameraMatrics(m_camera->descriptor_set_ubo, m_camera->GetCameraMatrics());
-			m_camera->m_light_parameter_buffer->Write(&m_camera->Light_Parameters);
-			Palette::SetupLightParameters(m_camera->descriptor_set_ubo, m_camera->m_light_parameter_buffer);
+			// Update UBO
+			Palette::SetupCameraMatrics(m_easel->GetDescriptorSetUBO(), m_camera->GetCameraMatrics());
+			static Light light{ m_vulkan_context };
+			Palette::SetupLightParameters(m_easel->GetDescriptorSetUBO(), light.GetLightData());
 
 			// Render Scene
 			canvas.cmd_buffer_front->Begin();
@@ -79,7 +36,7 @@ namespace Runtime
 				auto& pipelines = m_render_passes[render_pass_forward]->GetGraphicsPipelines();
 				Palette::BindDescriptorSetUBO(canvas.cmd_buffer_front,
 					pipelines[ForwardRenderPass::pipeline_present],
-					m_camera->descriptor_set_ubo);
+					m_easel->GetDescriptorSetUBO());
 				canvas.Paint(canvas.cmd_buffer_front, pipelines[ForwardRenderPass::pipeline_present], m_scene);
 			}
 	
@@ -134,8 +91,10 @@ namespace Runtime
 	{
 		//auto scene_future = AssetManager::instance().AsyncLoadModel("FlightHelmet/glTF/FlightHelmet.gltf");
 		//auto scene_future = AssetManager::instance().AsyncLoadModel("ABeautifulGame/glTF/ABeautifulGame.gltf");
-		//auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
-		auto scene_future = AssetManager::instance().AsyncLoadModel("WaterBottle/glTF/WaterBottle.gltf");
+		auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
+		//auto scene_future = AssetManager::instance().AsyncLoadModel("WaterBottle/glTF/WaterBottle.gltf");
+
+		m_camera->SetPosition({ 2.0, 2.0, 2.0 });
 
 		// Render Passes
 		create_render_passes();
@@ -143,7 +102,7 @@ namespace Runtime
 		// UI System
 		UISystem::instance().Initialize(m_vulkan_context, m_render_passes[render_pass_UI], UIRenderPass::subpass_UI);
 
-		m_scene->Sketch(scene_future->WaitResult());
+		m_scene->Load(scene_future->WaitResult());
 	}
 
 	void RenderSystem::create_render_passes()
@@ -161,11 +120,8 @@ namespace Runtime
 		if (RECREATING) return;
 		RECREATING = true;
 		{
-			log::info("Window Resized");
-
 			m_vulkan_context->RecreateSwapChain();
 			create_render_passes();		 // Recreate Render Passes
-			m_camera->GetViewingMatrix(true); // Update
 		}
 		RECREATING = false;
 	}

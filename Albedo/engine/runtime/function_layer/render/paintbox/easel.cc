@@ -34,6 +34,9 @@ namespace Runtime
 		({
 		{Palette::binding_pbr_base_color, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT}
 		});
+
+		// Global Descriptor Sets
+		m_descriptor_set_ubo = m_vulkan_context->CreateDescriptorSet(Palette::SET0_UBO_Layout);
 	}
 
 	Canvas& Easel::WaitCanvas() throw (RHI::VulkanContext::swapchain_error)

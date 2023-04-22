@@ -2,7 +2,7 @@
 
 #include <AlbedoRHI.hpp>
 
-#include <runtime/asset_layer/asset_layer_types.h>
+#include <runtime/asset_layer/asset_types.h>
 
 namespace Albedo {
 namespace Runtime
@@ -12,7 +12,7 @@ namespace Runtime
 	{
 		friend class Canvas; // Painted by Canvas
 	public:
-		void Sketch(std::shared_ptr<Model> model); // Load Model
+		void Load(std::shared_ptr<Model> model);
 
 	public:
 		Scene() = delete;

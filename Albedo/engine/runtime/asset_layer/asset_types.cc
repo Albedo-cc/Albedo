@@ -1,4 +1,4 @@
-#include "asset_layer_types.h"
+#include "asset_types.h"
 
 namespace Albedo {
 namespace Runtime

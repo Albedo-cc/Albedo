@@ -3,7 +3,7 @@
 #include <AlbedoRHI.hpp>
 
 #include "palette.h"
-#include "scene.h"
+#include "../environment/scene.h"
 
 namespace Albedo {
 namespace Runtime

@@ -17,6 +17,8 @@ namespace Runtime
 		Canvas& WaitCanvas() throw (RHI::VulkanContext::swapchain_error);
 		void PresentCanvas(std::vector<VkSemaphore> wait_semaphores, bool switch_canvas = true) throw (RHI::VulkanContext::swapchain_error);
 
+		std::shared_ptr<RHI::DescriptorSet> GetDescriptorSetUBO() { return m_descriptor_set_ubo; }
+
 	public:
 		Easel() = delete;
 		Easel(std::shared_ptr<RHI::VulkanContext> vulkan_context);
@@ -26,6 +28,8 @@ namespace Runtime
 
 		CID m_current_canvas = 0;
 		std::vector<Canvas> m_canvases;
+
+		std::shared_ptr<RHI::DescriptorSet> m_descriptor_set_ubo;
 	};
 
 }} // namespace Albedo::Runtime

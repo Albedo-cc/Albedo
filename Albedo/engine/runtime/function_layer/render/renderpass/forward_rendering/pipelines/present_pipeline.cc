@@ -97,9 +97,9 @@ namespace Runtime
 			.rasterizerDiscardEnable = VK_FALSE, // if VK_TRUE, then geometry never passes through the rasterizer stage
 			.polygonMode = VK_POLYGON_MODE_FILL,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
-			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, // Y-Flip (Vulkan Coordinate System is different with OpenGL)
+			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, // Note Y-Flip (Vulkan Coordinate System is different with OpenGL)
 			.depthBiasEnable = VK_FALSE,
-			.depthBiasConstantFactor = 0.0f,
+			.depthBiasConstantFactor = 0.0f, 
 			.depthBiasClamp = 0.0f,
 			.depthBiasSlopeFactor = 0.0f, // This is sometimes used for shadow mapping
 			.lineWidth = 1.0f // Any line thicker than 1.0f requires you to enable the wideLines GPU feature.			

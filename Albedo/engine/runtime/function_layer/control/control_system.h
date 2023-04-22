@@ -15,7 +15,6 @@ namespace Runtime
 	{
 		friend class pattern::Singleton<ControlSystem>;
 		friend class RuntimeModule;
-		void Update();
 
 	public:
 		void RegisterKeyboardEvent(std::string name, KeyboardEvent event);
