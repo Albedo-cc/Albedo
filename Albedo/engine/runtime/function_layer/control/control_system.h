@@ -7,33 +7,36 @@
 
 #include "control_events.h"
 
+#include <array>
+
 namespace Albedo {
 namespace Runtime
 {
+	class WindowSystem;
 
 	class ControlSystem : public pattern::Singleton<ControlSystem>
 	{
 		friend class pattern::Singleton<ControlSystem>;
 		friend class RuntimeModule;
+		void Update();
 
 	public:
-		void RegisterKeyboardEvent(std::string name, KeyboardEvent event);
-		void RegisterMouseButtonEvent(std::string name, MouseButtonEvent event);
-
-		void DeleteKeyboardEvent(std::string name);
-		void DeleteMouseEvent(std::string name);
+		void RegisterKeyboardEvent(KeyboardEventCreateInfo createinfo);
+		void DeleteKeyboardEvent(EventName name);
 
 	private:
-		void Initialize(GLFWwindow* window);
+		void Initialize(std::weak_ptr<WindowSystem> window_system);
 		ControlSystem() = default;
 
 	private:
-		inline static std::unordered_map<std::string, KeyboardEvent> m_keyborad_events;
-		inline static std::unordered_map<std::string, MouseButtonEvent> m_mouse_button_events;
+		std::weak_ptr<WindowSystem> m_window_system;
+
+		using KeyboardEventMap = std::unordered_map<Keyboard::Key, std::list<ControlEvent>>;
+		inline static std::unordered_map<EventName, ControlEvent*> m_registry_keyborad_events;
+		inline static std::array<KeyboardEventMap, Action::ACTION_TYPE_COUNT> m_keyboard_events;
 
 	private:
 		static void keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-		static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 	};
 
 }} // namespace Albedo::Runtime

@@ -12,7 +12,8 @@ namespace Runtime
 	{
 		static constexpr float MAX_FOV_Y	= 89 * ONE_DEGREE;
 		static constexpr float MIN_FOV_Y	= 10 * ONE_DEGREE;
-		static constexpr float MAX_FAR_PLANE = 65535.0; // If Z-Buffer is 16bits
+		static constexpr float MAX_FAR_PLANE		= 65535.0; // If Z-Buffer is 16bits
+		static constexpr float MIN_FAR_PLANE		= 100.0;
 		static constexpr float MIN_NEAR_PLANE	= 0.01;
 
 	public:

@@ -27,7 +27,7 @@ namespace Runtime
 				
 				picked |= ImGui::SliderFloat("FOV(Y)", &m_parameters.FOV_Y, MIN_FOV_Y, MAX_FOV_Y);
 				picked |= ImGui::SliderFloat("Near Plane", &m_parameters.plane_near, MIN_NEAR_PLANE, m_parameters.plane_far);
-				picked |= ImGui::SliderFloat("Far Plane", &m_parameters.plane_far, m_parameters.plane_near, MAX_FAR_PLANE);
+				picked |= ImGui::SliderFloat("Far Plane", &m_parameters.plane_far, MIN_FAR_PLANE, MAX_FAR_PLANE);
 				ImGui::Separator();
 
 				if (ImGui::Checkbox("Focus", &m_parameters.is_focusing) && m_parameters.is_focusing)
@@ -41,6 +41,9 @@ namespace Runtime
 				ImGui::Separator();
 
 				picked |= ImGui::Checkbox("Flip-Y", &m_parameters.flip_y);
+				ImGui::SameLine();
+				ImGui::SliderFloat("Speed", &m_parameters.speed, 0.0, 5.0);
+				ImGui::Separator();
 
 				ImGui::End();
 				if (picked)
@@ -52,11 +55,12 @@ namespace Runtime
 		);
 
 		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Front Press", KeyboardEvent
+			KeyboardEventCreateInfo
 			{
+				.name = "Camera Move Front",
 				.key = Keyboard::Key::W,
 				.action = Action::Press,
-				.function = [this]()
+				.event = [this]()
 				{
 					m_parameters.is_moving = true;
 					m_parameters.position += m_parameters.front * m_parameters.speed;
@@ -64,35 +68,12 @@ namespace Runtime
 			});
 
 		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Front Holding", KeyboardEvent
+			KeyboardEventCreateInfo
 			{
-				.key = Keyboard::Key::W,
-				.action = Action::Hold,
-				.function = [this]()
-				{
-					m_parameters.is_moving = true;
-					m_parameters.position += m_parameters.front * m_parameters.speed;
-				}
-			});
-
-		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Left Press", KeyboardEvent
-			{
+				.name = "Camera Move Left",
 				.key = Keyboard::Key::A,
 				.action = Action::Press,
-				.function = [this]()
-				{
-					m_parameters.is_moving = true;
-					m_parameters.position -= m_parameters.right * m_parameters.speed;
-				}
-			});
-		
-		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Left Holding", KeyboardEvent
-			{
-				.key = Keyboard::Key::A,
-				.action = Action::Hold,
-				.function = [this]()
+				.event = [this]()
 				{
 					m_parameters.is_moving = true;
 					m_parameters.position -= m_parameters.right * m_parameters.speed;
@@ -100,11 +81,12 @@ namespace Runtime
 			});
 
 		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Back Press", KeyboardEvent
+			KeyboardEventCreateInfo
 			{
+				.name = "Camera Move Back",
 				.key = Keyboard::Key::S,
 				.action = Action::Press,
-				.function = [this]()
+				.event = [this]()
 				{
 					m_parameters.is_moving = true;
 					m_parameters.position -= m_parameters.front * m_parameters.speed;
@@ -112,35 +94,12 @@ namespace Runtime
 			});
 
 		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Back Holding", KeyboardEvent
+			KeyboardEventCreateInfo
 			{
-				.key = Keyboard::Key::S,
-				.action = Action::Hold,
-				.function = [this]()
-				{
-					m_parameters.is_moving = true;
-					m_parameters.position -= m_parameters.front * m_parameters.speed;
-				}
-			});
-
-		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Right Press", KeyboardEvent
-			{
+				.name = "Camera Move Right",
 				.key = Keyboard::Key::D,
 				.action = Action::Press,
-				.function = [this]()
-				{
-					m_parameters.is_moving = true;
-					m_parameters.position += m_parameters.right * m_parameters.speed;
-				}
-			});
-
-		ControlSystem::instance().RegisterKeyboardEvent(
-			"Camera Move Right", KeyboardEvent
-			{
-				.key = Keyboard::Key::D,
-				.action = Action::Hold,
-				.function = [this]()
+				.event = [this]()
 				{
 					m_parameters.is_moving = true;
 					m_parameters.position += m_parameters.right * m_parameters.speed;

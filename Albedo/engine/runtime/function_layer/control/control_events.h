@@ -13,22 +13,32 @@ namespace Runtime
 	{
 		enum Type
 		{
-			Press = GLFW_PRESS, Hold = GLFW_REPEAT, Release = GLFW_RELEASE
+			Press = GLFW_PRESS,				// Just Pressed
+			Hold = GLFW_REPEAT,			// Pressed and Holding
+			Detach = Hold + 1,					// Just Released  (a special Release action)
+			Release = GLFW_RELEASE,	//	Released
+			ACTION_TYPE_COUNT = 4
 		};
 	}
 
-	struct KeyboardEvent
+	using EventName = std::string;
+	using ControlEvent = std::function<void()>;
+
+	struct KeyboardEventCreateInfo
 	{
+		EventName					name;
 		Keyboard::Key				key;
+		//Keyboard::Key			key2;	// TODO: main key + vice key = combinated action
 		Action::Type					action;
-		std::function<void()>	function;
+		ControlEvent					event;
 	};
 
-	struct MouseButtonEvent
+	struct MouseButtonEventCreateInfo
 	{
+		EventName					name;
 		Mouse::Button				button;
 		Action::Type					action;
-		std::function<void()>	function;
+		ControlEvent					event;
 	};
 
 }} // namespace Albedo::Runtime

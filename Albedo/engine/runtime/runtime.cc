@@ -13,18 +13,11 @@ namespace Runtime
 		m_window_system{ std::make_shared<WindowSystem>() }
 	{
 		m_vulkan_context = RHI::VulkanContext::Create(m_window_system->GetWindow());
-		ControlSystem::instance().Initialize(m_window_system->GetWindow()); 
+		ControlSystem::instance().Initialize(m_window_system); 
 		WindowSystem::SetFramebufferResizeCallback([this]() { m_render_system->handle_window_resize(); });
+		
 		// Must init Render System after Control System (GLFW callbacks)
 		m_render_system = std::make_shared<RenderSystem>(m_vulkan_context); 
-
-		ControlSystem::instance().RegisterKeyboardEvent(
-			"Test", KeyboardEvent
-			{
-				.key = Keyboard::Key::Space,
-				.action = Action::Press,
-				.function = [] () {log::info("Pressed Space!"); }
-			});
 	}
 
 	void RuntimeModule::Run()
@@ -32,6 +25,7 @@ namespace Runtime
 		while (!m_window_system->ShouldClose())
 		{
 			m_window_system->Update();
+			ControlSystem::instance().Update();
 			m_render_system->Update();
 		}
 	}
