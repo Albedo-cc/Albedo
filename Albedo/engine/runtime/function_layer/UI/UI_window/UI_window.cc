@@ -40,32 +40,31 @@ namespace Runtime
 
 
 			static bool item_vulkan_context = true;
+			static bool item_user_inputs = true;
             if (ImGui::BeginMenuBar())
             {
-                if (ImGui::BeginMenu("Options"))
+                if (ImGui::BeginMenu("View"))
                 {
                     ImGui::MenuItem("Vulkan Context", NULL, &item_vulkan_context);
                     ImGui::Separator();
 
+					ImGui::MenuItem("User Inputs", NULL, &item_user_inputs);
+					ImGui::Separator();
+					
                     ImGui::EndMenu();
                 }
 
-				static bool a, b, c;
+				static bool utils_palette;
 				if (ImGui::BeginMenu("Utils"))
 				{
-					ImGui::MenuItem("Palette", NULL, &a);
-
-				/*	ImGui::Separator();
-					ImGui::MenuItem("BBBBBVBB", NULL, &b);
-					ImGui::Separator();
-					ImGui::MenuItem("CCCCCCCC", NULL, &c);*/
+					ImGui::MenuItem("Palette", NULL, &utils_palette);
 
 					ImGui::EndMenu();
 				}
 
                 ImGui::EndMenuBar();
 
-				if (a)
+				if (utils_palette)
 				{
 					// Always both a small version of both types of pickers (to make it more visible in the demo to people who are skimming quickly through it)
 
@@ -94,21 +93,17 @@ namespace Runtime
 				}
 
 				if (item_vulkan_context) menu_item_vulkan_context(&item_vulkan_context);
+				if (item_user_inputs) menu_item_input_info(&item_user_inputs);
 
             } // End Menu Bar
 
-			ImGui::Begin("Look At Me");
-			if (ImGui::TreeNode("Configuration##2"))
-			{
-				bool a = false;
-				ImGui::Checkbox("Hello World", &a);				
-				ImGui::Checkbox("Hello Worl2d", &a);
-				ImGui::TreePop();
-				ImGui::Spacing();
-			}
-			ImGui::End();
 		}
 		End();
+	}
+
+	void UIWindow::menu_item_console(bool* is_open)
+	{
+
 	}
 
 	void UIWindow::menu_item_vulkan_context(bool* is_open)
@@ -117,31 +112,84 @@ namespace Runtime
 		{
 			auto vulkan_context = m_vulkan_context_view.lock();
 			ImGui::Begin("Vulkan Context", is_open, ImGuiWindowFlags_NoCollapse);
-
-			ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-			ImGui::Text("Owners: %u", vulkan_context.use_count());
-
-
-			if (ImGui::TreeNode("GPU"))
 			{
-				auto& gpu_properties = vulkan_context->m_physical_device_properties;
-				ImGui::Text("GPU: %s", gpu_properties.deviceName);
-				ImGui::Text("Max Bound DS: %u", gpu_properties.limits.maxBoundDescriptorSets);
-				ImGui::TreePop();
-				ImGui::Spacing();
-			}
+				ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+				if (ImGui::TreeNode("Basic"))
+				{
+					ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+					ImGui::Text("Owners: %u", vulkan_context.use_count());
 
-			if (ImGui::TreeNode("Swap Chain"))
-			{
-				ImGui::Text("Image Width:\t%u", vulkan_context->m_swapchain_current_extent.width);
-				ImGui::Text("Image Height:\t%u", vulkan_context->m_swapchain_current_extent.height);
-				ImGui::Text("Image Count:\t%u", vulkan_context->m_swapchain_image_count);
-				ImGui::TreePop();
-				ImGui::Spacing();
-			}
+					ImGui::TreePop();
+					ImGui::Spacing();
+				}
 
+				ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+				if (ImGui::TreeNode("GPU"))
+				{
+					auto& gpu_properties = vulkan_context->m_physical_device_properties;
+					ImGui::Text("GPU: %s", gpu_properties.deviceName);
+					ImGui::Text("Max Bound DS: %u", gpu_properties.limits.maxBoundDescriptorSets);
+
+					ImGui::TreePop();
+					ImGui::Spacing();
+				}
+
+				ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+				if (ImGui::TreeNode("Swap Chain"))
+				{
+					ImGui::Text("Image Width:\t%u", vulkan_context->m_swapchain_current_extent.width);
+					ImGui::Text("Image Height:\t%u", vulkan_context->m_swapchain_current_extent.height);
+					ImGui::Text("Image Count:\t%u", vulkan_context->m_swapchain_image_count);
+
+					ImGui::TreePop();
+					ImGui::Spacing();
+				}
+
+			}
 			ImGui::End();
 		}
+	}
+
+	void UIWindow::menu_item_input_info(bool* is_open)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+
+		ImGui::Begin("User Inputs", is_open, ImGuiWindowFlags_NoCollapse);
+		{
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Mouse"))
+			{
+				if (ImGui::IsMousePosValid())
+					ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
+				else
+					ImGui::Text("Mouse pos: <INVALID>");
+				ImGui::Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
+				ImGui::Text("Mouse down:");
+				for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+					if (ImGui::IsMouseDown(i)) { ImGui::SameLine(); ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); }
+				ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
+
+				ImGui::TreePop();
+				ImGui::Spacing();
+			}
+
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Keyboard"))
+			{
+				struct funcs { static bool IsLegacyNativeDupe(ImGuiKey key) { return key < 512 && ImGui::GetIO().KeyMap[key] != -1; } }; // Hide Native<>ImGuiKey duplicates when both exists in the array
+				ImGuiKey start_key = (ImGuiKey)0;
+
+				ImGui::Text("Keys down:");         for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)) { if (funcs::IsLegacyNativeDupe(key) || !ImGui::IsKeyDown(key)) continue; ImGui::SameLine(); ImGui::Text((key < ImGuiKey_NamedKey_BEGIN) ? "\"%s\"" : "\"%s\" %d", ImGui::GetKeyName(key), key); }
+				ImGui::Text("Keys mods: %s%s%s%s",
+					io.KeyCtrl ? "CTRL " : "",	io.KeyShift ? "SHIFT " : "",
+					io.KeyAlt ? "ALT " : "",		io.KeySuper ? "SUPER " : "");
+				ImGui::Text("Chars queue:");       for (int i = 0; i < io.InputQueueCharacters.Size; i++) { ImWchar c = io.InputQueueCharacters[i]; ImGui::SameLine();  ImGui::Text("\'%c\' (0x%04X)", (c > ' ' && c <= 255) ? (char)c : '?', c); } // FIXME: We should convert 'c' to UTF-8 here but the functions are not public.
+
+				ImGui::TreePop();
+				ImGui::Spacing();
+			}
+		}
+		ImGui::End();
 	}
 
 }} // namespace Albedo::Runtime

@@ -94,7 +94,7 @@ namespace Runtime
 		auto scene_future = AssetManager::instance().AsyncLoadModel("Cube/Cube.gltf");
 		//auto scene_future = AssetManager::instance().AsyncLoadModel("WaterBottle/glTF/WaterBottle.gltf");
 
-		m_camera->SetPosition({ 2.0, 2.0, 2.0 });
+		m_camera->SetPosition({ 0, 0, -5 });
 
 		// Render Passes
 		create_render_passes();

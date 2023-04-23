@@ -40,7 +40,7 @@ namespace Runtime
 			vkCmdPushConstants(*cmd_buffer_front, 
 				brush->GetPipelineLayout(),
 				VK_SHADER_STAGE_VERTEX_BIT, 
-				0, sizeof(glm::mat4), &nodeMatrix);
+				0, sizeof(Matrix4f), &nodeMatrix);
 
 			for (auto& primitive : model_node->mesh.primitives) 
 			{

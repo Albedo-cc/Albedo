@@ -31,7 +31,9 @@ namespace Runtime
 		ImVec2 m_window_position;
 		
 	private:
+		void menu_item_console(bool* is_open);
 		void menu_item_vulkan_context(bool* is_open);
+		void menu_item_input_info(bool* is_open);
 	};
 
 }} // namespace Albedo::Runtime

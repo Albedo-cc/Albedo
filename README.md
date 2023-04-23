@@ -1,6 +1,7 @@
 # Albedo
  
 ## TODO
+0. CMake Set VS Working Directory
 1. Create pipelines by group.
 2. Pipeline Cache
 3. Recreate Render Passes for UI Rendering

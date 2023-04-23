@@ -22,23 +22,31 @@ namespace Runtime
 	}
 
 	using EventName = std::string;
-	using ControlEvent = std::function<void()>;
 
+	using KeyboardEvent = std::function<void()>;
 	struct KeyboardEventCreateInfo
 	{
 		EventName					name;
 		Keyboard::Key				key;
 		//Keyboard::Key			key2;	// TODO: main key + vice key = combinated action
 		Action::Type					action;
-		ControlEvent					event;
+		KeyboardEvent				event;
 	};
 
+	using MouseButtonEvent = std::function<void()>;
 	struct MouseButtonEventCreateInfo
 	{
 		EventName					name;
 		Mouse::Button				button;
 		Action::Type					action;
-		ControlEvent					event;
+		MouseButtonEvent		event;
+	};
+
+	using MouseScrollEvent = std::function<void(double x, double y)>;
+	struct MouseScrollEventCreateInfo
+	{
+		EventName					name;
+		MouseScrollEvent		event;
 	};
 
 }} // namespace Albedo::Runtime

@@ -25,7 +25,7 @@ namespace Core
 		return look_at_matrix;
 	}
 
-	Matrix4f make_orthographics_matrix(float left, float right, float top, float bottom, float near_plane, float far_plane)
+	Matrix4f make_orthographics_matrix(float left, float right, float bottom, float top, float near_plane, float far_plane)
 	{
 		// Note that this function just works for NDC Z is from 0 to 1 (Vulkan)
 		Matrix4f orthographics_matrix;
@@ -33,9 +33,9 @@ namespace Core
 		orthographics_matrix(0, 0) = 2.f / (right - left);
 		orthographics_matrix(1, 1) = 2.f / (top - bottom);
 		orthographics_matrix(2, 2) = 1.f / (far_plane - near_plane);
-		orthographics_matrix(3, 0) = -(right + left) / (right - left);
-		orthographics_matrix(3, 1) = -(bottom + top) / (bottom - top);
-		orthographics_matrix(3, 2) = -(far_plane + near_plane) / (far_plane - near_plane);
+		orthographics_matrix(0, 3) = -(right + left) / (right - left);
+		orthographics_matrix(1, 3) = -(top + bottom) / (top - bottom);
+		orthographics_matrix(2, 3) = -near_plane / (near_plane - far_plane);
 
 		return orthographics_matrix;
 	}

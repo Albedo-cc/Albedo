@@ -18,44 +18,58 @@ namespace Runtime
 		UISystem::instance().RegisterUIEvent(
 			"Camera Parameters", [this]()
 			{
+				bool update_view = false;
+				bool update_projection = false;
+
+				// Update Aspect Ratio
+				float oldAspectRatio = m_parameters.aspect_ratio;
+				m_parameters.aspect_ratio = UISystem::instance().GetMainSceneAspectRatio();
+				if (oldAspectRatio != m_parameters.aspect_ratio) update_projection = true;
+
 				ImGui::Begin("Camera Parameters");
-
-				static bool picked = false;
-				picked |= ImGui::InputFloat("Position X", &m_parameters.position[0]);
-				picked |= ImGui::InputFloat("Position Y", &m_parameters.position[1]);
-				picked |= ImGui::InputFloat("Position Z", &m_parameters.position[2]);
-				ImGui::Separator();
-				
-				picked |= ImGui::SliderFloat("FOV(Y)", &m_parameters.FOV_Y, MIN_FOV_Y, MAX_FOV_Y);
-				picked |= ImGui::SliderFloat("Near Plane", &m_parameters.plane_near, MIN_NEAR_PLANE, m_parameters.plane_far);
-				picked |= ImGui::SliderFloat("Far Plane", &m_parameters.plane_far, MIN_FAR_PLANE, MAX_FAR_PLANE);
-				ImGui::Separator();
-
-				if (ImGui::Checkbox("Focus", &m_parameters.is_focusing) && m_parameters.is_focusing)
 				{
-					picked = true;
-					m_parameters.is_moving = false;
-					update_view_matrix();
+					update_view |= ImGui::InputFloat("Position X", &m_parameters.position[0]);
+					update_view |= ImGui::InputFloat("Position Y", &m_parameters.position[1]);
+					update_view |= ImGui::InputFloat("Position Z", &m_parameters.position[2]);
+					ImGui::Separator();
+
+					update_projection |= ImGui::SliderFloat("FOV(Y)", &m_parameters.FOV_Y, MIN_FOV_Y, MAX_FOV_Y);
+					update_projection |= ImGui::SliderFloat("Near Plane", &m_parameters.plane_near, MIN_NEAR_PLANE, m_parameters.plane_far);
+					update_projection |= ImGui::SliderFloat("Far Plane", &m_parameters.plane_far, MIN_FAR_PLANE, MAX_FAR_PLANE);
+					ImGui::Separator();
+
+					if (ImGui::Checkbox("Focus", &m_parameters.is_focusing) && m_parameters.is_focusing)
+					{
+						update_view |= true;
+						update_view_matrix();
+					}
+					ImGui::SameLine();
+					update_view |= ImGui::InputFloat3("", m_parameters.target.data());
+					ImGui::Separator();
+
+					m_parameters.is_active = UISystem::IsFocusingOnMainScene();
+					ImGui::RadioButton("Active", m_parameters.is_active);
+					ImGui::SameLine();
+					ImGui::SliderFloat("Speed", &m_parameters.speed, 0.0, 5.0);
+					ImGui::Separator();
+
+					update_projection |= ImGui::Checkbox("Flip-Y", &m_parameters.flip_y);
+					ImGui::SameLine();
+					const char* projection_modes[]{ "Orthographic", "Perspective" };
+					static int32_t projection_mode_index = (int32_t)(m_parameters.projection_mode);
+					if (ImGui::Combo("Projection", &projection_mode_index,
+						"Orthographic\0Perspective\0"))
+					{
+						update_projection = true;
+						m_parameters.projection_mode = ProjectionMode(projection_mode_index);
+					}
+
+					ImGui::Separator();
 				}
-				ImGui::SameLine();
-				picked |= ImGui::InputFloat3("", m_parameters.target.data());
-				ImGui::Separator();
-
-				picked |= ImGui::Checkbox("Flip-Y", &m_parameters.flip_y);
-				ImGui::Separator();
-
-				m_parameters.is_active = UISystem::IsFocusingOnMainScene();
-				ImGui::RadioButton("Active", m_parameters.is_active);
-				ImGui::SameLine();
-				ImGui::SliderFloat("Speed", &m_parameters.speed, 0.0, 5.0);
-				ImGui::Separator();
-
 				ImGui::End();
-				if (picked)
-				{
-					update_view_matrix();
-					update_projection_matrix();
-				}
+
+				if (update_view) update_view_matrix();
+				if (update_projection) update_projection_matrix();
 			}
 		);
 
@@ -68,7 +82,7 @@ namespace Runtime
 				.event = [this]()
 				{
 					if (!m_parameters.is_active) return;
-					m_parameters.is_moving = true;
+					m_parameters.should_update = true;
 					m_parameters.position += m_parameters.front * m_parameters.speed;
 				}
 			});
@@ -82,7 +96,7 @@ namespace Runtime
 				.event = [this]()
 				{
 					if (!m_parameters.is_active) return;
-					m_parameters.is_moving = true;
+					m_parameters.should_update = true;
 					m_parameters.position -= m_parameters.right * m_parameters.speed;
 				}
 			});
@@ -96,7 +110,7 @@ namespace Runtime
 				.event = [this]()
 				{
 					if (!m_parameters.is_active) return;
-					m_parameters.is_moving = true;
+					m_parameters.should_update = true;
 					m_parameters.position -= m_parameters.front * m_parameters.speed;
 				}
 			});
@@ -110,7 +124,7 @@ namespace Runtime
 				.event = [this]()
 				{
 					if (!m_parameters.is_active) return;
-					m_parameters.is_moving = true;
+					m_parameters.should_update = true;
 					m_parameters.position += m_parameters.right * m_parameters.speed;
 				}
 			});
@@ -124,7 +138,7 @@ namespace Runtime
 				.event = [this]()
 				{
 					if (!m_parameters.is_active) return;
-					m_parameters.is_moving = true;
+					m_parameters.should_update = true;
 					m_parameters.position -= m_parameters.upward * m_parameters.speed;
 				}
 			});
@@ -138,8 +152,21 @@ namespace Runtime
 				.event = [this]()
 				{
 					if (!m_parameters.is_active) return;
-					m_parameters.is_moving = true;
+					m_parameters.should_update = true;
 					m_parameters.position += m_parameters.upward * m_parameters.speed;
+				}
+			});
+
+		ControlSystem::instance().RegisterMouseScrollEvent(
+			MouseScrollEventCreateInfo
+			{
+				.name = "Camera FOV",
+				.event = [this](double x, double y)
+				{
+					if (!m_parameters.is_active) return;
+					m_parameters.should_update = true;
+					float new_fov_y = m_parameters.FOV_Y - (1.0 * y);
+					m_parameters.FOV_Y = std::clamp(new_fov_y, MIN_FOV_Y, MAX_FOV_Y);
 				}
 			});
 	}
@@ -147,15 +174,26 @@ namespace Runtime
 	std::shared_ptr<RHI::VMA::Buffer> Camera::
 		GetCameraMatrics()
 	{
-		if (m_parameters.is_moving)
+		if (m_parameters.should_update)
 		{
 			update_view_matrix();
 			update_projection_matrix();
-			m_parameters.is_moving = false;
+			m_parameters.should_update = false;
 		}
 
 		m_camera_matrix_buffer->Write(&m_camera_matrics);
 		return m_camera_matrix_buffer;
+	}
+
+	void Camera::SetPosition(Vector3f position)
+	{
+		m_parameters.position = std::move(position);
+		m_parameters.should_update = true;
+	}
+	void Camera::SetProjectionMode(ProjectionMode mode)
+	{
+		m_parameters.projection_mode = mode;
+		m_parameters.should_update = true;
 	}
 
 	void Camera::update_view_matrix()
@@ -170,17 +208,18 @@ namespace Runtime
 	{
 		if (ProjectionMode::PERSPECTIVE == m_parameters.projection_mode)
 		{
-			m_camera_matrics.matrix_projection = make_perspective_matrix(m_parameters.FOV_Y,
+			m_camera_matrics.matrix_projection = make_perspective_matrix(
+				m_parameters.FOV_Y * ONE_DEGREE,
 				m_parameters.aspect_ratio, m_parameters.plane_near, m_parameters.plane_far);
 			if (m_parameters.flip_y) m_camera_matrics.matrix_projection(1, 1) *= -1.0;
 		}
 		else // ProjectionMode::ORTHOGRAPHICS
 		{
-			float tanHalfFOV = tan(m_parameters.FOV_Y / 2.0);
-			float height = 2.0 * (tanHalfFOV * m_parameters.plane_near);
-			float width = height * m_parameters.aspect_ratio;
+			float tanHalfFOV = tan(m_parameters.FOV_Y * ONE_DEGREE / 2.0);
+			float top = tanHalfFOV * m_parameters.plane_near;
+			float right = top * m_parameters.aspect_ratio;
 			m_camera_matrics.matrix_projection = 
-				make_orthographics_matrix(0, width, height, 0,
+				make_orthographics_matrix(-right, right,  -top, top,
 				m_parameters.plane_near, m_parameters.plane_far);
 		}
 	}

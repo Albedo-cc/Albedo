@@ -27,7 +27,6 @@ namespace Runtime
 		m_vulkan_context = std::move(vulkan_context);
 
 		create_main_window();
-		register_control_events();
 
 		// Initialize Dear ImGUI
 		auto& graphics_queue_family = m_vulkan_context->m_device_queue_family_graphics;
@@ -116,16 +115,6 @@ namespace Runtime
 		}
 	}
 
-	void UISystem::initialize_imgui_context()
-	{
-
-	}
-
-	void UISystem::register_control_events()
-	{
-		
-	}
-
 	void UISystem::create_main_window()
 	{
 		// Create Main Scene
@@ -157,17 +146,17 @@ namespace Runtime
 					main_scene_image->BindSampler(main_scene_sampler);
 					main_scene->Update(main_scene_image);
 				}
-				static auto window_size = ImGui::GetWindowSize();
-				ImGui::SetNextWindowSize({ window_size.x, window_size.y });
+
+				ImGui::SetNextWindowSize({ main_scene_size.x, main_scene_size.y });
 				ImGui::Begin("Main Scene", nullptr,
 					ImGuiWindowFlags_NoCollapse |
 					ImGuiWindowFlags_NoScrollbar |
 					ImGuiWindowFlags_NoScrollWithMouse);
-				main_scene_is_focused = ImGui::IsWindowFocused();
-
-				ImGui::Image(*main_scene, { window_size.x, window_size.y });
-
-				window_size = ImGui::GetWindowSize();
+				{
+					main_scene_is_focused = ImGui::IsWindowFocused();
+					ImGui::Image(*main_scene, { main_scene_size.x, main_scene_size.y });
+					main_scene_size = ImGui::GetWindowSize();
+				}
 				ImGui::End();
 			});
 	}

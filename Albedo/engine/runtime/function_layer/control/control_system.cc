@@ -12,6 +12,7 @@ namespace Runtime
 		GLFWwindow* window = m_window_system.lock()->GetWindow();
 		// Register Callbacks
 		glfwSetKeyCallback(window, keyboard_callback);
+		glfwSetScrollCallback(window, mouse_scroll_callback);
 	}
 
 	void ControlSystem::Update()
@@ -20,6 +21,7 @@ namespace Runtime
 		{
 			auto window_system = m_window_system.lock(); // Keep
 			GLFWwindow* window = window_system->GetWindow();
+
 			// Handle Keyborad Press and Release Events
 			for (auto& [key, press_events] : m_keyboard_events[Action::Press])
 			{
@@ -76,6 +78,30 @@ namespace Runtime
 		else log::error("Albedo Control System: Failed to delete keyboard event {}", name);
 	}
 
+	void ControlSystem::RegisterMouseScrollEvent(MouseScrollEventCreateInfo createinfo)
+	{
+		auto newbee = m_registry_mouse_scroll_events.find(createinfo.name);
+		if (newbee == m_registry_mouse_scroll_events.end())
+		{
+			log::info("Albedo Control System: Registering a new mouse scroll event {}", createinfo.name);
+			m_registry_mouse_scroll_events[createinfo.name] =
+				&(m_mouse_scroll_events.emplace_back(std::move(createinfo.event)));
+		}
+		else log::error("Albedo Control System: Failed to register mouse scroll event {}", createinfo.name);
+	}
+
+	void ControlSystem::DeleteMouseScrollEvent(EventName name)
+	{
+		auto exiler = m_registry_mouse_scroll_events.find(name);
+		if (exiler != m_registry_mouse_scroll_events.end())
+		{
+			log::info("Albedo Control System: Will delete a mouse scroll event {}", name);
+			(*exiler->second) = nullptr;
+			m_registry_mouse_scroll_events.erase(exiler);
+		}
+		else log::error("Albedo Control System: Failed to delete mouse scroll event {}", name);
+	}
+
 	void ControlSystem::keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
 		// Handle Hold and Detach Events (because glfwGetXXX() can only get last state, so Repeat cannot be caught)
@@ -112,6 +138,16 @@ namespace Runtime
 				}
 				break;
 			}
+		}
+	}
+
+	void ControlSystem::mouse_scroll_callback(GLFWwindow* window, double offset_x, double offset_y)
+	{
+		for (auto mouse_scroll_event = m_mouse_scroll_events.begin();
+			mouse_scroll_event != m_mouse_scroll_events.end(); ++mouse_scroll_event)
+		{
+			if (*mouse_scroll_event != nullptr) (*mouse_scroll_event)(offset_x, offset_y);
+			else m_mouse_scroll_events.erase(mouse_scroll_event);
 		}
 	}
 

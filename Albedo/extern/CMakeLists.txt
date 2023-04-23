@@ -54,8 +54,3 @@ if (NOT TARGET imgui)
 
     target_link_libraries(AlbedoExternalLibraries INTERFACE imgui)
 endif()
-
-#DELETE
-add_subdirectory(glm)
-target_include_directories(glm INTERFACE glm)
-target_link_libraries(AlbedoExternalLibraries INTERFACE glm)

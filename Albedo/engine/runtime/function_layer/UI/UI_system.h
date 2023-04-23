@@ -17,10 +17,15 @@ namespace Runtime
 		void RegisterUIEvent(std::string name, UIEvent event);
 
 	public:
-		static bool IsFocusingOnMainScene() { return main_scene_is_focused; }
 
-	public: // Widgets
+
+	public: // Create Widgets
 		std::shared_ptr<UIWidget::Texture> CreateWidgetTexture(std::shared_ptr<RHI::VMA::Image> image);
+	
+	public: // Main Scene
+		const ImVec2& GetMainSceneSize() const { return main_scene_size; }
+		float GetMainSceneAspectRatio() const { return main_scene_size.x / main_scene_size.y; }
+		static bool IsFocusingOnMainScene() { return main_scene_is_focused; }
 
 	private:
 		//--------------------------------------------------------------------------------------------------------------
@@ -30,10 +35,11 @@ namespace Runtime
 			std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass);
 		bool ShouldRender() const { return m_should_render.value(); }
 		void Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer);
-		inline static bool main_scene_is_focused = false;
-		std::shared_ptr<RHI::Sampler> main_scene_sampler;
-		std::shared_ptr<RHI::VMA::Image> main_scene_image;
-		std::shared_ptr<UIWidget::Texture> main_scene;
+		std::shared_ptr<UIWidget::Texture>	main_scene;
+		inline static bool									main_scene_is_focused = false;
+		std::shared_ptr<RHI::Sampler>			main_scene_sampler;
+		std::shared_ptr<RHI::VMA::Image>	main_scene_image;
+		ImVec2													main_scene_size;
 		//--------------------------------------------------------------------------------------------------------------
 
 	private:
@@ -47,8 +53,6 @@ namespace Runtime
 		std::optional<bool> m_should_render; // Init after calling Initialize()
 
 	private:
-		void register_control_events();
-		void initialize_imgui_context();
 		void create_main_window();
 	};
 
