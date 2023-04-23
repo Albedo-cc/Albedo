@@ -163,6 +163,8 @@ namespace Runtime
 					ImGuiWindowFlags_NoCollapse |
 					ImGuiWindowFlags_NoScrollbar |
 					ImGuiWindowFlags_NoScrollWithMouse);
+				main_scene_is_focused = ImGui::IsWindowFocused();
+
 				ImGui::Image(*main_scene, { window_size.x, window_size.y });
 
 				window_size = ImGui::GetWindowSize();

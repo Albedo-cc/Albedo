@@ -19,6 +19,7 @@ namespace Runtime
 			"Camera Parameters", [this]()
 			{
 				ImGui::Begin("Camera Parameters");
+
 				static bool picked = false;
 				picked |= ImGui::InputFloat("Position X", &m_parameters.position[0]);
 				picked |= ImGui::InputFloat("Position Y", &m_parameters.position[1]);
@@ -41,6 +42,10 @@ namespace Runtime
 				ImGui::Separator();
 
 				picked |= ImGui::Checkbox("Flip-Y", &m_parameters.flip_y);
+				ImGui::Separator();
+
+				m_parameters.is_active = UISystem::IsFocusingOnMainScene();
+				ImGui::RadioButton("Active", m_parameters.is_active);
 				ImGui::SameLine();
 				ImGui::SliderFloat("Speed", &m_parameters.speed, 0.0, 5.0);
 				ImGui::Separator();
@@ -62,6 +67,7 @@ namespace Runtime
 				.action = Action::Press,
 				.event = [this]()
 				{
+					if (!m_parameters.is_active) return;
 					m_parameters.is_moving = true;
 					m_parameters.position += m_parameters.front * m_parameters.speed;
 				}
@@ -75,6 +81,7 @@ namespace Runtime
 				.action = Action::Press,
 				.event = [this]()
 				{
+					if (!m_parameters.is_active) return;
 					m_parameters.is_moving = true;
 					m_parameters.position -= m_parameters.right * m_parameters.speed;
 				}
@@ -88,6 +95,7 @@ namespace Runtime
 				.action = Action::Press,
 				.event = [this]()
 				{
+					if (!m_parameters.is_active) return;
 					m_parameters.is_moving = true;
 					m_parameters.position -= m_parameters.front * m_parameters.speed;
 				}
@@ -101,8 +109,37 @@ namespace Runtime
 				.action = Action::Press,
 				.event = [this]()
 				{
+					if (!m_parameters.is_active) return;
 					m_parameters.is_moving = true;
 					m_parameters.position += m_parameters.right * m_parameters.speed;
+				}
+			});
+
+		ControlSystem::instance().RegisterKeyboardEvent(
+			KeyboardEventCreateInfo
+			{
+				.name = "Camera Move Down",
+				.key = Keyboard::Key::E,
+				.action = Action::Press,
+				.event = [this]()
+				{
+					if (!m_parameters.is_active) return;
+					m_parameters.is_moving = true;
+					m_parameters.position -= m_parameters.upward * m_parameters.speed;
+				}
+			});
+
+		ControlSystem::instance().RegisterKeyboardEvent(
+			KeyboardEventCreateInfo
+			{
+				.name = "Camera Move Up",
+				.key = Keyboard::Key::Q,
+				.action = Action::Press,
+				.event = [this]()
+				{
+					if (!m_parameters.is_active) return;
+					m_parameters.is_moving = true;
+					m_parameters.position += m_parameters.upward * m_parameters.speed;
 				}
 			});
 	}

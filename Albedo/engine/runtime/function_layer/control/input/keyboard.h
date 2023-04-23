@@ -33,7 +33,9 @@ namespace Runtime
 
 			// Others
 			Space	=	GLFW_KEY_SPACE,
-			ESC		=	GLFW_KEY_ESCAPE
+			LShift	=	GLFW_KEY_LEFT_SHIFT,
+			RShift =	GLFW_KEY_RIGHT_SHIFT,
+			ESC		=	GLFW_KEY_ESCAPE,
 		};
 	}; // namespace Albedo::Runtime::Keyboard
 

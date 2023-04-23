@@ -61,7 +61,7 @@ namespace Runtime
 				&(m_keyboard_events[createinfo.action][createinfo.key].
 					emplace_back(std::move(createinfo.event)));
 		}
-		else log::warn("Albedo Control System: Failed to register keyboard event {}", createinfo.name);
+		else log::error("Albedo Control System: Failed to register keyboard event {}", createinfo.name);
 	}
 
 	void ControlSystem::DeleteKeyboardEvent(EventName name)
@@ -73,7 +73,7 @@ namespace Runtime
 			(*exiler->second) = nullptr;
 			m_registry_keyborad_events.erase(exiler);
 		}
-		else log::warn("Albedo Control System: Failed to delete keyboard event {}", name);
+		else log::error("Albedo Control System: Failed to delete keyboard event {}", name);
 	}
 
 	void ControlSystem::keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -84,9 +84,11 @@ namespace Runtime
 		{
 			case Action::Hold:
 			{
-				for (auto& [_key, hold_events] : m_keyboard_events[Action::Hold])
+				auto target = m_keyboard_events[Action::Hold].find(static_cast<Keyboard::Key>(key));
+				if (target != m_keyboard_events[Action::Hold].end())
 				{
-					if (key == _key) for (auto hold_event = hold_events.begin(); 
+					auto& hold_events = target->second;
+					for (auto hold_event = hold_events.begin();
 						hold_event != hold_events.end(); ++hold_event)
 					{
 						if (*hold_event != nullptr) (*hold_event)();
@@ -97,9 +99,11 @@ namespace Runtime
 			}
 			case Action::Release: // Detach is a special Release action
 			{
-				for (auto& [_key, detach_events] : m_keyboard_events[Action::Detach])
+				auto target = m_keyboard_events[Action::Detach].find(static_cast<Keyboard::Key>(key));
+				if (target != m_keyboard_events[Action::Detach].end())
 				{
-					if (key == _key) for (auto detach_event = detach_events.begin(); 
+					auto& detach_events = target->second;
+					for (auto detach_event = detach_events.begin();
 						detach_event != detach_events.end(); ++detach_event)
 					{
 						if (*detach_event != nullptr) (*detach_event)();

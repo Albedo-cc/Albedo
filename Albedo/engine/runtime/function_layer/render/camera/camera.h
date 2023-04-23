@@ -33,9 +33,10 @@ namespace Runtime
 			bool flip_y = true;
 			float aspect_ratio = 16.0 / 9.0; // 1920 : 1080
 			float plane_near{ 0.1 }, plane_far{ 100.0 };
-
-			float speed = 1.0;
+			
+			bool is_active = false; // ImGui::IsWindowFocused()
 			bool is_moving = false;
+			float speed = 1.0;
 		};
 
 		struct CameraMatrics

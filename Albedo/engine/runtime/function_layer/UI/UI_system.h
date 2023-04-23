@@ -16,6 +16,9 @@ namespace Runtime
 		using UIEvent = std::function<void()>;
 		void RegisterUIEvent(std::string name, UIEvent event);
 
+	public:
+		static bool IsFocusingOnMainScene() { return main_scene_is_focused; }
+
 	public: // Widgets
 		std::shared_ptr<UIWidget::Texture> CreateWidgetTexture(std::shared_ptr<RHI::VMA::Image> image);
 
@@ -27,6 +30,7 @@ namespace Runtime
 			std::shared_ptr<RHI::RenderPass> render_pass, uint32_t subpass);
 		bool ShouldRender() const { return m_should_render.value(); }
 		void Render(std::shared_ptr<RHI::CommandBuffer> commandBuffer);
+		inline static bool main_scene_is_focused = false;
 		std::shared_ptr<RHI::Sampler> main_scene_sampler;
 		std::shared_ptr<RHI::VMA::Image> main_scene_image;
 		std::shared_ptr<UIWidget::Texture> main_scene;
