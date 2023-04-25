@@ -38,10 +38,9 @@ namespace Runtime
 					update_projection |= ImGui::SliderFloat("Far Plane", &m_parameters.plane_far, MIN_FAR_PLANE, MAX_FAR_PLANE);
 					ImGui::Separator();
 
-					if (ImGui::Checkbox("Focus", &m_parameters.is_focusing) && m_parameters.is_focusing)
+					if (ImGui::Checkbox("Focus", &m_parameters.is_focusing))
 					{
 						update_view |= true;
-						update_view_matrix();
 					}
 					ImGui::SameLine();
 					update_view |= ImGui::InputFloat3("", m_parameters.target.data());
@@ -60,7 +59,7 @@ namespace Runtime
 					if (ImGui::Combo("Projection", &projection_mode_index,
 						"Orthographic\0Perspective\0"))
 					{
-						update_projection = true;
+						update_projection |= true;
 						m_parameters.projection_mode = ProjectionMode(projection_mode_index);
 					}
 

@@ -15,6 +15,13 @@ if (NOT TARGET AlbedoLog)
     target_link_libraries(AlbedoExternalLibraries INTERFACE Albedo::log)
 endif()
 
+# Albedo Net
+if (NOT TARGET AlbedoNet)
+    message(STATUS "\nLoading Albedo Net (Albedo::net)")
+    add_subdirectory(AlbedoNet)
+    target_link_libraries(AlbedoExternalLibraries INTERFACE Albedo::net)
+endif()
+
 # Albedo Utils
 if (NOT TARGET AlbedoUtils)
     message(STATUS "\nLoading Albedo Utils (Albedo::utils)")

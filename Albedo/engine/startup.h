@@ -5,6 +5,7 @@
 #include <AlbedoLog.hpp>
 
 #include "runtime/runtime.h"
+#include "net/net.h"
 
 namespace Albedo
 {
@@ -27,6 +28,7 @@ namespace Albedo
 	public:
 		void Run()
 		{
+			Net::NetModule::instance().Run("127.0.0.1", 5200);
 			Runtime::RuntimeModule::instance().Run();
 		}
 	private:

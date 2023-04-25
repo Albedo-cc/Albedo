@@ -22,6 +22,10 @@ namespace Runtime
 
 	void RuntimeModule::Run()
 	{
+		static bool RUNNING = false;
+		if (RUNNING) log::warn("You tried to run Runtime Module again!");
+		RUNNING = true;
+
 		while (!m_window_system->ShouldClose())
 		{
 			m_window_system->Update();

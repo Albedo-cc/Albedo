@@ -1,7 +1,6 @@
 #pragma once
 
 #include <AlbedoRHI.hpp>
-#include <AlbedoTime.hpp>
 #include <AlbedoPattern.hpp>
 
 namespace Albedo {

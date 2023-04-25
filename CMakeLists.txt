@@ -21,6 +21,10 @@ target_put_into_folder(AlbedoShader "Albedo")
 
 target_put_into_folder(imgui "Albedo/Extern/Dear_ImGUI")
 
+target_put_into_folder(AlbedoNet "Albedo/Extern/AlbedoNet")
+    target_put_into_folder(asio "Albedo/Extern/AlbedoNet/Library/ASIO")
+    target_put_into_folder(cryptopp "Albedo/Extern/AlbedoNet/Library/Crypto++")
+
 target_put_into_folder(AlbedoRHI "Albedo/Extern/AlbedoRHI")
     target_put_into_folder(glfw "Albedo/Extern/AlbedoRHI/Library/GLFW3")
         target_put_into_folder(update_mappings "Albedo/Extern/AlbedoRHI/Library/GLFW3") 
