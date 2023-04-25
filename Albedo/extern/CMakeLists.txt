@@ -15,6 +15,13 @@ if (NOT TARGET AlbedoLog)
     target_link_libraries(AlbedoExternalLibraries INTERFACE Albedo::log)
 endif()
 
+# Albedo Utils
+if (NOT TARGET AlbedoUtils)
+    message(STATUS "\nLoading Albedo Utils (Albedo::utils)")
+    add_subdirectory(AlbedoUtils)
+    target_link_libraries(AlbedoExternalLibraries INTERFACE Albedo::utils)
+endif()
+
 # Albedo Net
 if (NOT TARGET AlbedoNet)
     message(STATUS "\nLoading Albedo Net (Albedo::net)")
@@ -22,11 +29,14 @@ if (NOT TARGET AlbedoNet)
     target_link_libraries(AlbedoExternalLibraries INTERFACE Albedo::net)
 endif()
 
-# Albedo Utils
-if (NOT TARGET AlbedoUtils)
-    message(STATUS "\nLoading Albedo Utils (Albedo::utils)")
-    add_subdirectory(AlbedoUtils)
-    target_link_libraries(AlbedoExternalLibraries INTERFACE Albedo::utils)
+# Protocol Buffer
+if (NOT TARGET protobuf)
+    message(STATUS "\nLoading Protocol Buffer (protobuf)")
+    # option(protobuf_BUILD_TESTS "" OFF)
+    # option(protobuf_MSVC_STATIC_RUNTIME "" ON)
+    # option(protobuf_BUILD_EXAMPLES "" OFF)
+    # option(protobuf_BUILD_PROTOC_BINARIES "" OFF)
+    add_subdirectory(protobuf-3.21.12)
 endif()
 
 # Eigen

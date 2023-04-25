@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package Chamber;
+
+import public "AlbedoNetData.proto";
+
+enum Player
+{
+    CAMBER = 0;
+    A = 1;
+    B = 2;
+    C = 3;
+    D = 4;
+}
+
+enum DataUsage
+{
+    // Camera (data)
+    camera_view_matrix = 0;   // Mat4f
+
+    // Message (comment)
+    chamber_message = 100;
+    player_message  = 101;
+}
+
+message ChamberData
+{
+    Player sender = 1;
+    DataUsage usage = 2;
+    AlbedoNetData data = 3;
+}

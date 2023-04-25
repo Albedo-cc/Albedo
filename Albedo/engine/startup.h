@@ -26,7 +26,7 @@ namespace Albedo
 		}
 
 	public:
-		void Run()
+		void Run(int argc, char* argv[])
 		{
 			Net::NetModule::instance().Run("127.0.0.1", 5200);
 			Runtime::RuntimeModule::instance().Run();

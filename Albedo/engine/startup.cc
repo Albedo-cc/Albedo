@@ -6,7 +6,7 @@ int main(int argc, char* argv[])
 {
     try
     {
-        Albedo::APP::instance().Run();
+        Albedo::APP::instance().Run(argc, argv);
     }
     catch (std::exception& e)
     {
