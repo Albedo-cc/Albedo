@@ -6,7 +6,6 @@
 #include <AlbedoTime.hpp>
 
 #include "socket/socket.h"
-
 #include "protocol/chamber.pb.h"
 
 #include <core/math/math.h>
@@ -25,14 +24,36 @@ namespace Net
 		NetModule();
 
 	public:
-		Matrix4f GetCameraView(uint32_t player_id);
+		using UID = int32_t; // UID
+		using PlayerInfo = ABDChamber::ChamberLogin;
+		struct PlayerState
+		{
+			PlayerInfo profile;
+
+			Matrix4f camera_view_matrix;
+		};
+		const std::unordered_map<UID, PlayerState>& ViewPlayers() const
+		{return m_chamber_players;}
+		PlayerState GetPlayerState(UID player_id)
+		{
+			std::scoped_lock guard{ m_chamber_mutexes[player_id] };
+			return m_chamber_players[player_id];
+		}
+
+	private:
+		ABDChamber::ChamberLogin m_profile;
+		std::unordered_map<UID, std::mutex> m_chamber_mutexes;
+		std::unordered_map<UID, PlayerState> m_chamber_players;
+
+	public:
+		void SyncCamera(ABDChamber::Buffer* camera_data);
 
 	public:
 		bool IsOnline() const { return m_socket->isConnected(); }
 		void Reconnect();
 
 	public:
-		void Run(std::string host, const uint16_t port);
+		void Run(std::string_view uid, std::string_view nickname, std::string_view host, std::string_view port, std::string_view pass);
 
 	private:
 		std::unique_ptr<Socket> m_socket; // Client
@@ -40,16 +61,8 @@ namespace Net
 
 		std::string	m_host;
 		uint16_t		m_port = 0;
+		std::string  m_pass;
 
-		struct NetDataPool // Visit via AlbedoNetData::Usage
-		{
-			using NetDataMap = std::unordered_map<Chamber::DataUsage, std::pair<std::mutex, AlbedoNetData>>;
-			NetDataMap mutex_and_data;
-		};
-		std::vector<NetDataPool> m_netdata_pools; // 1 pool for 1 player
-
-		std::condition_variable m_data_processor_notifier;
-		std::mutex m_data_processor_mutex;
 		std::thread m_data_processor;
 	};
 

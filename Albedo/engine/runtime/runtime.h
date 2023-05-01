@@ -24,6 +24,9 @@ namespace Runtime
 		std::shared_ptr<RHI::VulkanContext> m_vulkan_context;
 		std::shared_ptr<WindowSystem> m_window_system;
 		std::shared_ptr<RenderSystem> m_render_system;
+
+	private:
+		void SyncToServer();
 	};
 
 }} // namespace Albedo::Runtime

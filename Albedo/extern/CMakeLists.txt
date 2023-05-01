@@ -37,6 +37,7 @@ if (NOT TARGET protobuf)
     # option(protobuf_BUILD_EXAMPLES "" OFF)
     # option(protobuf_BUILD_PROTOC_BINARIES "" OFF)
     add_subdirectory(protobuf-3.21.12)
+    target_link_libraries(AlbedoExternalLibraries INTERFACE protobuf)
 endif()
 
 # Eigen

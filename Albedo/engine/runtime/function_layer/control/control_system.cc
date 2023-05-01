@@ -6,49 +6,47 @@ namespace Albedo {
 namespace Runtime
 {
 	
-	void ControlSystem::Initialize(std::weak_ptr<WindowSystem> window_system)
+	void ControlSystem::Initialize(std::shared_ptr<WindowSystem> window_system)
 	{
 		m_window_system = std::move(window_system);
-		GLFWwindow* window = m_window_system.lock()->GetWindow();
+		GLFWwindow* window = m_window_system->GetWindow();
 		// Register Callbacks
 		glfwSetKeyCallback(window, keyboard_callback);
+		glfwSetCursorPosCallback(window, cursor_position_callback);
 		glfwSetScrollCallback(window, mouse_scroll_callback);
 	}
 
 	void ControlSystem::Update()
 	{
-		if (!m_window_system.expired()) // glfwPollEvents has been called in WindowSystem
+		GLFWwindow* window = m_window_system->GetWindow();
+
+		// Handle Keyborad Press and Release Events
+		for (auto& [key, press_events] : m_keyboard_events[Action::Press])
 		{
-			auto window_system = m_window_system.lock(); // Keep
-			GLFWwindow* window = window_system->GetWindow();
-
-			// Handle Keyborad Press and Release Events
-			for (auto& [key, press_events] : m_keyboard_events[Action::Press])
+			if (Action::Press == glfwGetKey(window, key))
 			{
-				if (Action::Press == glfwGetKey(window, key))
+				for (auto press_event = press_events.begin(); 
+					press_event != press_events.end(); ++press_event)
 				{
-					for (auto press_event = press_events.begin(); 
-						press_event != press_events.end(); ++press_event)
-					{
-						if (*press_event != nullptr) (*press_event)();
-						else press_events.erase(press_event);
-					}
+					if (*press_event != nullptr) (*press_event)();
+					else press_events.erase(press_event);
 				}
 			}
-			for (auto& [key, release_events] : m_keyboard_events[Action::Release])
+		}
+		for (auto& [key, release_events] : m_keyboard_events[Action::Release])
+		{
+			if (Action::Release == glfwGetKey(window, key))
 			{
-				if (Action::Release == glfwGetKey(window, key))
+				for (auto release_event = release_events.begin(); 
+					release_event != release_events.end(); ++release_event)
 				{
-					for (auto release_event = release_events.begin(); 
-						release_event != release_events.end(); ++release_event)
-					{
-						if (*release_event != nullptr) (*release_event)();
-						else release_events.erase(release_event);
-					}
+					if (*release_event != nullptr) (*release_event)();
+					else release_events.erase(release_event);
 				}
 			}
+		}
 
-		} // End Update()
+		// End void ControlSystem::Update()
 	}
 
 	void ControlSystem::RegisterKeyboardEvent(KeyboardEventCreateInfo createinfo)
@@ -102,6 +100,16 @@ namespace Runtime
 		else log::error("Albedo Control System: Failed to delete mouse scroll event {}", name);
 	}
 
+	Action::Type ControlSystem::GetKeyboardAction(Keyboard::Key key)
+	{
+		return static_cast<Action::Type>(glfwGetKey(m_window_system->GetWindow(), key));
+	}
+
+	Action::Type ControlSystem::GetMouseButtonAction(Mouse::Button button)
+	{
+		return static_cast<Action::Type>(glfwGetMouseButton(m_window_system->GetWindow(), button));
+	}
+
 	void ControlSystem::keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
 		// Handle Hold and Detach Events (because glfwGetXXX() can only get last state, so Repeat cannot be caught)
@@ -139,6 +147,14 @@ namespace Runtime
 				break;
 			}
 		}
+	}
+
+	void ControlSystem::cursor_position_callback(GLFWwindow* window, double position_x, double position_y)
+	{
+		sm_cursor.delta_x = position_x - sm_cursor.x;
+		sm_cursor.delta_y = position_y - sm_cursor.y;
+		sm_cursor.x = position_x; 
+		sm_cursor.y = position_y;
 	}
 
 	void ControlSystem::mouse_scroll_callback(GLFWwindow* window, double offset_x, double offset_y)

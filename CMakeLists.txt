@@ -13,16 +13,11 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/_script")
 include(check_in_source_build)
 
 add_subdirectory(Albedo)
-makeProtobufTarget(AlbedoProtocol 
-                   "${PROJECT_SOURCE_DIR}/Albedo/engine/net/protocol/source" 
-                   "${PROJECT_SOURCE_DIR}/Albedo/engine/net/protocol")
-target_link_libraries(${PROJECT_NAME} PRIVATE AlbedoProtocol)
 
 # Put targets into Folders
 include(target_put_into_folder)
 target_put_into_folder(Albedo "Albedo")
 target_put_into_folder(AlbedoShader "Albedo")
-target_put_into_folder(AlbedoProtocol "Albedo")
 
 target_put_into_folder(imgui "Albedo/Extern/Dear_ImGUI")
 target_put_into_folder(protobuf "Albedo/Extern/Protocol_Buffer")

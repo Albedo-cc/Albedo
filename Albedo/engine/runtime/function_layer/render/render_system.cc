@@ -25,7 +25,7 @@ namespace Runtime
 			static time::StopWatch timer{};
 
 			// Update UBO
-			Palette::SetupCameraMatrics(m_easel->GetDescriptorSetUBO(), m_camera->GetCameraMatrics());
+			Palette::SetupCameraMatrics(m_easel->GetDescriptorSetUBO(), m_camera->GetCameraMatricsBuffer());
 			static Light light{ m_vulkan_context };
 			Palette::SetupLightParameters(m_easel->GetDescriptorSetUBO(), light.GetLightData());
 
@@ -57,7 +57,7 @@ namespace Runtime
 				m_vulkan_context->Screenshot(UI.main_scene_image,
 					{ *canvas.syncmeta.semaphore_render_finished },
 					{ *canvas.syncmeta.semaphore_screenshot_finished });
-
+				
 				//UI.main_scene_image->Write(screenshot);
 				UI.main_scene->Update(UI.main_scene_image);
 

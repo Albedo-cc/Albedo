@@ -9,7 +9,7 @@ namespace Net
 	class Socket : public net::BasicClient
 	{
 	public:
-
+        
 		
 	public:
 		Socket() :BasicClient() {};

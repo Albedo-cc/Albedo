@@ -4,6 +4,8 @@
 #include <runtime/function_layer/control/control_system.h>
 #include <runtime/function_layer/render/paintbox/palette.h>
 
+#include <net/net.h>
+
 namespace Albedo {
 namespace Runtime
 {
@@ -13,11 +15,27 @@ namespace Runtime
 		AllocateBuffer(sizeof(CameraMatrics), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			true, true, false, true) } // Persistent Memory
 	{
+		// Initialize Camera Parameters
 		m_parameters.right = m_parameters.front.cross(m_parameters.upward).normalized();
+
+		// Note: we are using Vulkan Coordinate System
+		Radian pitch{ degree_to_radian(m_parameters.pitch) };
+		Radian yaw{ degree_to_radian(m_parameters.yaw) };
+		m_parameters.front.x() = cos(pitch) * sin(yaw);
+		m_parameters.front.y() = sin(pitch);
+		m_parameters.front.z() = cos(pitch) * cos(yaw);
+		m_parameters.front.normalize();
 
 		UISystem::instance().RegisterUIEvent(
 			"Camera Parameters", [this]()
 			{
+				// Sync Online Camera
+				static bool sync_from_net = false;
+
+				static auto& players = Net::NetModule::instance().ViewPlayers();
+				static int32_t selected_player;
+				static const Net::NetModule::PlayerState* selected_player_state = nullptr;
+
 				bool update_view = false;
 				bool update_projection = false;
 
@@ -31,6 +49,11 @@ namespace Runtime
 					update_view |= ImGui::InputFloat("Position X", &m_parameters.position[0]);
 					update_view |= ImGui::InputFloat("Position Y", &m_parameters.position[1]);
 					update_view |= ImGui::InputFloat("Position Z", &m_parameters.position[2]);
+					ImGui::Separator();
+
+					update_view |= ImGui::InputDouble("Yaw", &m_parameters.yaw);
+					update_view |= ImGui::InputDouble("Pitch", &m_parameters.pitch);
+					update_view |= ImGui::InputDouble("Roll", &m_parameters.roll);
 					ImGui::Separator();
 
 					update_projection |= ImGui::SliderFloat("FOV(Y)", &m_parameters.FOV_Y, MIN_FOV_Y, MAX_FOV_Y);
@@ -63,12 +86,50 @@ namespace Runtime
 						m_parameters.projection_mode = ProjectionMode(projection_mode_index);
 					}
 
-					ImGui::Separator();
+					ImGui::SeparatorText("Online Functions");
+
+					bool is_online = Net::NetModule::instance().IsOnline();
+					if (!is_online) ImGui::BeginDisabled();
+					{
+						update_view |= ImGui::Checkbox("Sync Online Camera", &sync_from_net);
+						if (!is_online) selected_player = -1;
+						 
+						static std::string surfaceDisplayName;
+						static std::string comboDisplayName;
+						if (ImGui::BeginCombo("Who's View", selected_player_state ? surfaceDisplayName.c_str() : "(NULL)"))
+						{
+							for (const auto& [id, state] : players)
+							{
+								auto& profile = state.profile;
+								bool is_selected = (selected_player == id);
+								comboDisplayName = std::format("{} ({})", profile.nickname(), profile.uid());
+								if (ImGui::Selectable(comboDisplayName.c_str(), is_selected))
+								{
+									selected_player = id;
+									ImGui::SetItemDefaultFocus();
+									surfaceDisplayName = std::format("{} ({})", profile.nickname(), profile.uid());
+									selected_player_state = &state;
+								}
+							}
+							ImGui::EndCombo();
+						}
+					}
+					if (!is_online) ImGui::EndDisabled();
 				}
 				ImGui::End();
 
-				if (update_view) update_view_matrix();
-				if (update_projection) update_projection_matrix();
+
+				if (sync_from_net)
+				{
+					m_parameters.is_active = false;
+					m_camera_matrics.matrix_view = selected_player_state->camera_view_matrix;
+				}
+				else
+				{
+					update_camera_rotation(); // [FIXME]: Avoid invalid updating
+					if (update_view) update_view_matrix();
+					if (update_projection) update_projection_matrix();
+				}
 			}
 		);
 
@@ -171,7 +232,7 @@ namespace Runtime
 	}
 
 	std::shared_ptr<RHI::VMA::Buffer> Camera::
-		GetCameraMatrics()
+		GetCameraMatricsBuffer()
 	{
 		if (m_parameters.should_update)
 		{
@@ -189,10 +250,44 @@ namespace Runtime
 		m_parameters.position = std::move(position);
 		m_parameters.should_update = true;
 	}
+
 	void Camera::SetProjectionMode(ProjectionMode mode)
 	{
 		m_parameters.projection_mode = mode;
 		m_parameters.should_update = true;
+	}
+
+	void Camera::update_camera_rotation()
+	{
+		if (m_parameters.is_active)
+		{
+			if (Action::Press == ControlSystem::instance().GetMouseButtonAction(Mouse::Button::Left))
+			{
+				static float sensitivity = 0.05;
+				{
+					auto& cursor = ControlSystem::GetCursor();
+					m_parameters.yaw = std::clamp(
+						m_parameters.yaw + cursor.delta_x * sensitivity,
+						MIN_EULER_ANGLE_YAW,
+						MAX_EULER_ANGLE_YAW);
+
+					m_parameters.pitch = std::clamp(
+						m_parameters.pitch + cursor.delta_y * sensitivity,
+						MIN_EULER_ANGLE_PITCH,
+						MAX_EULER_ANGLE_PITCH);
+					
+					// Note: we are using Vulkan Coordinate System
+					Radian pitch{ degree_to_radian(m_parameters.pitch) };
+					Radian yaw{ degree_to_radian(m_parameters.yaw) };
+					m_parameters.front.x() = cos(pitch) * sin(yaw);
+					m_parameters.front.y() = sin(pitch);
+					m_parameters.front.z() = cos(pitch) * cos(yaw);
+					m_parameters.front.normalize();
+
+					update_view_matrix();
+				}
+			}
+		} // End update_camera_view()
 	}
 
 	void Camera::update_view_matrix()

@@ -31,7 +31,6 @@
 #include <google/protobuf/extension_set.h>  // IWYU pragma: export
 #include <google/protobuf/generated_enum_reflection.h>
 #include <google/protobuf/unknown_field_set.h>
-#include "AlbedoNetData.pb.h"
 // @@protoc_insertion_point(includes)
 #include <google/protobuf/port_def.inc>
 #define PROTOBUF_INTERNAL_EXPORT_chamber_2eproto
@@ -46,53 +45,40 @@ struct TableStruct_chamber_2eproto {
   static const uint32_t offsets[];
 };
 extern const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_chamber_2eproto;
-namespace Chamber {
+namespace ABDChamber {
+class Buffer;
+struct BufferDefaultTypeInternal;
+extern BufferDefaultTypeInternal _Buffer_default_instance_;
+class BufferView;
+struct BufferViewDefaultTypeInternal;
+extern BufferViewDefaultTypeInternal _BufferView_default_instance_;
 class ChamberData;
 struct ChamberDataDefaultTypeInternal;
 extern ChamberDataDefaultTypeInternal _ChamberData_default_instance_;
-}  // namespace Chamber
+class ChamberLogin;
+struct ChamberLoginDefaultTypeInternal;
+extern ChamberLoginDefaultTypeInternal _ChamberLogin_default_instance_;
+}  // namespace ABDChamber
 PROTOBUF_NAMESPACE_OPEN
-template<> ::Chamber::ChamberData* Arena::CreateMaybeMessage<::Chamber::ChamberData>(Arena*);
+template<> ::ABDChamber::Buffer* Arena::CreateMaybeMessage<::ABDChamber::Buffer>(Arena*);
+template<> ::ABDChamber::BufferView* Arena::CreateMaybeMessage<::ABDChamber::BufferView>(Arena*);
+template<> ::ABDChamber::ChamberData* Arena::CreateMaybeMessage<::ABDChamber::ChamberData>(Arena*);
+template<> ::ABDChamber::ChamberLogin* Arena::CreateMaybeMessage<::ABDChamber::ChamberLogin>(Arena*);
 PROTOBUF_NAMESPACE_CLOSE
-namespace Chamber {
+namespace ABDChamber {
 
-enum Player : int {
-  CAMBER = 0,
-  A = 1,
-  B = 2,
-  C = 3,
-  D = 4,
-  Player_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::min(),
-  Player_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::max()
-};
-bool Player_IsValid(int value);
-constexpr Player Player_MIN = CAMBER;
-constexpr Player Player_MAX = D;
-constexpr int Player_ARRAYSIZE = Player_MAX + 1;
-
-const ::PROTOBUF_NAMESPACE_ID::EnumDescriptor* Player_descriptor();
-template<typename T>
-inline const std::string& Player_Name(T enum_t_value) {
-  static_assert(::std::is_same<T, Player>::value ||
-    ::std::is_integral<T>::value,
-    "Incorrect type passed to function Player_Name.");
-  return ::PROTOBUF_NAMESPACE_ID::internal::NameOfEnum(
-    Player_descriptor(), enum_t_value);
-}
-inline bool Player_Parse(
-    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, Player* value) {
-  return ::PROTOBUF_NAMESPACE_ID::internal::ParseNamedEnum<Player>(
-    Player_descriptor(), name, value);
-}
 enum DataUsage : int {
-  camera_view_matrix = 0,
-  chamber_message = 100,
-  player_message = 101,
+  CHAMBER_FAILED = 0,
+  CHAMBER_SUCCESS = 1,
+  CHAMBER_LOGIN = 2,
+  camera_matrics = 100,
+  chamber_message = 200,
+  player_message = 201,
   DataUsage_INT_MIN_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::min(),
   DataUsage_INT_MAX_SENTINEL_DO_NOT_USE_ = std::numeric_limits<int32_t>::max()
 };
 bool DataUsage_IsValid(int value);
-constexpr DataUsage DataUsage_MIN = camera_view_matrix;
+constexpr DataUsage DataUsage_MIN = CHAMBER_FAILED;
 constexpr DataUsage DataUsage_MAX = player_message;
 constexpr int DataUsage_ARRAYSIZE = DataUsage_MAX + 1;
 
@@ -112,8 +98,188 @@ inline bool DataUsage_Parse(
 }
 // ===================================================================
 
+class ChamberLogin final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ABDChamber.ChamberLogin) */ {
+ public:
+  inline ChamberLogin() : ChamberLogin(nullptr) {}
+  ~ChamberLogin() override;
+  explicit PROTOBUF_CONSTEXPR ChamberLogin(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  ChamberLogin(const ChamberLogin& from);
+  ChamberLogin(ChamberLogin&& from) noexcept
+    : ChamberLogin() {
+    *this = ::std::move(from);
+  }
+
+  inline ChamberLogin& operator=(const ChamberLogin& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline ChamberLogin& operator=(ChamberLogin&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const ChamberLogin& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const ChamberLogin* internal_default_instance() {
+    return reinterpret_cast<const ChamberLogin*>(
+               &_ChamberLogin_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    0;
+
+  friend void swap(ChamberLogin& a, ChamberLogin& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(ChamberLogin* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(ChamberLogin* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  ChamberLogin* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<ChamberLogin>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const ChamberLogin& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const ChamberLogin& from) {
+    ChamberLogin::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(ChamberLogin* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ABDChamber.ChamberLogin";
+  }
+  protected:
+  explicit ChamberLogin(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kNicknameFieldNumber = 2,
+    kPassFieldNumber = 3,
+    kUIDFieldNumber = 1,
+  };
+  // string nickname = 2;
+  void clear_nickname();
+  const std::string& nickname() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_nickname(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_nickname();
+  PROTOBUF_NODISCARD std::string* release_nickname();
+  void set_allocated_nickname(std::string* nickname);
+  private:
+  const std::string& _internal_nickname() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_nickname(const std::string& value);
+  std::string* _internal_mutable_nickname();
+  public:
+
+  // string pass = 3;
+  void clear_pass();
+  const std::string& pass() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_pass(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_pass();
+  PROTOBUF_NODISCARD std::string* release_pass();
+  void set_allocated_pass(std::string* pass);
+  private:
+  const std::string& _internal_pass() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_pass(const std::string& value);
+  std::string* _internal_mutable_pass();
+  public:
+
+  // int32 UID = 1;
+  void clear_uid();
+  int32_t uid() const;
+  void set_uid(int32_t value);
+  private:
+  int32_t _internal_uid() const;
+  void _internal_set_uid(int32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:ABDChamber.ChamberLogin)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr nickname_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr pass_;
+    int32_t uid_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_chamber_2eproto;
+};
+// -------------------------------------------------------------------
+
 class ChamberData final :
-    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:Chamber.ChamberData) */ {
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ABDChamber.ChamberData) */ {
  public:
   inline ChamberData() : ChamberData(nullptr) {}
   ~ChamberData() override;
@@ -160,7 +326,7 @@ class ChamberData final :
                &_ChamberData_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    0;
+    1;
 
   friend void swap(ChamberData& a, ChamberData& b) {
     a.Swap(&b);
@@ -216,7 +382,7 @@ class ChamberData final :
   private:
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "Chamber.ChamberData";
+    return "ABDChamber.ChamberData";
   }
   protected:
   explicit ChamberData(::PROTOBUF_NAMESPACE_ID::Arena* arena,
@@ -233,47 +399,47 @@ class ChamberData final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kDataFieldNumber = 3,
-    kSenderFieldNumber = 1,
+    kBufferFieldNumber = 3,
+    kUIDFieldNumber = 1,
     kUsageFieldNumber = 2,
   };
-  // .AlbedoNetData data = 3;
-  bool has_data() const;
+  // .ABDChamber.Buffer buffer = 3;
+  bool has_buffer() const;
   private:
-  bool _internal_has_data() const;
+  bool _internal_has_buffer() const;
   public:
-  void clear_data();
-  const ::AlbedoNetData& data() const;
-  PROTOBUF_NODISCARD ::AlbedoNetData* release_data();
-  ::AlbedoNetData* mutable_data();
-  void set_allocated_data(::AlbedoNetData* data);
+  void clear_buffer();
+  const ::ABDChamber::Buffer& buffer() const;
+  PROTOBUF_NODISCARD ::ABDChamber::Buffer* release_buffer();
+  ::ABDChamber::Buffer* mutable_buffer();
+  void set_allocated_buffer(::ABDChamber::Buffer* buffer);
   private:
-  const ::AlbedoNetData& _internal_data() const;
-  ::AlbedoNetData* _internal_mutable_data();
+  const ::ABDChamber::Buffer& _internal_buffer() const;
+  ::ABDChamber::Buffer* _internal_mutable_buffer();
   public:
-  void unsafe_arena_set_allocated_data(
-      ::AlbedoNetData* data);
-  ::AlbedoNetData* unsafe_arena_release_data();
+  void unsafe_arena_set_allocated_buffer(
+      ::ABDChamber::Buffer* buffer);
+  ::ABDChamber::Buffer* unsafe_arena_release_buffer();
 
-  // .Chamber.Player sender = 1;
-  void clear_sender();
-  ::Chamber::Player sender() const;
-  void set_sender(::Chamber::Player value);
+  // int32 UID = 1;
+  void clear_uid();
+  int32_t uid() const;
+  void set_uid(int32_t value);
   private:
-  ::Chamber::Player _internal_sender() const;
-  void _internal_set_sender(::Chamber::Player value);
+  int32_t _internal_uid() const;
+  void _internal_set_uid(int32_t value);
   public:
 
-  // .Chamber.DataUsage usage = 2;
+  // .ABDChamber.DataUsage usage = 2;
   void clear_usage();
-  ::Chamber::DataUsage usage() const;
-  void set_usage(::Chamber::DataUsage value);
+  ::ABDChamber::DataUsage usage() const;
+  void set_usage(::ABDChamber::DataUsage value);
   private:
-  ::Chamber::DataUsage _internal_usage() const;
-  void _internal_set_usage(::Chamber::DataUsage value);
+  ::ABDChamber::DataUsage _internal_usage() const;
+  void _internal_set_usage(::ABDChamber::DataUsage value);
   public:
 
-  // @@protoc_insertion_point(class_scope:Chamber.ChamberData)
+  // @@protoc_insertion_point(class_scope:ABDChamber.ChamberData)
  private:
   class _Internal;
 
@@ -281,10 +447,371 @@ class ChamberData final :
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
   struct Impl_ {
-    ::AlbedoNetData* data_;
-    int sender_;
+    ::ABDChamber::Buffer* buffer_;
+    int32_t uid_;
     int usage_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_chamber_2eproto;
+};
+// -------------------------------------------------------------------
+
+class BufferView final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ABDChamber.BufferView) */ {
+ public:
+  inline BufferView() : BufferView(nullptr) {}
+  ~BufferView() override;
+  explicit PROTOBUF_CONSTEXPR BufferView(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  BufferView(const BufferView& from);
+  BufferView(BufferView&& from) noexcept
+    : BufferView() {
+    *this = ::std::move(from);
+  }
+
+  inline BufferView& operator=(const BufferView& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline BufferView& operator=(BufferView&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const BufferView& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const BufferView* internal_default_instance() {
+    return reinterpret_cast<const BufferView*>(
+               &_BufferView_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    2;
+
+  friend void swap(BufferView& a, BufferView& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(BufferView* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(BufferView* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  BufferView* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<BufferView>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const BufferView& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const BufferView& from) {
+    BufferView::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(BufferView* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ABDChamber.BufferView";
+  }
+  protected:
+  explicit BufferView(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kOffsetFieldNumber = 1,
+    kSizeFieldNumber = 2,
+  };
+  // int32 offset = 1;
+  void clear_offset();
+  int32_t offset() const;
+  void set_offset(int32_t value);
+  private:
+  int32_t _internal_offset() const;
+  void _internal_set_offset(int32_t value);
+  public:
+
+  // int32 size = 2;
+  void clear_size();
+  int32_t size() const;
+  void set_size(int32_t value);
+  private:
+  int32_t _internal_size() const;
+  void _internal_set_size(int32_t value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:ABDChamber.BufferView)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    int32_t offset_;
+    int32_t size_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_chamber_2eproto;
+};
+// -------------------------------------------------------------------
+
+class Buffer final :
+    public ::PROTOBUF_NAMESPACE_ID::Message /* @@protoc_insertion_point(class_definition:ABDChamber.Buffer) */ {
+ public:
+  inline Buffer() : Buffer(nullptr) {}
+  ~Buffer() override;
+  explicit PROTOBUF_CONSTEXPR Buffer(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  Buffer(const Buffer& from);
+  Buffer(Buffer&& from) noexcept
+    : Buffer() {
+    *this = ::std::move(from);
+  }
+
+  inline Buffer& operator=(const Buffer& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline Buffer& operator=(Buffer&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::PROTOBUF_NAMESPACE_ID::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const Buffer& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const Buffer* internal_default_instance() {
+    return reinterpret_cast<const Buffer*>(
+               &_Buffer_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    3;
+
+  friend void swap(Buffer& a, Buffer& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(Buffer* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() != nullptr &&
+        GetOwningArena() == other->GetOwningArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetOwningArena() == other->GetOwningArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(Buffer* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  Buffer* New(::PROTOBUF_NAMESPACE_ID::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<Buffer>(arena);
+  }
+  using ::PROTOBUF_NAMESPACE_ID::Message::CopyFrom;
+  void CopyFrom(const Buffer& from);
+  using ::PROTOBUF_NAMESPACE_ID::Message::MergeFrom;
+  void MergeFrom( const Buffer& from) {
+    Buffer::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  uint8_t* _InternalSerialize(
+      uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const final { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::PROTOBUF_NAMESPACE_ID::Arena* arena, bool is_message_owned);
+  void SharedDtor();
+  void SetCachedSize(int size) const final;
+  void InternalSwap(Buffer* other);
+
+  private:
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "ABDChamber.Buffer";
+  }
+  protected:
+  explicit Buffer(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  public:
+
+  static const ClassData _class_data_;
+  const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*GetClassData() const final;
+
+  ::PROTOBUF_NAMESPACE_ID::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kContentFieldNumber = 1,
+    kViewsFieldNumber = 2,
+    kCommentFieldNumber = 3,
+  };
+  // repeated float content = 1;
+  int content_size() const;
+  private:
+  int _internal_content_size() const;
+  public:
+  void clear_content();
+  private:
+  float _internal_content(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+      _internal_content() const;
+  void _internal_add_content(float value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+      _internal_mutable_content();
+  public:
+  float content(int index) const;
+  void set_content(int index, float value);
+  void add_content(float value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+      content() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+      mutable_content();
+
+  // repeated .ABDChamber.BufferView views = 2;
+  int views_size() const;
+  private:
+  int _internal_views_size() const;
+  public:
+  void clear_views();
+  ::ABDChamber::BufferView* mutable_views(int index);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ABDChamber::BufferView >*
+      mutable_views();
+  private:
+  const ::ABDChamber::BufferView& _internal_views(int index) const;
+  ::ABDChamber::BufferView* _internal_add_views();
+  public:
+  const ::ABDChamber::BufferView& views(int index) const;
+  ::ABDChamber::BufferView* add_views();
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ABDChamber::BufferView >&
+      views() const;
+
+  // optional string comment = 3;
+  bool has_comment() const;
+  private:
+  bool _internal_has_comment() const;
+  public:
+  void clear_comment();
+  const std::string& comment() const;
+  template <typename ArgT0 = const std::string&, typename... ArgT>
+  void set_comment(ArgT0&& arg0, ArgT... args);
+  std::string* mutable_comment();
+  PROTOBUF_NODISCARD std::string* release_comment();
+  void set_allocated_comment(std::string* comment);
+  private:
+  const std::string& _internal_comment() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_comment(const std::string& value);
+  std::string* _internal_mutable_comment();
+  public:
+
+  // @@protoc_insertion_point(class_scope:ABDChamber.Buffer)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  struct Impl_ {
+    ::PROTOBUF_NAMESPACE_ID::internal::HasBits<1> _has_bits_;
+    mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< float > content_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ABDChamber::BufferView > views_;
+    ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr comment_;
   };
   union { Impl_ _impl_; };
   friend struct ::TableStruct_chamber_2eproto;
@@ -298,81 +825,211 @@ class ChamberData final :
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
-// ChamberData
+// ChamberLogin
 
-// .Chamber.Player sender = 1;
-inline void ChamberData::clear_sender() {
-  _impl_.sender_ = 0;
+// int32 UID = 1;
+inline void ChamberLogin::clear_uid() {
+  _impl_.uid_ = 0;
 }
-inline ::Chamber::Player ChamberData::_internal_sender() const {
-  return static_cast< ::Chamber::Player >(_impl_.sender_);
+inline int32_t ChamberLogin::_internal_uid() const {
+  return _impl_.uid_;
 }
-inline ::Chamber::Player ChamberData::sender() const {
-  // @@protoc_insertion_point(field_get:Chamber.ChamberData.sender)
-  return _internal_sender();
+inline int32_t ChamberLogin::uid() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.ChamberLogin.UID)
+  return _internal_uid();
 }
-inline void ChamberData::_internal_set_sender(::Chamber::Player value) {
+inline void ChamberLogin::_internal_set_uid(int32_t value) {
   
-  _impl_.sender_ = value;
+  _impl_.uid_ = value;
 }
-inline void ChamberData::set_sender(::Chamber::Player value) {
-  _internal_set_sender(value);
-  // @@protoc_insertion_point(field_set:Chamber.ChamberData.sender)
+inline void ChamberLogin::set_uid(int32_t value) {
+  _internal_set_uid(value);
+  // @@protoc_insertion_point(field_set:ABDChamber.ChamberLogin.UID)
 }
 
-// .Chamber.DataUsage usage = 2;
-inline void ChamberData::clear_usage() {
-  _impl_.usage_ = 0;
+// string nickname = 2;
+inline void ChamberLogin::clear_nickname() {
+  _impl_.nickname_.ClearToEmpty();
 }
-inline ::Chamber::DataUsage ChamberData::_internal_usage() const {
-  return static_cast< ::Chamber::DataUsage >(_impl_.usage_);
+inline const std::string& ChamberLogin::nickname() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.ChamberLogin.nickname)
+  return _internal_nickname();
 }
-inline ::Chamber::DataUsage ChamberData::usage() const {
-  // @@protoc_insertion_point(field_get:Chamber.ChamberData.usage)
-  return _internal_usage();
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ChamberLogin::set_nickname(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.nickname_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ABDChamber.ChamberLogin.nickname)
 }
-inline void ChamberData::_internal_set_usage(::Chamber::DataUsage value) {
+inline std::string* ChamberLogin::mutable_nickname() {
+  std::string* _s = _internal_mutable_nickname();
+  // @@protoc_insertion_point(field_mutable:ABDChamber.ChamberLogin.nickname)
+  return _s;
+}
+inline const std::string& ChamberLogin::_internal_nickname() const {
+  return _impl_.nickname_.Get();
+}
+inline void ChamberLogin::_internal_set_nickname(const std::string& value) {
   
-  _impl_.usage_ = value;
+  _impl_.nickname_.Set(value, GetArenaForAllocation());
 }
-inline void ChamberData::set_usage(::Chamber::DataUsage value) {
-  _internal_set_usage(value);
-  // @@protoc_insertion_point(field_set:Chamber.ChamberData.usage)
+inline std::string* ChamberLogin::_internal_mutable_nickname() {
+  
+  return _impl_.nickname_.Mutable(GetArenaForAllocation());
 }
-
-// .AlbedoNetData data = 3;
-inline bool ChamberData::_internal_has_data() const {
-  return this != internal_default_instance() && _impl_.data_ != nullptr;
+inline std::string* ChamberLogin::release_nickname() {
+  // @@protoc_insertion_point(field_release:ABDChamber.ChamberLogin.nickname)
+  return _impl_.nickname_.Release();
 }
-inline bool ChamberData::has_data() const {
-  return _internal_has_data();
-}
-inline const ::AlbedoNetData& ChamberData::_internal_data() const {
-  const ::AlbedoNetData* p = _impl_.data_;
-  return p != nullptr ? *p : reinterpret_cast<const ::AlbedoNetData&>(
-      ::_AlbedoNetData_default_instance_);
-}
-inline const ::AlbedoNetData& ChamberData::data() const {
-  // @@protoc_insertion_point(field_get:Chamber.ChamberData.data)
-  return _internal_data();
-}
-inline void ChamberData::unsafe_arena_set_allocated_data(
-    ::AlbedoNetData* data) {
-  if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.data_);
-  }
-  _impl_.data_ = data;
-  if (data) {
+inline void ChamberLogin::set_allocated_nickname(std::string* nickname) {
+  if (nickname != nullptr) {
     
   } else {
     
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:Chamber.ChamberData.data)
+  _impl_.nickname_.SetAllocated(nickname, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.nickname_.IsDefault()) {
+    _impl_.nickname_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ABDChamber.ChamberLogin.nickname)
 }
-inline ::AlbedoNetData* ChamberData::release_data() {
+
+// string pass = 3;
+inline void ChamberLogin::clear_pass() {
+  _impl_.pass_.ClearToEmpty();
+}
+inline const std::string& ChamberLogin::pass() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.ChamberLogin.pass)
+  return _internal_pass();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void ChamberLogin::set_pass(ArgT0&& arg0, ArgT... args) {
+ 
+ _impl_.pass_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ABDChamber.ChamberLogin.pass)
+}
+inline std::string* ChamberLogin::mutable_pass() {
+  std::string* _s = _internal_mutable_pass();
+  // @@protoc_insertion_point(field_mutable:ABDChamber.ChamberLogin.pass)
+  return _s;
+}
+inline const std::string& ChamberLogin::_internal_pass() const {
+  return _impl_.pass_.Get();
+}
+inline void ChamberLogin::_internal_set_pass(const std::string& value) {
   
-  ::AlbedoNetData* temp = _impl_.data_;
-  _impl_.data_ = nullptr;
+  _impl_.pass_.Set(value, GetArenaForAllocation());
+}
+inline std::string* ChamberLogin::_internal_mutable_pass() {
+  
+  return _impl_.pass_.Mutable(GetArenaForAllocation());
+}
+inline std::string* ChamberLogin::release_pass() {
+  // @@protoc_insertion_point(field_release:ABDChamber.ChamberLogin.pass)
+  return _impl_.pass_.Release();
+}
+inline void ChamberLogin::set_allocated_pass(std::string* pass) {
+  if (pass != nullptr) {
+    
+  } else {
+    
+  }
+  _impl_.pass_.SetAllocated(pass, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.pass_.IsDefault()) {
+    _impl_.pass_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ABDChamber.ChamberLogin.pass)
+}
+
+// -------------------------------------------------------------------
+
+// ChamberData
+
+// int32 UID = 1;
+inline void ChamberData::clear_uid() {
+  _impl_.uid_ = 0;
+}
+inline int32_t ChamberData::_internal_uid() const {
+  return _impl_.uid_;
+}
+inline int32_t ChamberData::uid() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.ChamberData.UID)
+  return _internal_uid();
+}
+inline void ChamberData::_internal_set_uid(int32_t value) {
+  
+  _impl_.uid_ = value;
+}
+inline void ChamberData::set_uid(int32_t value) {
+  _internal_set_uid(value);
+  // @@protoc_insertion_point(field_set:ABDChamber.ChamberData.UID)
+}
+
+// .ABDChamber.DataUsage usage = 2;
+inline void ChamberData::clear_usage() {
+  _impl_.usage_ = 0;
+}
+inline ::ABDChamber::DataUsage ChamberData::_internal_usage() const {
+  return static_cast< ::ABDChamber::DataUsage >(_impl_.usage_);
+}
+inline ::ABDChamber::DataUsage ChamberData::usage() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.ChamberData.usage)
+  return _internal_usage();
+}
+inline void ChamberData::_internal_set_usage(::ABDChamber::DataUsage value) {
+  
+  _impl_.usage_ = value;
+}
+inline void ChamberData::set_usage(::ABDChamber::DataUsage value) {
+  _internal_set_usage(value);
+  // @@protoc_insertion_point(field_set:ABDChamber.ChamberData.usage)
+}
+
+// .ABDChamber.Buffer buffer = 3;
+inline bool ChamberData::_internal_has_buffer() const {
+  return this != internal_default_instance() && _impl_.buffer_ != nullptr;
+}
+inline bool ChamberData::has_buffer() const {
+  return _internal_has_buffer();
+}
+inline void ChamberData::clear_buffer() {
+  if (GetArenaForAllocation() == nullptr && _impl_.buffer_ != nullptr) {
+    delete _impl_.buffer_;
+  }
+  _impl_.buffer_ = nullptr;
+}
+inline const ::ABDChamber::Buffer& ChamberData::_internal_buffer() const {
+  const ::ABDChamber::Buffer* p = _impl_.buffer_;
+  return p != nullptr ? *p : reinterpret_cast<const ::ABDChamber::Buffer&>(
+      ::ABDChamber::_Buffer_default_instance_);
+}
+inline const ::ABDChamber::Buffer& ChamberData::buffer() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.ChamberData.buffer)
+  return _internal_buffer();
+}
+inline void ChamberData::unsafe_arena_set_allocated_buffer(
+    ::ABDChamber::Buffer* buffer) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.buffer_);
+  }
+  _impl_.buffer_ = buffer;
+  if (buffer) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:ABDChamber.ChamberData.buffer)
+}
+inline ::ABDChamber::Buffer* ChamberData::release_buffer() {
+  
+  ::ABDChamber::Buffer* temp = _impl_.buffer_;
+  _impl_.buffer_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
   temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
@@ -384,66 +1041,269 @@ inline ::AlbedoNetData* ChamberData::release_data() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::AlbedoNetData* ChamberData::unsafe_arena_release_data() {
-  // @@protoc_insertion_point(field_release:Chamber.ChamberData.data)
+inline ::ABDChamber::Buffer* ChamberData::unsafe_arena_release_buffer() {
+  // @@protoc_insertion_point(field_release:ABDChamber.ChamberData.buffer)
   
-  ::AlbedoNetData* temp = _impl_.data_;
-  _impl_.data_ = nullptr;
+  ::ABDChamber::Buffer* temp = _impl_.buffer_;
+  _impl_.buffer_ = nullptr;
   return temp;
 }
-inline ::AlbedoNetData* ChamberData::_internal_mutable_data() {
+inline ::ABDChamber::Buffer* ChamberData::_internal_mutable_buffer() {
   
-  if (_impl_.data_ == nullptr) {
-    auto* p = CreateMaybeMessage<::AlbedoNetData>(GetArenaForAllocation());
-    _impl_.data_ = p;
+  if (_impl_.buffer_ == nullptr) {
+    auto* p = CreateMaybeMessage<::ABDChamber::Buffer>(GetArenaForAllocation());
+    _impl_.buffer_ = p;
   }
-  return _impl_.data_;
+  return _impl_.buffer_;
 }
-inline ::AlbedoNetData* ChamberData::mutable_data() {
-  ::AlbedoNetData* _msg = _internal_mutable_data();
-  // @@protoc_insertion_point(field_mutable:Chamber.ChamberData.data)
+inline ::ABDChamber::Buffer* ChamberData::mutable_buffer() {
+  ::ABDChamber::Buffer* _msg = _internal_mutable_buffer();
+  // @@protoc_insertion_point(field_mutable:ABDChamber.ChamberData.buffer)
   return _msg;
 }
-inline void ChamberData::set_allocated_data(::AlbedoNetData* data) {
+inline void ChamberData::set_allocated_buffer(::ABDChamber::Buffer* buffer) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
-    delete reinterpret_cast< ::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.data_);
+    delete _impl_.buffer_;
   }
-  if (data) {
+  if (buffer) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(
-                reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(data));
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(buffer);
     if (message_arena != submessage_arena) {
-      data = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, data, submessage_arena);
+      buffer = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, buffer, submessage_arena);
     }
     
   } else {
     
   }
-  _impl_.data_ = data;
-  // @@protoc_insertion_point(field_set_allocated:Chamber.ChamberData.data)
+  _impl_.buffer_ = buffer;
+  // @@protoc_insertion_point(field_set_allocated:ABDChamber.ChamberData.buffer)
+}
+
+// -------------------------------------------------------------------
+
+// BufferView
+
+// int32 offset = 1;
+inline void BufferView::clear_offset() {
+  _impl_.offset_ = 0;
+}
+inline int32_t BufferView::_internal_offset() const {
+  return _impl_.offset_;
+}
+inline int32_t BufferView::offset() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.BufferView.offset)
+  return _internal_offset();
+}
+inline void BufferView::_internal_set_offset(int32_t value) {
+  
+  _impl_.offset_ = value;
+}
+inline void BufferView::set_offset(int32_t value) {
+  _internal_set_offset(value);
+  // @@protoc_insertion_point(field_set:ABDChamber.BufferView.offset)
+}
+
+// int32 size = 2;
+inline void BufferView::clear_size() {
+  _impl_.size_ = 0;
+}
+inline int32_t BufferView::_internal_size() const {
+  return _impl_.size_;
+}
+inline int32_t BufferView::size() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.BufferView.size)
+  return _internal_size();
+}
+inline void BufferView::_internal_set_size(int32_t value) {
+  
+  _impl_.size_ = value;
+}
+inline void BufferView::set_size(int32_t value) {
+  _internal_set_size(value);
+  // @@protoc_insertion_point(field_set:ABDChamber.BufferView.size)
+}
+
+// -------------------------------------------------------------------
+
+// Buffer
+
+// repeated float content = 1;
+inline int Buffer::_internal_content_size() const {
+  return _impl_.content_.size();
+}
+inline int Buffer::content_size() const {
+  return _internal_content_size();
+}
+inline void Buffer::clear_content() {
+  _impl_.content_.Clear();
+}
+inline float Buffer::_internal_content(int index) const {
+  return _impl_.content_.Get(index);
+}
+inline float Buffer::content(int index) const {
+  // @@protoc_insertion_point(field_get:ABDChamber.Buffer.content)
+  return _internal_content(index);
+}
+inline void Buffer::set_content(int index, float value) {
+  _impl_.content_.Set(index, value);
+  // @@protoc_insertion_point(field_set:ABDChamber.Buffer.content)
+}
+inline void Buffer::_internal_add_content(float value) {
+  _impl_.content_.Add(value);
+}
+inline void Buffer::add_content(float value) {
+  _internal_add_content(value);
+  // @@protoc_insertion_point(field_add:ABDChamber.Buffer.content)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+Buffer::_internal_content() const {
+  return _impl_.content_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >&
+Buffer::content() const {
+  // @@protoc_insertion_point(field_list:ABDChamber.Buffer.content)
+  return _internal_content();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+Buffer::_internal_mutable_content() {
+  return &_impl_.content_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< float >*
+Buffer::mutable_content() {
+  // @@protoc_insertion_point(field_mutable_list:ABDChamber.Buffer.content)
+  return _internal_mutable_content();
+}
+
+// repeated .ABDChamber.BufferView views = 2;
+inline int Buffer::_internal_views_size() const {
+  return _impl_.views_.size();
+}
+inline int Buffer::views_size() const {
+  return _internal_views_size();
+}
+inline void Buffer::clear_views() {
+  _impl_.views_.Clear();
+}
+inline ::ABDChamber::BufferView* Buffer::mutable_views(int index) {
+  // @@protoc_insertion_point(field_mutable:ABDChamber.Buffer.views)
+  return _impl_.views_.Mutable(index);
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ABDChamber::BufferView >*
+Buffer::mutable_views() {
+  // @@protoc_insertion_point(field_mutable_list:ABDChamber.Buffer.views)
+  return &_impl_.views_;
+}
+inline const ::ABDChamber::BufferView& Buffer::_internal_views(int index) const {
+  return _impl_.views_.Get(index);
+}
+inline const ::ABDChamber::BufferView& Buffer::views(int index) const {
+  // @@protoc_insertion_point(field_get:ABDChamber.Buffer.views)
+  return _internal_views(index);
+}
+inline ::ABDChamber::BufferView* Buffer::_internal_add_views() {
+  return _impl_.views_.Add();
+}
+inline ::ABDChamber::BufferView* Buffer::add_views() {
+  ::ABDChamber::BufferView* _add = _internal_add_views();
+  // @@protoc_insertion_point(field_add:ABDChamber.Buffer.views)
+  return _add;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::ABDChamber::BufferView >&
+Buffer::views() const {
+  // @@protoc_insertion_point(field_list:ABDChamber.Buffer.views)
+  return _impl_.views_;
+}
+
+// optional string comment = 3;
+inline bool Buffer::_internal_has_comment() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
+  return value;
+}
+inline bool Buffer::has_comment() const {
+  return _internal_has_comment();
+}
+inline void Buffer::clear_comment() {
+  _impl_.comment_.ClearToEmpty();
+  _impl_._has_bits_[0] &= ~0x00000001u;
+}
+inline const std::string& Buffer::comment() const {
+  // @@protoc_insertion_point(field_get:ABDChamber.Buffer.comment)
+  return _internal_comment();
+}
+template <typename ArgT0, typename... ArgT>
+inline PROTOBUF_ALWAYS_INLINE
+void Buffer::set_comment(ArgT0&& arg0, ArgT... args) {
+ _impl_._has_bits_[0] |= 0x00000001u;
+ _impl_.comment_.Set(static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
+  // @@protoc_insertion_point(field_set:ABDChamber.Buffer.comment)
+}
+inline std::string* Buffer::mutable_comment() {
+  std::string* _s = _internal_mutable_comment();
+  // @@protoc_insertion_point(field_mutable:ABDChamber.Buffer.comment)
+  return _s;
+}
+inline const std::string& Buffer::_internal_comment() const {
+  return _impl_.comment_.Get();
+}
+inline void Buffer::_internal_set_comment(const std::string& value) {
+  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_.comment_.Set(value, GetArenaForAllocation());
+}
+inline std::string* Buffer::_internal_mutable_comment() {
+  _impl_._has_bits_[0] |= 0x00000001u;
+  return _impl_.comment_.Mutable(GetArenaForAllocation());
+}
+inline std::string* Buffer::release_comment() {
+  // @@protoc_insertion_point(field_release:ABDChamber.Buffer.comment)
+  if (!_internal_has_comment()) {
+    return nullptr;
+  }
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  auto* p = _impl_.comment_.Release();
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.comment_.IsDefault()) {
+    _impl_.comment_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  return p;
+}
+inline void Buffer::set_allocated_comment(std::string* comment) {
+  if (comment != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  _impl_.comment_.SetAllocated(comment, GetArenaForAllocation());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if (_impl_.comment_.IsDefault()) {
+    _impl_.comment_.Set("", GetArenaForAllocation());
+  }
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:ABDChamber.Buffer.comment)
 }
 
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
+
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace Chamber
+}  // namespace ABDChamber
 
 PROTOBUF_NAMESPACE_OPEN
 
-template <> struct is_proto_enum< ::Chamber::Player> : ::std::true_type {};
+template <> struct is_proto_enum< ::ABDChamber::DataUsage> : ::std::true_type {};
 template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::Chamber::Player>() {
-  return ::Chamber::Player_descriptor();
-}
-template <> struct is_proto_enum< ::Chamber::DataUsage> : ::std::true_type {};
-template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::Chamber::DataUsage>() {
-  return ::Chamber::DataUsage_descriptor();
+inline const EnumDescriptor* GetEnumDescriptor< ::ABDChamber::DataUsage>() {
+  return ::ABDChamber::DataUsage_descriptor();
 }
 
 PROTOBUF_NAMESPACE_CLOSE
