@@ -139,6 +139,25 @@ namespace Net
 										log::info("[Chamber]: {}", body.message);
 										break;
 									}
+									case ABDChamber::DataUsage::player_message:
+									{
+										ABDChamber::ChamberData cb_data;
+										if (cb_data.ParseFromString(body.message))
+										{
+											if (cb_data.buffer().has_comment())
+											{
+												auto& profile = m_chamber_players[cb_data.uid()].profile;
+												console_messages.emplace_back(
+													std::move(std::format("[{} ({})]: {}", 
+														profile.nickname(),
+														profile.uid(),
+														cb_data.buffer().comment())));
+											}
+											else log::warn("Received an error Player Message!");
+										}
+										else log::warn("Failed to parse Player Message protobuf");
+										break;
+									}
 									default: log::warn("Unknown Chamber Data Usage!");
 								}
 							}
@@ -184,6 +203,26 @@ namespace Net
 		m_socket->sendToServer(net::Message{ 
 			ABDChamber::DataUsage::camera_matrics, serializedData });
 
+	}
+
+	void NetModule::SyncMessage(std::string_view message)
+	{
+		if (!IsOnline()) return;
+
+		ABDChamber::ChamberData chamber_data;
+
+		chamber_data.set_uid(m_profile.uid());
+		chamber_data.set_usage(ABDChamber::DataUsage::player_message);
+
+		ABDChamber::Buffer* buffer = new ABDChamber::Buffer();
+		buffer->set_comment(message.data());
+		chamber_data.set_allocated_buffer(buffer);
+
+		static std::string serializedData;
+		chamber_data.SerializeToString(&serializedData);
+
+		m_socket->sendToServer(net::Message{
+			ABDChamber::DataUsage::player_message, serializedData });
 	}
 
 }} // namespace Albedo::Net

@@ -44,7 +44,7 @@ namespace Runtime
 		static auto& net = Net::NetModule::instance();
 		if (!net.IsOnline()) return;
 
-		static constexpr float SYNC_PERIOD_MS = 1000.0f / 61.0; // 60FPS
+		static constexpr float SYNC_PERIOD_MS = 1000.0f / 121.0; // 120FPS
 		static time::StopWatch<float> timer;
 
 		static float period = 0.0f;

@@ -2,6 +2,9 @@
 
 #include <AlbedoRHI.hpp>
 
+#include <runtime/function_layer/control/control_system.h>
+#include <net/net.h>
+
 namespace Albedo {
 namespace Runtime
 {
@@ -41,6 +44,7 @@ namespace Runtime
 
 			static bool item_vulkan_context = true;
 			static bool item_user_inputs = true;
+			static bool item_console = true;
             if (ImGui::BeginMenuBar())
             {
                 if (ImGui::BeginMenu("View"))
@@ -51,6 +55,9 @@ namespace Runtime
 					ImGui::MenuItem("User Inputs", NULL, &item_user_inputs);
 					ImGui::Separator();
 					
+					ImGui::MenuItem("Console", NULL, &item_console);
+					ImGui::Separator();
+
                     ImGui::EndMenu();
                 }
 
@@ -94,6 +101,7 @@ namespace Runtime
 
 				if (item_vulkan_context) menu_item_vulkan_context(&item_vulkan_context);
 				if (item_user_inputs) menu_item_input_info(&item_user_inputs);
+				if (item_console) menu_item_console(&item_console);
 
             } // End Menu Bar
 
@@ -103,7 +111,36 @@ namespace Runtime
 
 	void UIWindow::menu_item_console(bool* is_open)
 	{
+		static char buffer_input[128];
 
+		auto& netmodule = Net::NetModule::instance();
+
+		ImGui::Begin("Console", is_open, ImGuiWindowFlags_NoCollapse);
+		{
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0.2,0.2,0.2,1 });
+		
+			if (ImGui::BeginListBox("Online Servers", ImVec2(-FLT_MIN, 11 * ImGui::GetTextLineHeightWithSpacing())))
+			{
+				for (const auto& console_message : netmodule.console_messages)
+				{
+					ImGui::TextUnformatted(console_message.c_str());
+				}
+
+				ImGui::SetScrollHereY(1.0f);
+				ImGui::EndListBox();
+			}
+			ImGui::PopStyleColor();
+
+			ImGui::SetNextItemWidth(-FLT_MIN);//ImVec2(-FLT_MIN, 30 * ImGui::GetTextLineHeightWithSpacing())
+			if (ImGui::InputText("##INPUT", buffer_input, sizeof(buffer_input) / sizeof(char), ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				ImGui::SetKeyboardFocusHere(-1);
+				netmodule.console_messages.emplace_back(std::move(std::format("[Me]: {}", buffer_input)));
+				netmodule.SyncMessage(buffer_input);
+				buffer_input[0] = '\0';
+			}
+		}
+		ImGui::End();
 	}
 
 	void UIWindow::menu_item_vulkan_context(bool* is_open)

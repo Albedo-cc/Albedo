@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 #include <string>
+#include <vector>
 #include <memory>
 
 namespace Albedo {

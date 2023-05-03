@@ -47,6 +47,8 @@ namespace Net
 
 	public:
 		void SyncCamera(ABDChamber::Buffer* camera_data);
+		void SyncMessage(std::string_view message);
+		std::vector<std::string> console_messages; // [FIXME]: Need Reconstruction!
 
 	public:
 		bool IsOnline() const { return m_socket->isConnected(); }

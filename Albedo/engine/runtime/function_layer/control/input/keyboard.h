@@ -36,6 +36,7 @@ namespace Runtime
 			LShift	=	GLFW_KEY_LEFT_SHIFT,
 			RShift =	GLFW_KEY_RIGHT_SHIFT,
 			ESC		=	GLFW_KEY_ESCAPE,
+			Enter	=	GLFW_KEY_ENTER
 		};
 	}; // namespace Albedo::Runtime::Keyboard
 
