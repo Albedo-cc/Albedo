@@ -119,7 +119,7 @@ namespace Runtime
 		{
 			ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0.2,0.2,0.2,1 });
 		
-			if (ImGui::BeginListBox("Online Servers", ImVec2(-FLT_MIN, 11 * ImGui::GetTextLineHeightWithSpacing())))
+			if (ImGui::BeginListBox("Online Servers", ImVec2(-FLT_MIN, 10 * ImGui::GetTextLineHeightWithSpacing())))
 			{
 				for (const auto& console_message : netmodule.console_messages)
 				{

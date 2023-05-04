@@ -46,10 +46,16 @@ namespace Runtime
 			.Allocator = m_vulkan_context->m_memory_allocation_callback
 		};
 
+		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		auto& io = ImGui::GetIO();
+
+		// Configuration
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		const char* font_path = "resource/font/calibri.ttf";
+		if (io.Fonts->AddFontFromFileTTF(font_path, 16.0f) == NULL)
+			throw std::runtime_error(std::format("Failed to load font {}!", font_path));
 
 		ImGui_ImplVulkan_Init(&ImGui_InitInfo, *render_pass);
 		ImGui_ImplGlfw_InitForVulkan(m_vulkan_context->m_window, true); // Install callbacks via ImGUI

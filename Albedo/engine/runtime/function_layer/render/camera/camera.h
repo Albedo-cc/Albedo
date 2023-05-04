@@ -34,7 +34,7 @@ namespace Runtime
 			Vector3f target				{ 0.0, 0.0, -1.0 };
 			
 			float FOV_Y = 60;
-			bool flip_y = true;
+			bool	 flip_y = true;
 			float aspect_ratio = 16.0 / 9.0; // 1920 : 1080
 			float plane_near{ 0.1 }, plane_far{ 100.0 };
 			

@@ -72,7 +72,7 @@ namespace Runtime
 					m_parameters.is_active = UISystem::IsFocusingOnMainScene();
 					ImGui::RadioButton("Active", m_parameters.is_active);
 					ImGui::SameLine();
-					ImGui::SliderFloat("Speed", &m_parameters.speed, 0.0, 5.0);
+					ImGui::SliderFloat("Speed", &m_parameters.speed, 0.0, 2.0);
 					ImGui::Separator();
 
 					update_projection |= ImGui::Checkbox("Flip-Y", &m_parameters.flip_y);
