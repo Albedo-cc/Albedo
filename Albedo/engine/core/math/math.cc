@@ -6,7 +6,7 @@ namespace Core
 
 	Matrix4f make_look_at_matrix(const Vector3f& position, const Vector3f& target, const Vector3f& upward_direction)
 	{
-		// Just works in UP(0,1,0) Right(1,0,0) Front(0,0,1)
+		// Only works in UP(0,1,0) Right(1,0,0) Front(0,0,1)
 		Vector3f dir_forward = (target - position).normalized();
 		Vector3f dir_right = dir_forward.cross(upward_direction).normalized();
 		Vector3f dir_up = dir_right.cross(dir_forward);
@@ -27,7 +27,7 @@ namespace Core
 
 	Matrix4f make_orthographics_matrix(float left, float right, float bottom, float top, float near_plane, float far_plane)
 	{
-		// Note that this function just works for NDC Z is from 0 to 1 (Vulkan)
+		// Note that this function only works for NDC Z is from 0 to 1 (Vulkan)
 		Matrix4f orthographics_matrix;
 		orthographics_matrix.setOnes();
 		orthographics_matrix(0, 0) = 2.f / (right - left);
@@ -42,7 +42,7 @@ namespace Core
 
 	Matrix4f make_perspective_matrix(Radian FOV_y, float aspect_ratio, float near_plane, float far_plane)
 	{
-		// Note that this function just works for NDC Z is from 0 to 1 (Vulkan)
+		// Note that this function only works for NDC Z is from 0 to 1 (Vulkan)
 		Radian tan_half_fov_y = tan(FOV_y / 2.0);
 
 		Matrix4f perspective_matrix;

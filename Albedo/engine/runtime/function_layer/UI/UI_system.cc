@@ -53,6 +53,7 @@ namespace Runtime
 		// Configuration
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
 		const char* font_path = "resource/font/calibri.ttf";
 		if (io.Fonts->AddFontFromFileTTF(font_path, 16.0f) == NULL)
 			throw std::runtime_error(std::format("Failed to load font {}!", font_path));

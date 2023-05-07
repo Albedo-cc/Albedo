@@ -25,7 +25,7 @@ namespace Runtime
 		std::shared_ptr<Image> LoadIcon(std::string icon_name);
 		std::shared_ptr<ImageFuture> AsyncLoadIcon(std::string icon_name);
 
-		// Load TempModel Asset
+		// Load Model Asset
 		std::shared_ptr<Model> LoadModel(std::string model_name);
 		std::shared_ptr<ModelFuture> AsyncLoadModel(std::string model_name);
 
