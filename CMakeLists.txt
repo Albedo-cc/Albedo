@@ -20,6 +20,7 @@ target_put_into_folder(Albedo "Albedo")
 target_put_into_folder(AlbedoShader "Albedo")
 
 target_put_into_folder(imgui "Albedo/Extern/Dear_ImGUI")
+target_put_into_folder(imcurio "Albedo/Extern/Dear_ImCurio")
 target_put_into_folder(protobuf "Albedo/Extern/Protocol_Buffer")
 
 target_put_into_folder(AlbedoNet "Albedo/Extern/AlbedoNet")

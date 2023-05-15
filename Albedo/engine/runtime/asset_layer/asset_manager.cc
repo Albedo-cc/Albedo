@@ -4,6 +4,12 @@ namespace Albedo {
 namespace Runtime
 {
 
+	AssetManager::AssetManager()
+	{
+
+	}
+
+
 	std::shared_ptr<Image> AssetManager::
 		LoadTexture2D(std::string texture_name)
 	{

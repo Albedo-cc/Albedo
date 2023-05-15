@@ -31,11 +31,11 @@ namespace Runtime
 
 	public :
 		// Keep Assets
-		/*void RegisterImage(std::shared_ptr<Image> image);
-		void RegisterModel(std::shared_ptr<TempModel> image);*/
+		//void RegisterImage(std::shared_ptr<Image> image);
+		//void RegisterModel(std::shared_ptr<TempModel> image);
 
 	private:
-		AssetManager() = default;
+		AssetManager();
 
 	public: // Path (Future: Load from Platform Layer)
 		static const std::string& get_asset_path_texture() { static const std::string path = "resource/texture/";  return path; }

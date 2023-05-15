@@ -7,6 +7,7 @@ namespace Runtime
 {
 	void Scene::Load(std::shared_ptr<Model> model)
 	{
+		boundingbox = model->bounding_box;
 		textures = model->textures;
 		materials = model->materials;
 		nodes = model->nodes;
@@ -47,7 +48,6 @@ namespace Runtime
 				image_buffers[i]->Write(current_image.data);
 			}
 
-
 			// Submit
 			auto commandBuffer = m_vulkan_context->
 				CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
@@ -75,6 +75,20 @@ namespace Runtime
 				else log::warn("Current Primitive has no PBR Base Color Textures!");
 			}
 		}
+	}
+
+	void Scene::operator()(const ImVec2& size)
+	{
+		ImGui::Button("Scene", size);
+	}
+
+	void Scene::on_mouse_is_hovering()
+	{
+			ImGui::BeginTooltip();
+			ImGui::TextUnformatted(
+				"Valid Drag Targets:\n"
+				"1. Camera Panel");
+			ImGui::EndTooltip();
 	}
 
 }} // namespace Albedo::Runtime

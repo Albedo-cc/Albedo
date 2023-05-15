@@ -1,5 +1,6 @@
 #include "render_system.h"
 
+#include <imcurio.h>
 #include <AlbedoTime.hpp>
 
 #include "camera/camera.h"
@@ -17,6 +18,7 @@
 namespace Albedo {
 namespace Runtime
 {
+
 	void RenderSystem::Update()
 	{
 		try
@@ -103,6 +105,35 @@ namespace Runtime
 		UISystem::instance().Initialize(m_vulkan_context, m_render_passes[render_pass_UI], UIRenderPass::subpass_UI);
 
 		m_scene->Load(scene_future->WaitResult());
+
+		// Scene Window
+		m_chest = std::make_unique<ImCurio::Chest>(
+			ImVec2{ 40, 40 },
+			60,
+			ImCurioChestFlags_AutoIncreaseCapacity);
+
+		m_chest->InsertItem(m_scene.get());
+
+		UISystem::instance().RegisterUIEvent(
+			"Scene", [this]()
+			{
+				ImGui::Begin("Scene", 0, ImGuiWindowFlags_NoScrollbar);
+				{
+					(*m_chest)();
+				}
+				ImGui::End();
+
+				static std::string display = "Empty";
+				ImGui::Begin("test recv");
+				{
+					ImGui::Button(display.c_str(), {100, 100});
+					if (auto item = ImCurio::AcceptChestDragItem(typeid(Scene)))
+					{
+						display = "Full";
+					}
+				}
+				ImGui::End();
+			});
 	}
 
 	void RenderSystem::create_render_passes()

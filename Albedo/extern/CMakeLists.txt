@@ -68,7 +68,16 @@ endif()
 if (NOT TARGET imgui)
     message(STATUS "\nLoading Dear ImGui (imgui)")
     add_subdirectory(imgui-1.89.5-docking)
-    target_link_libraries(imgui AlbedoRHI)
+    target_link_libraries(imgui PRIVATE AlbedoRHI)
 
     target_link_libraries(AlbedoExternalLibraries INTERFACE imgui)
+endif()
+
+# Dear ImCurio
+if (NOT TARGET imcurio)
+    message(STATUS "\nLoading Dear ImCurio (imcurio)")
+    add_subdirectory(ImCurio)
+    target_link_libraries(imcurio PRIVATE imgui)
+
+    target_link_libraries(AlbedoExternalLibraries INTERFACE imcurio)
 endif()

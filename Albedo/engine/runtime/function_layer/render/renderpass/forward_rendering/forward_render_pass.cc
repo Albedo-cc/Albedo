@@ -114,7 +114,7 @@ namespace Runtime
 		present.srcSubpass = VK_SUBPASS_EXTERNAL; // Implicit subpass (First subpass set in srcSubpass and Last subpass set in dstSubpass)
 		present.dstSubpass = 0; // Must higher than srcSubpass, 0 refers to this subpass is the first and only one
 		present.srcStageMask = // The stages to start subpass
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
 			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // For Depth Test
 		present.dstStageMask =  // The stages to complete
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |

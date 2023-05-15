@@ -2,6 +2,11 @@
 #include <AlbedoRHI.hpp>
 #include <AlbedoTime.hpp>
 
+namespace ImCurio
+{
+	class Chest;
+}
+
 namespace Albedo {
 namespace Runtime
 {
@@ -33,6 +38,7 @@ namespace Runtime
 		std::shared_ptr<Easel> m_easel;
 		std::shared_ptr<Camera> m_camera;
 		std::shared_ptr<Scene> m_scene;
+		std::shared_ptr<ImCurio::Chest> m_chest; // UI widget
 
 		std::vector<std::shared_ptr<RHI::RenderPass>> m_render_passes;
 
