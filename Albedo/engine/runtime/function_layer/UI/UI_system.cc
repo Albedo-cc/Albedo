@@ -109,10 +109,10 @@ namespace Runtime
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 			
-			{ // TEST
+			{ // WIP
 				static UIWindow main_window{m_vulkan_context};
 				main_window.Render();
-				ImGui::ShowDemoWindow();
+				//ImGui::ShowDemoWindow();
 			}
 
 			for (const auto& [name, ui_event] : m_ui_events) { ui_event(); }

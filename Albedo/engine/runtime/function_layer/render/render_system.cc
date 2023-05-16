@@ -108,29 +108,18 @@ namespace Runtime
 
 		// Scene Window
 		m_chest = std::make_unique<ImCurio::Chest>(
-			ImVec2{ 40, 40 },
-			60,
+			ImVec2{ 64, 64 },
+			24,
 			ImCurioChestFlags_AutoIncreaseCapacity);
 
-		m_chest->InsertItem(m_scene.get());
+		//m_chest->InsertItem(m_scene.get());
 
 		UISystem::instance().RegisterUIEvent(
-			"Scene", [this]()
+			"Toolkit", [this]()
 			{
-				ImGui::Begin("Scene", 0, ImGuiWindowFlags_NoScrollbar);
+				ImGui::Begin("Toolkit", 0, ImGuiWindowFlags_NoScrollbar);
 				{
 					(*m_chest)();
-				}
-				ImGui::End();
-
-				static std::string display = "Empty";
-				ImGui::Begin("test recv");
-				{
-					ImGui::Button(display.c_str(), {100, 100});
-					if (auto item = ImCurio::AcceptChestDragItem(typeid(Scene)))
-					{
-						display = "Full";
-					}
 				}
 				ImGui::End();
 			});
