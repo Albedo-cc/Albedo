@@ -1,10 +1,10 @@
-# Frozen C++ Ignore
+# Albedo
 
 # Directories
+Build/
+Project/
+Install/
 .vscode/
-build/
-build_debug/
-build_release/
 
 # Generated and user files 
 **/CMakeCache.txt 

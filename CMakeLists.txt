@@ -1,42 +1,33 @@
 cmake_minimum_required(VERSION 3.21.0 FATAL_ERROR)
 
-project("Albedo"
+set(ALBEDO_APP_NAME "AlbedoAPP")
+project(${ALBEDO_APP_NAME}
     LANGUAGES CXX
-    VERSION 1.0.0)
+    VERSION "0.0.0"
+    HOMEPAGE_URL "")
 
+# [Configuration]
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Explicitly require the standard
 set(CMAKE_CXX_EXTENSIONS OFF) # Vendor-specific Extensions
 
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/_script")
+# [Options]
 
-include(check_in_source_build)
+# [Macros]
+add_compile_definitions(ALBEDO_APP_NAME="${ALBEDO_APP_NAME}")
+add_compile_definitions(ALBEDO_APP_VERSION="${PROJECT_VERSION}")
+add_compile_definitions(ALBEDO_APP_ASSET_PATH="$<TARGET_FILE_DIR:${PROJECT_NAME}>/asset")
 
-add_subdirectory(Albedo)
+# [Project]
+add_subdirectory(AlbedoSDK)
+file(GLOB_RECURSE ALBEDO_APP_HEADER "APP/*.h")
+file(GLOB_RECURSE ALBEDO_APP_SOURCE "APP/*.cc")
+source_group(TREE "${PROJECT_SOURCE_DIR}/APP" FILES ${ALBEDO_APP_HEADER} ${ALBEDO_APP_SOURCE})
+add_executable(${ALBEDO_APP_NAME} ${ALBEDO_APP_HEADER} ${ALBEDO_APP_SOURCE})
+target_link_libraries(${ALBEDO_APP_NAME} PRIVATE Albedo)
+target_sources(${ALBEDO_APP_NAME} PRIVATE README.md TODO.md)
 
-# Put targets into Folders
-include(target_put_into_folder)
-target_put_into_folder(Albedo "Albedo")
-target_put_into_folder(AlbedoShader "Albedo")
-
-target_put_into_folder(imgui "Albedo/Extern/Dear_ImGUI")
-target_put_into_folder(imcurio "Albedo/Extern/Dear_ImCurio")
-target_put_into_folder(protobuf "Albedo/Extern/Protocol_Buffer")
-
-target_put_into_folder(AlbedoNet "Albedo/Extern/AlbedoNet")
-    target_put_into_folder(asio "Albedo/Extern/AlbedoNet/Library/ASIO")
-    target_put_into_folder(cryptopp "Albedo/Extern/AlbedoNet/Library/Crypto++")
-
-target_put_into_folder(AlbedoRHI "Albedo/Extern/AlbedoRHI")
-    target_put_into_folder(glfw "Albedo/Extern/AlbedoRHI/Library/GLFW3")
-        target_put_into_folder(update_mappings "Albedo/Extern/AlbedoRHI/Library/GLFW3") 
-    target_put_into_folder(VulkanMemoryAllocator "Albedo/Extern/AlbedoRHI/Library/VMA")
-    target_put_into_folder(spirv-reflect-static "Albedo/Extern/AlbedoRHI/Library/SPIRV-Reflect")
-
-target_put_into_folder(AlbedoLog "Albedo/Extern/AlbedoLog")
-    target_put_into_folder(spdlog "Albedo/Extern/AlbedoLog/Library/spdlog")
-
-target_put_into_folder(AlbedoUtils "Albedo/Extern/AlbedoUtils")
-
-# StartUp Project in Visual Studio
-set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+# [Property]
+# Visual Studio
+set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${ALBEDO_APP_NAME})
+set_property(TARGET ${ALBEDO_APP_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
