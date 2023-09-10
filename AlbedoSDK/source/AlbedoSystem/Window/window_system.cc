@@ -8,7 +8,7 @@
 namespace Albedo
 {
 
-    void WindowSystem::Initialize(const WindowSystem::Parameters& parameters)
+    void WindowSystem::Initialize(WindowSystem::CreateInfo createinfo)
     {
 		Log::Debug("Albedo Window System is being initialized...");
 
@@ -18,8 +18,8 @@ namespace Albedo
 		glfwWindowHint(GLFW_RESIZABLE,	GLFW_TRUE);
 
         // Init System Parameters
-        m_parameters = parameters;
-        if (!parameters.width || !parameters.height)
+        m_parameters = std::move(createinfo);
+        if (!m_parameters.width || !m_parameters.height)
 		{
 			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 			const GLFWvidmode* mode = glfwGetVideoMode(monitor);

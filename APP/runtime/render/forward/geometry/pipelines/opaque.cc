@@ -5,8 +5,8 @@
 namespace Albedo{
 namespace APP
 {
-	const char* vert_shader_path = "C:\\Frozen Zone\\OneDrive\\LJYC\\Code\\Albedo\\APP\\asset\\shaders\\opaque.vert.spv";
-	const char* frag_shader_path = "C:\\Frozen Zone\\OneDrive\\LJYC\\Code\\Albedo\\APP\\asset\\shaders\\opaque.frag.spv";
+	const char* vert_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\opaque.vert.spv";
+	const char* frag_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\opaque.frag.spv";
 	
 	std::vector<char> ReadShader(const char* path)
 	{

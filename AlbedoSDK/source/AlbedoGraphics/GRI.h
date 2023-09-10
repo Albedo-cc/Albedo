@@ -13,7 +13,7 @@
 #include <vector>
 #include <string>
 #include <optional>
-#include <exception>
+#include <stdexcept>
 #include <functional>
 #include <string_view>
 
@@ -393,17 +393,20 @@ namespace Albedo
 			};
 
 		protected:
-			void build(); // Call after add_subpass() & add_attachment();
 			auto add_attachment(AttachmentSetting setting) -> uint32_t;
 			auto add_subpass(SubpassSetting setting)	   -> uint32_t;
 			void add_framebuffer(FramebufferSetting setting);
+			void BUILD_ALL(); // Call after add_subpass() & add_attachment()
+			void BUILD_SELF();
+			void BUILD_SUBPASSES();
+			void BUILD_FRAMEBUFFERS();
 
 		public:
 			RenderPass() = delete;
 			RenderPass(std::string name, uint32_t priority);
 			virtual ~RenderPass() noexcept;
 
-		private:
+		protected:
 			std::string   m_name;
 			VkRenderPass  m_handle	   { VK_NULL_HANDLE };
 			uint32_t	  m_priority   { 0 }; // Less is more
@@ -423,6 +426,9 @@ namespace Albedo
 				std::vector<VkClearValue>			 clear_colors;
 			};
 			AttachmentSet m_attachments;
+
+		private:
+			static inline uint32_t sm_renderpass_count = 0;
 		};
 
 		class GraphicsPipeline
@@ -442,6 +448,7 @@ namespace Albedo
 				std::shared_ptr<Shader> fragment_shader;	
 			};
 			GraphicsPipeline(ShaderModule shader_module);
+			GraphicsPipeline(const char* signature); // Skip initialization
 			virtual ~GraphicsPipeline() noexcept;
 			GraphicsPipeline() = delete;
 
@@ -463,6 +470,9 @@ namespace Albedo
 			VkViewport							m_viewport;
 			VkRect2D							m_scissor;
 			VkPipelineColorBlendAttachmentState m_color_blend;
+
+		private:
+			const char* m_signature = nullptr; // For Skipping Creation
 		};
 
     private:

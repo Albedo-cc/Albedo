@@ -67,7 +67,7 @@ namespace Albedo
 	EventManager::
 	Clear(std::string_view signature)
 	{
-		Log::Warn("{} is clearing BasicEvent Manager({})!", signature, this);
+		Log::Warn("{} is clearing BasicEvent Manager({})!", signature, uintptr_t(this));
 
 		for (auto& event : m_events) delete event;
 		m_events.clear();

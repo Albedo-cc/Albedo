@@ -378,7 +378,7 @@ namespace Albedo
 		assert(device.queue_families.graphics == device.queue_families.present);
 		std::vector<float> graphics_queue_priorities;
 		{
-			for (const auto& queue : device.queue_families.graphics.queues) 
+			for (const auto& queue : device.queue_families.graphics.queues)
 				graphics_queue_priorities.emplace_back(queue.priority);
 
 			deviceQueueCreateInfos.emplace_back(VkDeviceQueueCreateInfo
@@ -389,7 +389,7 @@ namespace Albedo
 					.pQueuePriorities = graphics_queue_priorities.data()
 				});
 		}
-		
+
 		// Compute Queue Family
 		assert(device.queue_families.compute != device.queue_families.graphics && 
 			   device.queue_families.compute != device.queue_families.transfer);
@@ -406,6 +406,7 @@ namespace Albedo
 					.pQueuePriorities = compute_queue_priorities.data()
 				});
 		}
+
 		// Transfer Queue Family
 		assert(device.queue_families.transfer != device.queue_families.graphics);
 		std::vector<float> transfer_queue_priorities;
@@ -436,6 +437,29 @@ namespace Albedo
 		
 		if (vkCreateDevice(GPU, &deviceCreateInfo, allocator, &device.handle) != VK_SUCCESS)
 			throw std::runtime_error("Failed to create the logical device!");
+
+		// Graphics & Present Queue Family
+		assert(device.queue_families.graphics == device.queue_families.present);
+		for (uint32_t i = 0; i < device.queue_families.graphics.queues.size(); ++i)
+		{
+			auto& queue_family = device.queue_families.graphics;
+			vkGetDeviceQueue(device, queue_family, i, &queue_family.queues[i].handle);
+			device.queue_families.present.queues[i].handle = queue_family.queues[i];
+		}
+
+		// Compute Queue Family
+		for (uint32_t i = 0; i < device.queue_families.compute.queues.size(); ++i)
+		{
+			auto& queue_family = device.queue_families.compute;
+			vkGetDeviceQueue(device, queue_family, i, &queue_family.queues[i].handle);
+		}
+
+		// Transfer Queue Family
+		for (uint32_t i = 0; i < device.queue_families.transfer.queues.size(); ++i)
+		{
+			auto& queue_family = device.queue_families.transfer;
+			vkGetDeviceQueue(device, queue_family, i, &queue_family.queues[i].handle);
+		}
 	}
 
 	void RHI::destroy_logical_device()
@@ -688,6 +712,9 @@ namespace Albedo
 				&swapchain.image_views[idx]) != VK_SUCCESS)
 				throw std::runtime_error("Failed to create all image views");
 		}
+
+		// Reset Cursor
+		swapchain.cursor = 0;
 	}
 
 	bool RHI::check_swap_chain_image_format_support()

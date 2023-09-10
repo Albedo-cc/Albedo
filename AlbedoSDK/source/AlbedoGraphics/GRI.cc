@@ -149,7 +149,7 @@ namespace Albedo
 	GRI::
 	GetGlobalDescriptorPool(std::thread::id thread_id/* = std::this_thread::get_id()*/)
 	{
-		auto target = sm_descriptor_pools[thread_id];
+		auto& target = sm_descriptor_pools[thread_id];
 		if (target == nullptr)
 		{
 			Log::Debug("Albedo GRI is creating a new Global Descriptor Pool.");
@@ -191,9 +191,22 @@ namespace Albedo
 	GRI::
 	GetQueue(QueueFamilyType queue_family, uint32_t index/* = 0*/)
 	{
-		VkQueue queue{ VK_NULL_HANDLE };
-		vkGetDeviceQueue(g_rhi->device, GetQueueFamilyIndex(queue_family), index, &queue);
-		return queue;
+		switch (queue_family)
+		{
+		case QueueFamilyType_Graphics:
+			assert(g_rhi->device.queue_families.graphics.queues.size() > index);
+			return g_rhi->device.queue_families.graphics.queues[index];
+		case QueueFamilyType_Present:
+			assert(g_rhi->device.queue_families.present.queues.size() > index);
+			return g_rhi->device.queue_families.present.queues[index];
+		case QueueFamilyType_Transfer:
+			assert(g_rhi->device.queue_families.transfer.queues.size() > index);
+			return g_rhi->device.queue_families.transfer.queues[index];
+		case QueueFamilyType_Compute:
+			assert(g_rhi->device.queue_families.compute.queues.size() > index);
+			return g_rhi->device.queue_families.compute.queues[index];
+		default: assert(false);
+		}
 	}
 
 	uint32_t
@@ -287,7 +300,7 @@ namespace Albedo
 	GRI::Fence::
 	IsReady()
 	{
-		return VK_TIMEOUT != vkWaitForFences(g_rhi->device, 1, &m_handle, VK_TRUE, 0);
+		return VK_SUCCESS == vkGetFenceStatus(g_rhi->device, m_handle);
 	}
 
 	GRI::Semaphore::
@@ -1091,7 +1104,7 @@ namespace Albedo
 				{
 					.format			= g_rhi->swapchain.format,
 					.samples		= VK_SAMPLE_COUNT_1_BIT,
-					.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR,
+					.loadOp			= sm_renderpass_count? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
 					.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 					.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -1125,6 +1138,8 @@ namespace Albedo
 						 RenderTarget::zbuffer->GetView()}
 				});
 		}
+
+		sm_renderpass_count++;
 	}
 
 	GRI::RenderPass::
@@ -1142,13 +1157,23 @@ namespace Albedo
 		}
 		vkDestroyRenderPass(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
+
+		sm_renderpass_count--;
 	}
 
 	void
 	GRI::RenderPass::
-	build()
+	BUILD_ALL()
 	{
-		// 1. Create Render Pass
+		BUILD_SELF();
+		BUILD_SUBPASSES();
+		BUILD_FRAMEBUFFERS();
+	}
+
+	void
+	GRI::RenderPass::
+	BUILD_SELF()
+	{
 		assert(VK_SUBPASS_EXTERNAL == uint32_t(-1));
 		std::vector<VkSubpassDescription> subpass_descriptions(m_subpasses.size());
 		std::vector<VkSubpassDependency>  subpass_dependencies(m_subpasses.size());
@@ -1190,33 +1215,17 @@ namespace Albedo
 			g_rhi->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Render Pass!");
+	}
 
-		// 2. Create Framebuffers
-		for (size_t i = 0; i < m_framebuffers.size(); ++i)
-		{
-			VkFramebufferCreateInfo framebufferCreateInfo
-			{
-				.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-				.renderPass = m_handle,
-				.attachmentCount = static_cast<uint32_t>(m_framebuffers[i].render_targets.size()),
-				.pAttachments = m_framebuffers[i].render_targets.data(),
-				.width  = m_render_area.extent.width,
-				.height = m_render_area.extent.height,
-				.layers = 1
-			};
-
-			if (vkCreateFramebuffer(
-				g_rhi->device,
-				&framebufferCreateInfo,
-				g_rhi->allocator,
-				&m_framebuffers[i].handle) != VK_SUCCESS)
-				Log::Fatal("Failed to create the Vulkan Framebuffer!");
-		}
-
-		// 3. Create Pipelines
+	void
+	GRI::RenderPass::
+	BUILD_SUBPASSES()
+	{
 		for (size_t i = 0; i < m_subpasses.size(); ++i)
 		{
 			auto& pipeline = m_subpasses[i].pipeline;
+			if (pipeline->m_signature) continue;
+
 			std::vector<VkPipelineShaderStageCreateInfo> shaders(2);
 			shaders[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shaders[0].stage =  pipeline->m_shader_module.vertex_shader->GetStage();
@@ -1273,6 +1282,32 @@ namespace Albedo
 				&pipeline->m_handle) != VK_SUCCESS)
 				Log::Fatal("Failed to create the Vulkan Graphics Pipeline!");
 			}
+	}
+
+	void
+	GRI::RenderPass::
+	BUILD_FRAMEBUFFERS()
+	{
+		for (size_t i = 0; i < m_framebuffers.size(); ++i)
+		{
+			VkFramebufferCreateInfo framebufferCreateInfo
+			{
+				.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+				.renderPass = m_handle,
+				.attachmentCount = static_cast<uint32_t>(m_framebuffers[i].render_targets.size()),
+				.pAttachments = m_framebuffers[i].render_targets.data(),
+				.width  = m_render_area.extent.width,
+				.height = m_render_area.extent.height,
+				.layers = 1
+			};
+
+			if (vkCreateFramebuffer(
+				g_rhi->device,
+				&framebufferCreateInfo,
+				g_rhi->allocator,
+				&m_framebuffers[i].handle) != VK_SUCCESS)
+				Log::Fatal("Failed to create the Vulkan Framebuffer!");
+		}
 	}
 
 	uint32_t
@@ -1422,6 +1457,14 @@ namespace Albedo
 			g_rhi->allocator,
 			&m_pipeline_layout) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Pipeline Layout!");
+	}
+
+	GRI::
+	GraphicsPipeline::
+	GraphicsPipeline(const char* signature):
+		m_signature{signature}
+	{
+		Log::Debug("{} skipped initializing current Graphics Pipeline.", signature);
 	}
 
 	GRI::GraphicsPipeline::
@@ -1731,20 +1774,21 @@ namespace Albedo
 			RT.image->ConvertLayout(RT.commandbuffer, oldLayout);
 		}
 		RT.commandbuffer->End();
-		
+
 		RT.commandbuffer->Submit
-		({ 
+		({
 			.wait_stages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 			.signal_fence	   = RT.fence_in_flight,
+			.wait_semaphores   = wait_semaphores,
 			.signal_semaphores = {RT.semaphore_ready},
 		});
 
-		wait_semaphores.emplace_back(RT.semaphore_ready);
+		VkSemaphore present_semaphores = RT.semaphore_ready;
 		VkPresentInfoKHR presentInfo
 		{
 			.sType				= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-			.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size()),
-			.pWaitSemaphores	= wait_semaphores.data(),
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores	= &present_semaphores,
 			.swapchainCount		= 1,
 			.pSwapchains		= &g_rhi->swapchain.handle,
 			.pImageIndices		= &g_rhi->swapchain.cursor,

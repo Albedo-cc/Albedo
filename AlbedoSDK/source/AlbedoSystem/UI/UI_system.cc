@@ -13,7 +13,11 @@ namespace Albedo
 	UISystem::
 	Initialize(const CreateInfo& createinfo)
 	{
+		Log::Debug("Albedo UI System is being initialized...");
+
 		assert(g_rhi != nullptr && "Forget to Initialize RHI?");
+		assert(!createinfo.font_path.empty());
+
 		// Initialize Dear ImGUI
 		ImGui_ImplVulkan_InitInfo ImGui_InitInfo
 		{
@@ -21,12 +25,12 @@ namespace Albedo
 			.PhysicalDevice = g_rhi->GPU,
 			.Device			= g_rhi->device,
 			.QueueFamily	= g_rhi->device.queue_families.graphics,
-			.Queue			= g_rhi->device.queue_families.graphics.queues.front(),
+			.Queue			= g_rhi->device.queue_families.graphics.queues[0],
 			.PipelineCache	= g_rhi->pipeline_cache,
 			.DescriptorPool = createinfo.descriptor_pool,
 			.Subpass		= createinfo.subpass,
-			.MinImageCount	= g_rhi->swapchain.images.size(),
-			.ImageCount		= g_rhi->swapchain.images.size(),
+			.MinImageCount	= static_cast<uint32_t>(g_rhi->swapchain.images.size()),
+			.ImageCount		= static_cast<uint32_t>(g_rhi->swapchain.images.size()),
 			.MSAASamples	= VK_SAMPLE_COUNT_1_BIT,
 			.Allocator		= g_rhi->allocator,
 		};
@@ -36,33 +40,36 @@ namespace Albedo
 		auto& io = ImGui::GetIO();
 
 		// Configuration
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable	|
-						  ImGuiConfigFlags_ViewportsEnable	;
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable
+					  ;//|ImGuiConfigFlags_ViewportsEnable;
 
-		/*const char* font_path = "resource/font/calibri.ttf";
-		if (io.Fonts->AddFontFromFileTTF(font_path, 16.0f) == NULL)
-			Log::Fatal(std::format("Failed to load font {}!", font_path));*/
+		if (io.Fonts->AddFontFromFileTTF(createinfo.font_path.data(), createinfo.font_size) == NULL)
+			Log::Fatal("Albedo System UI: Failed to load font {}!", createinfo.font_path);
 
-		ImGui_ImplVulkan_Init(&ImGui_InitInfo, createinfo.renderpass);
 		bool INSTALL_IMGUI_CALLBACKS = true;
 		ImGui_ImplGlfw_InitForVulkan(WindowSystem::GetWindow(), INSTALL_IMGUI_CALLBACKS); // Install callbacks via ImGUI
+		ImGui_ImplVulkan_Init(&ImGui_InitInfo, createinfo.renderpass);
 
-		/*auto commandBuffer = m_vulkan_context->
-			CreateOneTimeCommandBuffer(m_vulkan_context->m_device_queue_family_graphics);
-		commandBuffer->Begin();
-		main_scene_image->TransitionLayoutCommand(commandBuffer, 
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		ImGui_ImplVulkan_CreateFontsTexture(*commandBuffer);
-		commandBuffer->End();
-		commandBuffer->Submit(true);*/
+		auto commandbuffer =
+			GRI::GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
+			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+		
+		commandbuffer->Begin();
+		{
+			ImGui_ImplVulkan_CreateFontsTexture(*commandbuffer);
+		}
+		commandbuffer->End();
+		commandbuffer->Submit({.wait_stages = VK_PIPELINE_STAGE_TRANSFER_BIT});
 
-		//ImGui_ImplVulkan_DestroyFontUploadObjects();
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
 	}
 
 	void
 	UISystem::
 	Terminate() noexcept
 	{
+		Log::Debug("Albedo UI System is being terminated...");
+
 		m_ui_event_manager.Clear("UI System");
 
 		ImGui_ImplVulkan_Shutdown();
@@ -78,12 +85,15 @@ namespace Albedo
 
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
+
 		ImGui::NewFrame();
 		{
 			m_ui_event_manager.TrigAll();
 		}
 		ImGui::Render(); // Prepare the data for rendering so you can call GetDrawData()
+		
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *commandbuffer);
+		ImGui::UpdatePlatformWindows();
 	}
 
 	void
@@ -98,20 +108,6 @@ namespace Albedo
 	DeleteUIEvent(std::string_view name)
 	{
 		m_ui_event_manager.Delete(name);
-	}
-
-	bool
-	UIEvent::
-	Trig()
-	{
-		return false;
-	}
-
-	void
-	UIEvent::
-	Act()
-	{
-
 	}
 
 } // namespace Albedo

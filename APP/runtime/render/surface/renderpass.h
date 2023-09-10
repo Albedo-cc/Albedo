@@ -12,6 +12,7 @@ namespace APP
 	public:
 		enum Subpass { UI, };
 
+
 	public:
 		SurfacePass();
 		virtual ~SurfacePass() noexcept override {};

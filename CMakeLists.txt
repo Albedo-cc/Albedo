@@ -24,7 +24,7 @@ file(GLOB_RECURSE ALBEDO_APP_HEADER "APP/*.h")
 file(GLOB_RECURSE ALBEDO_APP_SOURCE "APP/*.cc")
 source_group(TREE "${PROJECT_SOURCE_DIR}/APP" FILES ${ALBEDO_APP_HEADER} ${ALBEDO_APP_SOURCE})
 add_executable(${ALBEDO_APP_NAME} ${ALBEDO_APP_HEADER} ${ALBEDO_APP_SOURCE})
-target_link_libraries(${ALBEDO_APP_NAME} PRIVATE Albedo)
+target_link_libraries(${ALBEDO_APP_NAME} PRIVATE AlbedoSDK)
 target_sources(${ALBEDO_APP_NAME} PRIVATE README.md TODO.md)
 
 # [Property]

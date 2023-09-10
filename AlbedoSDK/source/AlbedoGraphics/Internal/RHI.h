@@ -145,7 +145,7 @@ namespace Albedo
 		struct PipelineCache
 		{
 			VkPipelineCache handle	   {VK_NULL_HANDLE};
-			const char*		file	   = ALBEDO_PIPELINE_CACHE_FILE;
+			const char*		file	   = ALBEDO_SDK_PIPELINE_CACHE_FILE;
 			bool			is_expired = false;
 			operator VkPipelineCache() const { return handle; }
 		}pipeline_cache;

@@ -21,7 +21,7 @@ namespace Albedo
 		BasicEvent(std::string name,
 			std::function<void()> action,
 			std::function<bool()> condition = nullptr); // nullptr == Unconditional
-		virtual ~BasicEvent() { sm_event_count -= 1; }
+		virtual ~BasicEvent() { sm_event_count--; }
 
 	private:
 		std::string m_name;

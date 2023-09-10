@@ -2,6 +2,7 @@
 
 #include <AlbedoCore/Log/log.h>
 #include "forward/geometry/renderpass.h"
+#include "surface/renderpass.h"
 
 #include <algorithm>
 
@@ -19,22 +20,33 @@ namespace APP
 			auto& frame = sm_frames[GRI::GetRenderTargetCursor()];
 			GRI::WaitNextFrame(frame.semaphore_image_available, VK_NULL_HANDLE);
 
-			frame.commandbuffer->Begin();
-			for (auto& renderpass : sm_renderpasses)
+			frame.commandbuffer_geometry->Begin();
 			{
-				renderpass->Begin(frame.commandbuffer);
-				renderpass->End(frame.commandbuffer);
+				sm_renderpasses[Geometry]->Begin(frame.commandbuffer_geometry);
+				sm_renderpasses[Geometry]->End(frame.commandbuffer_geometry);
 			}
-			frame.commandbuffer->End();
-			frame.commandbuffer->Submit(
+			frame.commandbuffer_geometry->End();
+			frame.commandbuffer_geometry->Submit(
 				{
 					.wait_stages	   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 					.wait_semaphores   = {frame.semaphore_image_available},
 					.signal_semaphores = {frame.semaphore_geometry_pass},	
 				});
 
+			frame.commandbuffer_surface->Begin();
+			{
+				sm_renderpasses[Surface]->Begin(frame.commandbuffer_surface);
+				sm_renderpasses[Surface]->End(frame.commandbuffer_surface);
+			}
+			frame.commandbuffer_surface->End();
+			frame.commandbuffer_surface->Submit(
+				{
+					.wait_stages	   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.wait_semaphores   = {frame.semaphore_geometry_pass},
+					.signal_semaphores = {frame.semaphore_surface_pass},	
+				});
 
-			GRI::PresentFrame({frame.semaphore_geometry_pass});
+			GRI::PresentFrame({ frame.semaphore_surface_pass });
 		}
 		catch (GRI::SIGNAL_RECREATE_SWAPCHAIN)
 		{
@@ -52,7 +64,7 @@ namespace APP
 		{
 			if (renderpass->GetName() == name) return renderpass;
 		}
-		Log::Error("Failed to find renderpass({})!", name);
+		Log::Error("Failed to find renderpass({})!", name.data());
 	}
 
 	void
@@ -94,6 +106,7 @@ namespace APP
 	create_renderpasses()
 	{
 		sm_renderpasses.emplace_back(new GeometryPass());
+		sm_renderpasses.emplace_back(new SurfacePass());
 
 		// Sort Render Passes by Priority
 		std::sort(sm_renderpasses.begin(), sm_renderpasses.end(),
@@ -101,7 +114,7 @@ namespace APP
 			   const GRI::RenderPass* b)
 			->bool
 			{
-				return a->GetPriority() < b->GetPriority();
+				return a->GetPriority() > b->GetPriority();
 			});
 	}
 
@@ -124,8 +137,13 @@ namespace APP
 		sm_frames.resize(GRI::GetRenderTargetCount());
 		for (auto& frame : sm_frames)
 		{
-			frame.commandbuffer = GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
-			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+			frame.commandbuffer_geometry = 
+				GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
+				->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+
+			frame.commandbuffer_surface = 
+				GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
+				->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 		}
 	}
 

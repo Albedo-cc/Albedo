@@ -2,11 +2,13 @@
 
 #include <AlbedoCore/Log/log.h>
 #include <AlbedoGraphics/GRI.h>
+#include <AlbedoSystem/Control/control_system.h>
 #include <AlbedoSystem/Window/window_system.h>
 #include <AlbedoSystem/UI/UI_system.h>
 #include <AlbedoUtils/time.h>
 
 #include "render/renderer.h"
+#include "editor/editor.h"
 
 namespace Albedo{
 namespace APP
@@ -18,7 +20,7 @@ namespace APP
 	Tick()
 	{
 		WindowSystem::PollEvents();
-		EventSystem::Process();
+		ControlSystem::Process();
 
 		Renderer::Tick();
 
@@ -48,12 +50,17 @@ namespace APP
 
 		auto ui_renderpass = Renderer::SearchRenderPass("Surface");
 		auto ui_subpass    = ui_renderpass->SeachSubpass("Surface::UI");
+		auto ui_descriptor_pool = GRI::GetGlobalDescriptorPool();
 		UISystem::Initialize(UISystem::CreateInfo
 		{
 			.renderpass = *ui_renderpass,
 			.subpass	= ui_subpass,
-			.descriptor_pool = *GRI::GetGlobalDescriptorPool(),
+			.descriptor_pool = *ui_descriptor_pool,
+			.font_path	= "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\fonts\\calibri.ttf",
+			.font_size	= 16.0f,
 		});
+
+		Editor::Initialize();
 
 		runtime_timer.Reset();
 		m_is_running = true;
@@ -65,6 +72,8 @@ namespace APP
 	{
 		Log::Info("Runtime Duration: {} s", runtime_timer.Split().seconds());
 		Renderer::Destroy();
+		UISystem::Terminate();
+		Editor::Destroy();
 	}
 
 }} // namespace Albedo::APP

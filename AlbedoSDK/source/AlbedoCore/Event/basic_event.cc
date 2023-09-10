@@ -1,7 +1,6 @@
 #include "basic_event.h"
 
 #include <AlbedoCore/Log/log.h>
-#include "basic_event.h"
 
 namespace Albedo
 {
@@ -29,7 +28,7 @@ namespace Albedo
 	{
 		assert(!m_name.empty());
 		assert(m_action);
-		sm_event_count += 1;
+		sm_event_count++;
 	}
 
 } // namespace Albedo

@@ -16,7 +16,7 @@ namespace Albedo
             int height    = 800;
             bool maximize = true;
         };
-        static void Initialize(const WindowSystem::CreateInfo& parameters);
+        static void Initialize(WindowSystem::CreateInfo createinfo);
         static void Terminate() noexcept;
 
     public:

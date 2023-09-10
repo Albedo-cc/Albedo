@@ -31,7 +31,7 @@ namespace APP
 										   VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 			});
 
-		build(); // Build Render Pass
+		BUILD_ALL(); // Build Render Pass
 	}
 	
 }} // namespace Albedo::APP

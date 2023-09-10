@@ -27,6 +27,8 @@ namespace Albedo
             VkRenderPass     renderpass;
             uint32_t         subpass;
             VkDescriptorPool descriptor_pool;
+            std::string_view font_path;
+            float            font_size = 16.0f;
         };
         static void Initialize(const CreateInfo& createinfo);
         static void Terminate() noexcept;
