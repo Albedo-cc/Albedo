@@ -252,6 +252,13 @@ namespace Albedo
 		return g_rhi->swapchain.cursor;
 	}
 
+	VkFormat
+	GRI::
+	GetRenderTargetFormat()
+	{
+		return g_rhi->swapchain.format;
+	}
+
 	const std::shared_ptr<const GRI::Image>&
 	GRI::
 	GetZBuffer()
@@ -276,7 +283,7 @@ namespace Albedo
 	}
 
 	GRI::Fence::
-	~Fence()
+	~Fence() noexcept
 	{
 		vkDestroyFence(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
@@ -320,7 +327,7 @@ namespace Albedo
 	}
 
 	GRI::Semaphore::
-	~Semaphore()
+	~Semaphore() noexcept
 	{
 		vkDestroySemaphore(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
@@ -528,7 +535,7 @@ namespace Albedo
 	}
 
 	GRI::CommandPool::
-	~CommandPool()
+	~CommandPool() noexcept
 	{
 		// Command buffers will be automatically freed when their command pool is destroyed
 		vkDestroyCommandPool(g_rhi->device, m_handle,g_rhi->allocator);
@@ -572,7 +579,7 @@ namespace Albedo
 	}
 
 	GRI::DescriptorSetLayout::
-	~DescriptorSetLayout()
+	~DescriptorSetLayout() noexcept
 	{
 		vkDestroyDescriptorSetLayout(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
@@ -598,9 +605,9 @@ namespace Albedo
 	}
 
 	GRI::DescriptorPool::
-	~DescriptorPool()
+	~DescriptorPool() noexcept
 	{
-		assert(weak_from_this().use_count() == 1 && "You should free all descriptor sets created by current descriptor pool first.");
+		//assert(weak_from_this().use_count() == 1 && "You should free all descriptor sets created by current descriptor pool first.");
 		vkDestroyDescriptorPool(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
@@ -632,7 +639,7 @@ namespace Albedo
 	}
 
 	GRI::DescriptorSet::
-	~DescriptorSet()
+	~DescriptorSet() noexcept
 	{
 		vkFreeDescriptorSets(g_rhi->device, *m_parent, 1, &m_handle);
 		m_handle = VK_NULL_HANDLE;
@@ -660,7 +667,7 @@ namespace Albedo
 	}
 
 	GRI::Shader::
-	~Shader()
+	~Shader() noexcept
 	{
 		vkDestroyShaderModule(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
@@ -699,7 +706,7 @@ namespace Albedo
 	}
 
 	GRI::Buffer::
-	~Buffer()
+	~Buffer() noexcept
 	{
 		vmaDestroyBuffer(g_rhi->vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
@@ -848,12 +855,125 @@ namespace Albedo
 	}
 
 	GRI::Image::
-	~Image()
+	~Image() noexcept
 	{
 		vmaDestroyImage(g_rhi->vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
 		vkDestroyImageView(g_rhi->device, m_view, g_rhi->allocator);
 		m_view	 = VK_NULL_HANDLE;
+	}
+
+	void
+	GRI::Image::
+	fill_convert_layout_info(
+		VkImageLayout source_layout,
+		VkImageLayout target_layout,
+		VkImageMemoryBarrier& barrier,
+		VkPipelineStageFlags& from_stage,
+		VkPipelineStageFlags& to_stage) const
+	{
+		// Barriers are primarily used for synchronization purposes, so you must specify which types of operations that involve 
+		//the resource must happen before the barrier, 
+		//and which operations that involve the resource must wait on the barrier.
+		if (VK_IMAGE_LAYOUT_UNDEFINED == source_layout)
+		{
+			switch (target_layout)
+			{
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+								VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				to_stage	= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
+								VK_ACCESS_SHADER_WRITE_BIT;
+				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				break;
+			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
+			}
+		}
+		else if (VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL == source_layout)
+		{
+			switch (target_layout)
+			{
+			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+				barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT |
+							VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				from_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
+			}
+		}
+		else if (VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL == source_layout)
+		{
+			switch (target_layout)
+			{
+			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
+								VK_ACCESS_SHADER_WRITE_BIT;
+				from_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				break;
+			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
+			}
+		}
+		else if (VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL == source_layout)
+		{
+			switch (target_layout)
+			{
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				from_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				break;
+			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
+			}
+		}
+		else if (VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL == source_layout)
+		{
+			switch (target_layout)
+			{
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				from_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
+			}
+		}
+		else Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
+
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = source_layout;
+		barrier.newLayout = target_layout;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = m_handle;
+		barrier.subresourceRange = GetSubresourceRange();
 	}
 
 	void
@@ -869,13 +989,7 @@ namespace Albedo
 			.bufferOffset		= 0,
 			.bufferRowLength	= 0,
 			.bufferImageHeight	= 0,
-			.imageSubresource
-			{
-				.aspectMask		= m_settings.aspect,
-				.mipLevel		= 0,
-				.baseArrayLayer = 0,
-				.layerCount		= m_settings.arrayLayers,
-			},
+			.imageSubresource	= GetSubresourceLayers(),
 			.imageOffset = {0,0,0},
 			.imageExtent = m_settings.extent,
 		};
@@ -887,18 +1001,14 @@ namespace Albedo
 	}
 
 	void
-	GRI::Image::Blit(std::shared_ptr<GRI::CommandBuffer> commandbuffer, std::shared_ptr<Image>  target)
+	GRI::Image::
+	Blit(std::shared_ptr<GRI::CommandBuffer> commandbuffer,
+		std::shared_ptr<Image>  target) const
 	{
 		// Only Blit Mipmap LV.0 by default.
 		VkImageBlit blitRegion
 		{
-			.srcSubresource
-			{
-				.aspectMask = m_settings.aspect,
-				.mipLevel	= 0,
-				.baseArrayLayer = 0,
-				.layerCount = this->GetArraryLevels(),
-			},
+			.srcSubresource = this->GetSubresourceLayers(),
 			.srcOffsets = 
 			{
 				{0,0,0},
@@ -906,13 +1016,7 @@ namespace Albedo
 				 int32_t(this->m_settings.extent.height),
 				 int32_t(this->m_settings.extent.depth)}
 			},
-			.dstSubresource
-			{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.mipLevel	= 0,
-				.baseArrayLayer = 0,
-				.layerCount = target->GetArraryLevels(),
-			},
+			.dstSubresource = target->GetSubresourceLayers(),
 			.dstOffsets =
 			{
 				{0,0,0},
@@ -921,16 +1025,37 @@ namespace Albedo
 				 int32_t(target->m_settings.extent.depth)}
 			},
 		};
-		auto sourceOldLayout = this->GetLayout();
+		// Convert Layouts to TransferSRC/DST
 		auto targetOldLayout = target->GetLayout();
-		this->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		VkImageMemoryBarrier barrier_to_transfer{};
+		VkImageMemoryBarrier barrier_to_origin{};
+		VkPipelineStageFlags from_stage{}, to_stage{};
+		fill_convert_layout_info(
+			m_layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			barrier_to_transfer, from_stage, to_stage);
+		vkCmdPipelineBarrier(*commandbuffer, from_stage, to_stage,
+			0x0,		// Dependency Flags
+			0, nullptr,	// Memory Barrier
+			0, nullptr,	// Buffer Memory Barrier
+			1, &barrier_to_transfer);
 		target->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		// Blit Image
 		vkCmdBlitImage(*commandbuffer,
-			m_handle, m_layout,
-			*target,  target->GetLayout(),
+			m_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			*target,  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			1, &blitRegion,
 			VK_FILTER_LINEAR);
-		this->ConvertLayout(commandbuffer, sourceOldLayout);
+
+		// Convert Layouts to Origin
+		fill_convert_layout_info(
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_layout,
+			barrier_to_origin, from_stage, to_stage);
+		vkCmdPipelineBarrier(*commandbuffer, from_stage, to_stage,
+			0x0,		// Dependency Flags
+			0, nullptr,	// Memory Barrier
+			0, nullptr,	// Buffer Memory Barrier
+			1, &barrier_to_origin);
 		target->ConvertLayout(commandbuffer, targetOldLayout);
 	}
 
@@ -941,128 +1066,12 @@ namespace Albedo
 		assert(commandbuffer->IsRecording());
 		if (target_layout == m_layout)
 		{
-			return Log::Debug("You are converting VkImage to the same layout!");
+			return Log::Warn("You are converting VkImage to the same layout!");
 		}
 
-		// Barriers are primarily used for synchronization purposes, so you must specify which types of operations that involve 
-		//the resource must happen before the barrier, 
-		//and which operations that involve the resource must wait on the barrier.
-		VkPipelineStageFlags from_stage{ 0x0 };
-		VkPipelineStageFlags to_stage  { 0x0 };
-		VkAccessFlags		 srcAccessMask{ 0x0 };
-		VkAccessFlags		 dstAccessMask{ 0x0 };
-
-		if (VK_IMAGE_LAYOUT_UNDEFINED == m_layout)
-		{
-			switch (target_layout)
-			{
-			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-				srcAccessMask = 0;
-				dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
-				break;
-
-			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-				srcAccessMask = 0;
-				dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-								VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				to_stage	= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-				break;
-
-			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-				srcAccessMask = 0;
-				dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				break;
-
-			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
-				srcAccessMask = 0;
-				dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
-								VK_ACCESS_SHADER_WRITE_BIT;
-				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				break;
-			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
-			}
-		}
-		else if (VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL == m_layout)
-		{
-			switch (target_layout)
-			{
-			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-				srcAccessMask = VK_ACCESS_SHADER_READ_BIT |
-							VK_ACCESS_SHADER_WRITE_BIT;
-				dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				from_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
-				break;
-			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
-			}
-		}
-		else if (VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL == m_layout)
-		{
-			switch (target_layout)
-			{
-			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
-				srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
-								VK_ACCESS_SHADER_WRITE_BIT;
-				from_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
-				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				break;
-			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
-			}
-		}
-		else if (VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL == m_layout)
-		{
-			switch (target_layout)
-			{
-			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-				srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-				from_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
-				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				break;
-			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
-			}
-		}
-		else if (VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL == m_layout)
-		{
-			switch (target_layout)
-			{
-			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-				srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-				dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				from_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
-				break;
-			default: Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
-			}
-		}
-		else Log::Fatal("Failed to transition the Vulkan Image Layout - Unsupported layout transition!");
-
-		VkImageMemoryBarrier barrier
-		{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.srcAccessMask = srcAccessMask,
-			.dstAccessMask = dstAccessMask,
-			.oldLayout = m_layout,
-			.newLayout = target_layout,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = m_handle,
-			.subresourceRange
-			{
-				.aspectMask		= m_settings.aspect,
-				.baseMipLevel	= 0,
-				.levelCount		= m_settings.mipLevels,
-				.baseArrayLayer = 0,
-				.layerCount		= m_settings.arrayLayers,
-			}
-		};
+		VkImageMemoryBarrier barrier{};
+		VkPipelineStageFlags from_stage{}, to_stage{};
+		fill_convert_layout_info(m_layout, target_layout, barrier, from_stage, to_stage);
 
 		vkCmdPipelineBarrier(
 			*commandbuffer,
@@ -1074,6 +1083,33 @@ namespace Albedo
 			1, &barrier);
 
 		m_layout = target_layout;
+	}
+
+	VkImageSubresourceRange
+	GRI::Image::
+	GetSubresourceRange() const
+	{
+		return VkImageSubresourceRange
+		{
+			.aspectMask = m_settings.aspect,
+			.baseMipLevel = 0,
+			.levelCount = m_settings.mipLevels,
+			.baseArrayLayer = 0,
+			.layerCount = m_settings.arrayLayers,
+		};
+	}
+
+	VkImageSubresourceLayers
+	GRI::Image::
+	GetSubresourceLayers() const
+	{
+		return VkImageSubresourceLayers
+		{
+				.aspectMask = m_settings.aspect,
+				.mipLevel	= 0,
+				.baseArrayLayer = 0,
+				.layerCount = m_settings.arrayLayers,
+		};
 	}
 
 	VkDeviceSize
@@ -1098,7 +1134,7 @@ namespace Albedo
 		m_render_area{ {0,0},{g_rhi->swapchain.extent} }
 	{
 		// Add Attachments
-		assert(ST_Color == add_attachment(GRI::RenderPass::AttachmentSetting
+		assert(ST_Color == add_attachment(AttachmentSetting
 			{
 				.description
 				{
@@ -1113,7 +1149,7 @@ namespace Albedo
 				},
 			}));
 
-		assert(ST_ZBuffer == add_attachment(GRI::RenderPass::AttachmentSetting
+		assert(ST_ZBuffer == add_attachment(AttachmentSetting
 			{
 				.description
 				{
@@ -1131,7 +1167,7 @@ namespace Albedo
 		// Add Framebuffers
 		for (size_t i = 0; i < sm_render_targets.size(); ++i)
 		{
-			add_framebuffer(GRI::RenderPass::FramebufferSetting
+			add_framebuffer(FramebufferSetting
 				{
 					.render_targets = 
 						{sm_render_targets[i].image->GetView(),
@@ -1143,7 +1179,7 @@ namespace Albedo
 	}
 
 	GRI::RenderPass::
-	~RenderPass()
+	~RenderPass() noexcept
 	{
 		// Destroy Graphics Pipelines
 		for (auto& subpass : m_subpasses)
@@ -1468,7 +1504,7 @@ namespace Albedo
 	}
 
 	GRI::GraphicsPipeline::
-	~GraphicsPipeline()
+	~GraphicsPipeline() noexcept
 	{
 		vkDestroyPipelineLayout(g_rhi->device, m_pipeline_layout, g_rhi->allocator);
 		m_pipeline_layout = VK_NULL_HANDLE;
@@ -1676,7 +1712,7 @@ namespace Albedo
 	 */
 	void
 	GRI::
-	PresentFrame(std::vector<VkSemaphore> wait_semaphores)
+	PresentFrame(const std::vector<VkSemaphore>& wait_semaphores)
 	throw (SIGNAL_RECREATE_SWAPCHAIN)
 	{
 		auto& RT = sm_render_targets[GetRenderTargetCursor()];
@@ -1826,6 +1862,46 @@ namespace Albedo
 
 	void
 	GRI::
+	ClearScreen(std::shared_ptr<CommandBuffer> commandbuffer, const VkClearColorValue& clear_color)
+	{
+		auto& screen = GetCurrentRenderTarget();
+		auto subsrcrange = screen->GetSubresourceRange();
+		vkCmdClearColorImage(*commandbuffer,
+			*screen,
+			screen->GetLayout(),
+			&clear_color,
+			1, &subsrcrange);
+	}
+
+	void
+	GRI::
+	ScreenShot(std::shared_ptr<Image> output)
+	{
+		auto commandbuffer = 
+			GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
+			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+
+		uint32_t prev_cursor = (GetRenderTargetCursor() + (sm_render_targets.size() - 1)) % sm_render_targets.size();
+		auto& PrevRT = sm_render_targets[prev_cursor];
+		PrevRT.fence_in_flight.Wait();
+		PrevRT.fence_in_flight.Reset();
+
+		commandbuffer->Begin();
+		{
+			PrevRT.image->Blit(commandbuffer, output);
+		}
+		commandbuffer->End();
+		commandbuffer->Submit(
+			{
+				.wait_stages  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				.signal_fence		= PrevRT.fence_in_flight,
+				.wait_semaphores	= {},
+				.signal_semaphores	= {},
+			});
+	}
+
+	void
+	GRI::
 	create_render_targets()
 	{
 		sm_render_targets.resize(g_rhi->swapchain.images.size());
@@ -1843,7 +1919,7 @@ namespace Albedo
 						.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 						.usage  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
 								  VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-						.format = g_rhi->swapchain.format,
+						.format = GetRenderTargetFormat(),
 						.extent = {g_rhi->swapchain.extent.width, g_rhi->swapchain.extent.height, 1},
 						.mipLevels	 = 1,
 						.arrayLayers = 1,

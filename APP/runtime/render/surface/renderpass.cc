@@ -1,12 +1,12 @@
 #include "renderpass.h"
 
-#include "pipelines/UI.h"
+#include "pipelines/present.h"
 
 namespace Albedo{
 namespace APP
 {
 	SurfacePass::
-	SurfacePass() : GRI::RenderPass{"Surface", 0}
+	SurfacePass() : GRI::RenderPass{ "Surface", 0 }
 	{
 		// Add Attachments (From SystemTarget::MAX_SYSTEM_TARGET)
 		
@@ -14,11 +14,11 @@ namespace APP
 		// [!---FIXING---!]
 		
 		// Add Subpasses
-		// [0]: UI
+		// [0]: Present
 		add_subpass(GRI::RenderPass::SubpassSetting
 			{
-				.name					 = "Surface::UI",
-				.pipeline				 = std::make_unique<UIPipeline>(),
+				.name					 = "Surface::Editor",
+				.pipeline				 = std::make_unique<EditorPipeline>(),
 				.color_attachments		 = {get_system_target_reference(ST_Color)},
 				//.depth_stencil_attachment= get_system_target_reference(ST_ZBuffer),
 				.source_stage_mask		 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,

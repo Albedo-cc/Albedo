@@ -8,7 +8,6 @@
 #include <AlbedoUtils/time.h>
 
 #include "render/renderer.h"
-#include "editor/editor.h"
 
 namespace Albedo{
 namespace APP
@@ -49,18 +48,16 @@ namespace APP
 		Renderer::Initialize();
 
 		auto ui_renderpass = Renderer::SearchRenderPass("Surface");
-		auto ui_subpass    = ui_renderpass->SeachSubpass("Surface::UI");
-		auto ui_descriptor_pool = GRI::GetGlobalDescriptorPool();
+		auto ui_subpass    = ui_renderpass->SeachSubpass("Surface::Editor");
+
 		UISystem::Initialize(UISystem::CreateInfo
 		{
 			.renderpass = *ui_renderpass,
 			.subpass	= ui_subpass,
-			.descriptor_pool = *ui_descriptor_pool,
+			.descriptor_pool = *GRI::GetGlobalDescriptorPool(),
 			.font_path	= "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\fonts\\calibri.ttf",
 			.font_size	= 16.0f,
 		});
-
-		Editor::Initialize();
 
 		runtime_timer.Reset();
 		m_is_running = true;
@@ -71,9 +68,9 @@ namespace APP
 	Terminate()
 	{
 		Log::Info("Runtime Duration: {} s", runtime_timer.Split().seconds());
+
 		Renderer::Destroy();
 		UISystem::Terminate();
-		Editor::Destroy();
 	}
 
 }} // namespace Albedo::APP

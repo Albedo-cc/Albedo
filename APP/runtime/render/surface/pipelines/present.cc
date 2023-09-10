@@ -1,28 +1,31 @@
-#include "UI.h"
+#include "present.h"
+
 #include <AlbedoCore/Log/log.h>
 #include <AlbedoSystem/UI/UI_system.h>
+
+#include "../../../../editor/editor.h"
 
 namespace Albedo{
 namespace APP
 {
 	
-	UIPipeline::
-	UIPipeline():
-		GRI::GraphicsPipeline("Surface::UI")
+	EditorPipeline::
+	EditorPipeline():
+		GRI::GraphicsPipeline("Surface::Editor")
 	{
 
 	}
 
 	void
-	UIPipeline::
+	EditorPipeline::
 	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		assert(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
-		UISystem::Process(commandbuffer);
+		Editor::Tick(commandbuffer);
 	}
 
 	void
-	UIPipeline::
+	EditorPipeline::
 	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");

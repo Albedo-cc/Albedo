@@ -6,7 +6,7 @@ namespace Albedo{
 namespace APP
 {
 	
-	class UIPipeline final
+	class EditorPipeline final
 		:public GRI::GraphicsPipeline
 	{
 	public:
@@ -14,8 +14,8 @@ namespace APP
 		virtual void End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)	  override;
 
 	public:
-		UIPipeline();
-		virtual ~UIPipeline() noexcept override {};
+		EditorPipeline();
+		virtual ~EditorPipeline() noexcept override {};
 
 	protected:
 		//virtual auto vertex_input_state()	-> VkPipelineVertexInputStateCreateInfo		override;

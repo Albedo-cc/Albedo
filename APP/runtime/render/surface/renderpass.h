@@ -10,7 +10,7 @@ namespace APP
 		:public GRI::RenderPass
 	{
 	public:
-		enum Subpass { UI, };
+		enum Subpass { Editor, };
 
 
 	public:

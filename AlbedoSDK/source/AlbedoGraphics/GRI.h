@@ -56,13 +56,17 @@ namespace Albedo
 		static auto GetCurrentRenderTarget() -> const std::shared_ptr<const GRI::Image>&;
 		static auto GetRenderTargetCount()	 -> size_t;
 		static auto GetRenderTargetCursor()	 -> uint32_t;
+		static auto GetRenderTargetFormat()	 -> VkFormat;
 		static auto GetZBuffer()			 -> const std::shared_ptr<const GRI::Image>&;
+
+		static void ScreenShot(std::shared_ptr<Image> output);
 
 	public: // Developer-level Interface
 		class SIGNAL_RECREATE_SWAPCHAIN : public std::exception {};
 		static void WaitNextFrame(VkSemaphore signal_semaphore, VkFence signal_fence) throw (SIGNAL_RECREATE_SWAPCHAIN);
-		static void PresentFrame(std::vector<VkSemaphore> wait_semaphores) throw (SIGNAL_RECREATE_SWAPCHAIN);
+		static void PresentFrame(const std::vector<VkSemaphore>& wait_semaphores) throw (SIGNAL_RECREATE_SWAPCHAIN);
 		static void WaitDeviceIdle();
+		static void ClearScreen(std::shared_ptr<CommandBuffer> commandbuffer, const VkClearColorValue& clear_color);
 
     public: // Initialize & Terminate
         static void Initialize(const GRICreateInfo& createinfo);
@@ -217,6 +221,9 @@ namespace Albedo
 		class DescriptorSet final
 		{
 		public:
+			void WriteBuffer(uint32_t binding, VkDescriptorType type, std::shared_ptr<Buffer> buffer);
+			void WriteImage(uint32_t binding, VkDescriptorType type)
+
 			operator VkDescriptorSet() const { return m_handle; }
 
 		public:
@@ -304,17 +311,19 @@ namespace Albedo
 
 		public:
 			void Write(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data);
-			void Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Image>  target);
+			void Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Image>  target) const;
 			void ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout);
 
-			auto GetLayout()		const -> VkImageLayout{ return m_layout; }
-			auto GetView()			const -> VkImageView { return m_view; }
-			auto GetFormat()		const -> VkFormat { return m_settings.format; }
-			auto GetExtent()		const -> const VkExtent3D& { return m_settings.extent; }
-			auto GetMipmapLevels()	const -> uint32_t { return m_settings.mipLevels; }
-			auto GetArraryLevels()	const -> uint32_t { return m_settings.arrayLayers; }
-			auto GetSize()			const	->VkDeviceSize;
-			operator VkImage()		const { return m_handle; }
+			auto GetLayout()			const -> VkImageLayout{ return m_layout; }
+			auto GetView()				const -> VkImageView { return m_view; }
+			auto GetFormat()			const -> VkFormat { return m_settings.format; }
+			auto GetExtent()			const -> const VkExtent3D& { return m_settings.extent; }
+			auto GetMipmapLevels()		const -> uint32_t { return m_settings.mipLevels; }
+			auto GetArraryLevels()		const -> uint32_t { return m_settings.arrayLayers; }
+			auto GetSubresourceRange()	const ->VkImageSubresourceRange;
+			auto GetSubresourceLayers() const ->VkImageSubresourceLayers;
+			auto GetSize()				const ->VkDeviceSize;
+			operator VkImage()			const { return m_handle; }
 
 			auto HasStencil()		const -> bool;
 			auto HasMipmap()		const -> bool { return m_settings.mipLevels - 1; }
@@ -322,6 +331,10 @@ namespace Albedo
 		public:
 			Image(CreateInfo createinfo);
 			~Image() noexcept;
+
+		private:
+			void fill_convert_layout_info(VkImageLayout source_layout, VkImageLayout target_layout, 
+				VkImageMemoryBarrier& barrier, VkPipelineStageFlags& from_stage, VkPipelineStageFlags& to_stage) const;
 
 		private:
 			VkImage			m_handle		{ VK_NULL_HANDLE };

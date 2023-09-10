@@ -2,6 +2,7 @@
 #include "config.h"
 #include "local.h"
 #include "../runtime/runtime.h"
+#include "../editor/editor.h"
 #include "../sandbox/sandbox.h"
 
 // Sort by Initialization Order
@@ -39,12 +40,16 @@ namespace APP
 	{
 		Log::Info("{} is running.", APP_NAME);
 
-		Runtime::Initialize();
+		Runtime::Initialize();	
+		Editor::Initialize();
+
 		while (Runtime::Tick())
 		{
 			Sandbox();
 		}
+
 		Runtime::Terminate();
+		Editor::Terminate();
 	}
 
 	int Terminate() noexcept
