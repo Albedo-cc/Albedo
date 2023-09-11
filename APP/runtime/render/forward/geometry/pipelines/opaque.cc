@@ -32,10 +32,10 @@ namespace APP
 			{
 				.descriptor_set_layouts =
 				{
-					GRI::GetGlobalDescriptorSetLayout("NULL") // Set=0
+					*GRI::GetGlobalDescriptorSetLayout("NULL") // Set=0
 				},
-				.vertex_shader   = std::make_shared<GRI::Shader>(ShaderType_Vertex,	   ReadShader(vert_shader_path)),
-				.fragment_shader = std::make_shared<GRI::Shader>(ShaderType_Fragment,  ReadShader(frag_shader_path)),
+				.vertex_shader   = GRI::Shader::Create(ShaderType_Vertex,	   ReadShader(vert_shader_path)),
+				.fragment_shader = GRI::Shader::Create(ShaderType_Fragment,  ReadShader(frag_shader_path)),
 			})
 	{
 

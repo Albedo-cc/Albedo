@@ -12,6 +12,7 @@
 #include <thread>
 #include <vector>
 #include <string>
+#include <cassert>
 #include <optional>
 #include <stdexcept>
 #include <functional>
@@ -41,13 +42,17 @@ namespace Albedo
 	/*Memory*/			class Shader; class Buffer; class Image;
 	/*Interface Class*/	class RenderPass; class GraphicsPipeline;
 	/*Descriptor*/		class DescriptorSetLayout; class DescriptorPool; class DescriptorSet;
-						class Sampler; class Texture2D;
+						class Sampler; class Texture;
+	//[TIPS]-----------------------------------------------------------------------------------------------------------------------
+	// 1. For better Interface Compatibility, you should create GRI objects via [Class]::Create(...).
+	//    Importantly, DO NOT create GRI objects without [Class]::Create(...) by yourself!
 	//-----------------------------------------------------------------------------------------------------------------------------
-    public: // User-level Interfaces
+	
+	public: // User-level Interfaces
 		static void CreateGlobalDescriptorSetLayout(std::string id, const std::vector<VkDescriptorSetLayoutBinding>& descriptor_bindings);
 		//static void CreateGlobalSampler
 
-		static auto GetGlobalDescriptorSetLayout(std::string_view id) -> const GRI::DescriptorSetLayout&;
+		static auto GetGlobalDescriptorSetLayout(std::string_view id) -> std::shared_ptr<GRI::DescriptorSetLayout>;
 		static auto GetGlobalDescriptorPool(std::thread::id thread_id = std::this_thread::get_id()) -> std::shared_ptr<GRI::DescriptorPool>;
 		static auto GetGlobalCommandPool(CommandPoolType type, QueueFamilyType queue, std::thread::id thread_id = std::this_thread::get_id()) -> std::shared_ptr<GRI::CommandPool>;
 		
@@ -81,6 +86,7 @@ namespace Albedo
 			auto IsReady() -> bool;
 
 		public:
+			static inline auto Create(FenceType type) { return Fence{type}; }
 			Fence() = delete;
 			Fence(FenceType type);
 			~Fence() noexcept;
@@ -93,6 +99,7 @@ namespace Albedo
 		class Semaphore final
 		{
 		public:
+			static inline auto Create(SemaphoreType type) { return Semaphore{type}; }
 			Semaphore() = delete;
 			Semaphore(SemaphoreType type);
 			~Semaphore() noexcept;
@@ -179,6 +186,8 @@ namespace Albedo
 			operator VkCommandPool() const { return m_handle; }
 
 		public:
+			static inline auto Create(const GRI::CommandPool::CreateInfo& createinfo)
+			{ return std::make_shared<CommandPool>(createinfo); }
 			CommandPool() = delete;
 			CommandPool(const CreateInfo& createinfo);
 			~CommandPool() noexcept;
@@ -191,25 +200,32 @@ namespace Albedo
 		class DescriptorSetLayout final
 		{
 		public:
+			auto GetBinding(uint32_t index) const -> const VkDescriptorSetLayoutBinding&
+			{assert(m_bindings.size() > index); return m_bindings[index]; }
 			operator VkDescriptorSetLayout() const { return m_handle; }
 
 		public:
+			static inline auto Create(std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings)
+			{ return std::make_shared<DescriptorSetLayout>(descriptor_bindings); }
 			DescriptorSetLayout() = delete;
-			DescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& descriptor_bindings);
+			DescriptorSetLayout(std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings);
 			~DescriptorSetLayout() noexcept;
 
 		private:
 			VkDescriptorSetLayout m_handle{ VK_NULL_HANDLE };
+			std::vector<VkDescriptorSetLayoutBinding> m_bindings;
 		};
 
 		class DescriptorPool final:
 			public std::enable_shared_from_this<DescriptorPool>
 		{
 		public:
-			auto AllocateDescriptorSet(const DescriptorSetLayout& descriptor_set_layout) -> std::shared_ptr<DescriptorSet>;
+			auto AllocateDescriptorSet(std::shared_ptr<DescriptorSetLayout> layout) -> std::shared_ptr<DescriptorSet>;
 			operator VkDescriptorPool() const { return m_handle; }
 
 		public:
+			static inline auto Create(const std::vector<VkDescriptorPoolSize>& pool_size, uint32_t limit_max_sets)
+			{ return std::make_shared<DescriptorPool>(pool_size, limit_max_sets); }
 			DescriptorPool() = delete;
 			DescriptorPool(const std::vector<VkDescriptorPoolSize>& pool_size, uint32_t limit_max_sets);
 			~DescriptorPool() noexcept;
@@ -218,22 +234,25 @@ namespace Albedo
 			VkDescriptorPool m_handle{ VK_NULL_HANDLE };
 		};
 
+		static void UpdateDescriptorSets(const std::vector<VkWriteDescriptorSet>& updateinfo);
 		class DescriptorSet final
 		{
 		public:
-			void WriteBuffer(uint32_t binding, VkDescriptorType type, std::shared_ptr<Buffer> buffer);
-			void WriteImage(uint32_t binding, VkDescriptorType type)
+			// GRI::UpdateDescriptorSets({SetA.WriteBuffer(...), SetB.WriteImage(...), ...}
+			auto WriteBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer) -> VkWriteDescriptorSet;
+			auto WriteTexture(uint32_t binding, std::shared_ptr<Texture> texture)  -> VkWriteDescriptorSet;
 
 			operator VkDescriptorSet() const { return m_handle; }
 
 		public:
 			DescriptorSet() = delete;
-			DescriptorSet(std::shared_ptr<DescriptorPool> parent, const DescriptorSetLayout& descriptor_set_layout);
+			DescriptorSet(std::shared_ptr<DescriptorPool> parent, std::shared_ptr<DescriptorSetLayout> layout);
 			~DescriptorSet() noexcept;
 
 		private:
-			std::shared_ptr<DescriptorPool> m_parent;
-			VkDescriptorSet m_handle{ VK_NULL_HANDLE };
+			std::shared_ptr<DescriptorPool>		 m_parent;
+			VkDescriptorSet						 m_handle{ VK_NULL_HANDLE };
+			std::shared_ptr<DescriptorSetLayout> m_layout;
 		};
 
 		class Shader final
@@ -246,9 +265,11 @@ namespace Albedo
 			operator VkShaderModule() const { return m_handle; }
 
 		public:
+			static inline auto Create(ShaderType type, std::vector<char> code)
+			{ return std::make_shared<GRI::Shader>(type, code); }
 			Shader() = delete;
 			Shader(ShaderType type, std::vector<char> code);
-			~Shader();
+			~Shader() noexcept = default;
 
 		private:
 			VkShaderModule m_handle{ VK_NULL_HANDLE };
@@ -285,6 +306,8 @@ namespace Albedo
 			operator VkBuffer() const { return m_handle; }
 
 		public:
+			static inline auto Create(GRI::Buffer::CreateInfo createinfo)
+			{ return std::make_shared<GRI::Buffer>(createinfo); }
 			Buffer(const CreateInfo& createinfo);	
 			~Buffer() noexcept;
 			Buffer() = delete;
@@ -329,6 +352,8 @@ namespace Albedo
 			auto HasMipmap()		const -> bool { return m_settings.mipLevels - 1; }
 
 		public:
+			static inline auto Create(GRI::Image::CreateInfo createinfo)
+			{ return std::make_shared<GRI::Image>(createinfo); }
 			Image(CreateInfo createinfo);
 			~Image() noexcept;
 
@@ -346,12 +371,50 @@ namespace Albedo
 
 		class Sampler
 		{
+		public:
+			struct CreateInfo
+			{
+				// General
+				union ImageWrap
+				{
+					VkSamplerAddressMode modes[3] = { VK_SAMPLER_ADDRESS_MODE_REPEAT };
+					struct { VkSamplerAddressMode U, V, W; }; // If V or W is 0(REPEAT), they use U mode.
+				} wrap_mode;
 
+				// Advanced
+				union ImageFilter
+				{
+					VkFilter modes[2] = { VK_FILTER_LINEAR, VK_FILTER_LINEAR };
+					struct { VkFilter magnify, minimize; };
+				} filter;
+				VkBorderColor		 border_color = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+				VkSamplerMipmapMode  mipmap_mode = VK_SAMPLER_MIPMAP_MODE_BOX;
+				VkCompareOp			 compare_mode= VK_COMPARE_OP_NEVER;
+				VkBool32             enable_anisotropy = VK_TRUE;
+			};
+
+		public:
+			operator VkSampler() const { return m_handle; }
+
+		public:
+			static inline auto Create(GRI::Sampler::CreateInfo createinfo)
+			{ return std::make_shared<GRI::Sampler>(createinfo); }
+			Sampler(CreateInfo createinfo);
+			Sampler() = delete;
+			~Sampler() noexcept;
+
+		private:
+			VkSampler  m_handle{ VK_NULL_HANDLE };
+			CreateInfo m_setting;
 		};
 
-		class Texture2D
+		class Texture
 		{
+		public:
 
+		private:
+			std::shared_ptr<Image>   m_image;
+			std::shared_ptr<Sampler> m_sampler;
 		};
 
 		class RenderPass
@@ -496,7 +559,7 @@ namespace Albedo
 		static inline std::unordered_map<std::thread::id, GRICommandPool> sm_auto_reset_command_pools;
 
 		// Global Descriptor Objects
-		static inline std::unordered_map<std::string, DescriptorSetLayout> sm_descriptor_set_layouts;
+		static inline std::unordered_map<std::string, std::shared_ptr<DescriptorSetLayout>>sm_descriptor_set_layouts;
 		static inline std::unordered_map<std::thread::id, std::shared_ptr<DescriptorPool>> sm_descriptor_pools;
 
 	private:

@@ -89,7 +89,7 @@ namespace APP
 	Renderer::
 	create_decriptor_set_layouts()
 	{
-				// Add Descriptor Set Layouts
+		// Add Descriptor Set Layouts
 		GRI::CreateGlobalDescriptorSetLayout(
 			"NULL",
 			{

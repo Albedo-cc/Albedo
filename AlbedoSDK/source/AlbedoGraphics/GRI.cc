@@ -89,7 +89,7 @@ namespace Albedo
 			if (commandPool == nullptr)
 			{
 				Log::Debug("Albedo GRI is creating a new Normal Command Pool.");
-				commandPool = std::make_shared<CommandPool>(CommandPool::CreateInfo
+				commandPool = CommandPool::Create(CommandPool::CreateInfo
 				{
 					.queue_family = queue,
 					.type = CommandPoolType_Normal,
@@ -104,7 +104,7 @@ namespace Albedo
 			if (commandPool == nullptr)
 			{
 				Log::Debug("Albedo GRI is creating a new Transient Command Pool.");
-				commandPool = std::make_shared<CommandPool>(CommandPool::CreateInfo
+				commandPool = CommandPool::Create(CommandPool::CreateInfo
 				{
 					.queue_family = queue,
 					.type = CommandPoolType_Transient,
@@ -119,7 +119,7 @@ namespace Albedo
 			if (commandPool == nullptr)
 			{
 				Log::Debug("Albedo GRI is creating a new Resettable Command Pool.");
-				commandPool = std::make_shared<CommandPool>(CommandPool::CreateInfo
+				commandPool = CommandPool::Create(CommandPool::CreateInfo
 				{
 					.queue_family = queue,
 					.type = CommandPoolType_Resettable,
@@ -140,7 +140,7 @@ namespace Albedo
 		if (target == sm_descriptor_set_layouts.end())
 		{
 			Log::Debug("Albedo GRI is creating a new Descriptor Set Layout.");
-			sm_descriptor_set_layouts.emplace(std::move(id), descriptor_bindings);
+			sm_descriptor_set_layouts.emplace(std::move(id), DescriptorSetLayout::Create(descriptor_bindings));
 		}
 		else Log::Fatal("Failed to create duplicate Vulkan Descriptor Set Layouts!");
 	}
@@ -155,7 +155,7 @@ namespace Albedo
 			Log::Debug("Albedo GRI is creating a new Global Descriptor Pool.");
 
 			constexpr uint32_t LIMIT_SETS = 100;
-			target = std::make_shared<DescriptorPool>(std::vector<VkDescriptorPoolSize>
+			target = DescriptorPool::Create(std::vector<VkDescriptorPoolSize>
 				{
 					{ VK_DESCRIPTOR_TYPE_SAMPLER,					100 },
 					{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,	100 },
@@ -175,7 +175,7 @@ namespace Albedo
 		else return target;
 	}
 
-	const GRI::DescriptorSetLayout&
+	std::shared_ptr<GRI::DescriptorSetLayout>
 	GRI::
 	GetGlobalDescriptorSetLayout(std::string_view id)
 	{
@@ -561,13 +561,14 @@ namespace Albedo
 	}
 
 	GRI::DescriptorSetLayout::
-	DescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& descriptor_bindings)
+	DescriptorSetLayout(std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings):
+		m_bindings{std::move(descriptor_bindings)}
 	{
 		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-			.bindingCount = static_cast<uint32_t>(descriptor_bindings.size()),
-			.pBindings = descriptor_bindings.data()
+			.bindingCount = static_cast<uint32_t>(m_bindings.size()),
+			.pBindings = m_bindings.data()
 		};
 
 		if (vkCreateDescriptorSetLayout(
@@ -611,24 +612,69 @@ namespace Albedo
 		vkDestroyDescriptorPool(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
+
 	std::shared_ptr<GRI::DescriptorSet>
 	GRI::DescriptorPool::
-	AllocateDescriptorSet(const GRI::DescriptorSetLayout& descriptor_set_layout)
+	AllocateDescriptorSet(std::shared_ptr<DescriptorSetLayout> layout)
 	{
-		return std::make_shared<GRI::DescriptorSet>(shared_from_this(), descriptor_set_layout);
+		return std::make_shared<GRI::DescriptorSet>(shared_from_this(), layout);
+	}
+
+	void
+	GRI::
+	UpdateDescriptorSets(const std::vector<VkWriteDescriptorSet>& updateinfo)
+	{
+		vkUpdateDescriptorSets(g_rhi->device, updateinfo.size(), updateinfo.data(), 0, nullptr);
+	}
+
+	VkWriteDescriptorSet
+	GRI::DescriptorSet::
+	WriteBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer)
+	{
+		auto& bindinginfo = m_layout.GetBinding(binding);
+
+		
+	}
+
+	VkWriteDescriptorSet
+	GRI::DescriptorSet::
+	WriteTexture(uint32_t binding, std::shared_ptr<Texture> texture)
+	{
+		auto& bindinginfo = m_layout.GetBinding(binding);
+
+		VkDescriptorImageInfo descriptorImageInfo
+		{
+			.sampler	= image->Get(), 
+			.imageView	= image->GetView(),-p
+			.imageLayout= image->GetLayout()
+		};
+
+		return VkWriteDescriptorSet
+		{
+			.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet			= m_handle,
+			.dstBinding		= binding,
+			.dstArrayElement= 0,
+			.descriptorCount= 1,
+			.descriptorType	= bindinginfo.descriptorType,
+			.pImageInfo		= &descriptorImageInfo,
+			.pBufferInfo	= nullptr,
+			.pTexelBufferView = nullptr,
+		};
 	}
 
 	GRI::DescriptorSet::
-	DescriptorSet(std::shared_ptr<DescriptorPool> parent, const DescriptorSetLayout& descriptor_set_layout) :
-		m_parent{ std::move(parent) }
+	DescriptorSet(std::shared_ptr<DescriptorPool> parent, std::shared_ptr<DescriptorSetLayout> layout) :
+		m_parent{ std::move(parent) },
+		m_layout{ std::move(layout) }
 	{
-		VkDescriptorSetLayout layout = descriptor_set_layout;
+		VkDescriptorSetLayout descriptor_set_layout = *m_layout;
 		VkDescriptorSetAllocateInfo descriptorSetAllocateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.descriptorPool = *m_parent,
 			.descriptorSetCount = 1,
-			.pSetLayouts = &layout,
+			.pSetLayouts = &descriptor_set_layout,
 		};
 
 		if (vkAllocateDescriptorSets(
@@ -1125,6 +1171,53 @@ namespace Albedo
 	{
 		return (VK_FORMAT_S8_UINT <= m_settings.format &&
 									 m_settings.format <= VK_FORMAT_D32_SFLOAT_S8_UINT);
+	}
+
+	GRI::Sampler::
+	Sampler(CreateInfo createinfo):
+		m_setting{ std::move(createinfo) }
+	{
+		VkSamplerCreateInfo samplerCreateInfo
+		{
+			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+
+			.magFilter = m_setting.filter.magnify,
+			.minFilter = m_setting.filter.minimize,
+
+			.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+
+			.addressModeU = m_setting.wrap_mode.U,
+			.addressModeV = m_setting.wrap_mode.V? m_setting.wrap_mode.V : m_setting.wrap_mode.U,
+			.addressModeW = m_setting.wrap_mode.W? m_setting.wrap_mode.W : m_setting.wrap_mode.U,
+
+			.mipLodBias = 0.0,
+
+			.anisotropyEnable = m_setting.enable_anisotropy,
+			.maxAnisotropy	  = g_rhi->GPU.properties.limits.maxSamplerAnisotropy,
+
+			.compareEnable	= m_setting.compare_mode? VK_TRUE : VK_FALSE,
+			.compareOp		= m_setting.compare_mode,	
+
+			.minLod = 0.0,
+			.maxLod = 0.0,
+
+			.borderColor = m_setting.border_color,
+			.unnormalizedCoordinates = VK_FALSE
+		};
+
+		if (vkCreateSampler(
+			g_rhi->device,
+			&samplerCreateInfo,
+			g_rhi->allocator,
+			&m_handle) != VK_SUCCESS)
+			Log::Fatal("Failed to create the Vulkan Sampler!");
+	}
+
+	GRI::Sampler::
+	~Sampler() noexcept
+	{
+		vkDestroySampler(g_rhi->device, m_handle, g_rhi->allocator);
+		m_handle = VK_NULL_HANDLE;
 	}
 
 	GRI::RenderPass::
@@ -1914,7 +2007,7 @@ namespace Albedo
 			for (size_t i = 0; i < sm_render_targets.size(); ++i)
 			{
 				auto& RT = sm_render_targets[i];
-				RT.image = std::make_shared<Image>(Image::CreateInfo
+				RT.image = Image::Create(Image::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 						.usage  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
@@ -1931,7 +2024,7 @@ namespace Albedo
 								   ->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 			}
 			// Create ZBuffer(Shared)
-			RenderTarget::zbuffer = std::make_shared<Image>(Image::CreateInfo
+			RenderTarget::zbuffer = Image::Create(Image::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_DEPTH_BIT,
 						.usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,

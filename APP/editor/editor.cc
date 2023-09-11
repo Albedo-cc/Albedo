@@ -8,7 +8,7 @@ namespace APP
 	Editor::
 	Initialize()
 	{
-		sm_main_camera = std::make_shared<GRI::Image>
+		sm_main_camera = GRI::Image::Create
 			(GRI::Image::CreateInfo{
 				.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 				.usage  = VK_IMAGE_USAGE_SAMPLED_BIT |
