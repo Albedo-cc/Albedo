@@ -8,8 +8,8 @@ namespace APP
 	Editor::
 	Initialize()
 	{
-		sm_main_camera = GRI::Image::Create
-			(GRI::Image::CreateInfo{
+		auto main_camera_image = 
+			GRI::Image::Create(GRI::Image::CreateInfo{
 				.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 				.usage  = VK_IMAGE_USAGE_SAMPLED_BIT |
 							VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -18,18 +18,21 @@ namespace APP
 				.mipLevels	 = 1,
 				.arrayLayers = 1,
 				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.tiling  = VK_IMAGE_TILING_OPTIMAL,
-			});
+				.tiling  = VK_IMAGE_TILING_OPTIMAL,});
 
+		sm_main_camera = GRI::Texture::Create(main_camera_image, GRI::Sampler::Create({}));
+
+		GRI::Fence fence{ FenceType_Unsignaled };
 		auto commandbuffer = 
 			GRI::GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 		commandbuffer->Begin();
 		{
-			sm_main_camera->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);	
+			main_camera_image->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);	
 		}
 		commandbuffer->End();
-		commandbuffer->Submit({});
+		commandbuffer->Submit({.signal_fence = fence});
+		fence.Wait();
 
 		UISystem::RegisterUIEvent(new UIEvent
 		("Main Camera", []()->void

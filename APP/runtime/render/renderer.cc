@@ -90,15 +90,15 @@ namespace APP
 	create_decriptor_set_layouts()
 	{
 		// Add Descriptor Set Layouts
-		GRI::CreateGlobalDescriptorSetLayout(
+		GRI::RegisterGlobalDescriptorSetLayout(
 			"NULL",
-			{
+			GRI::DescriptorSetLayout::Create({
 				VkDescriptorSetLayoutBinding
 				{
 					.binding = 0,
 					.descriptorCount = 0, // Disable for now
 				}
-			});
+			}));
 	}
 
 	void

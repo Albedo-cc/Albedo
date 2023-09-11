@@ -14,7 +14,7 @@ namespace APP
         static void Tick(std::shared_ptr<GRI::CommandBuffer> commandbuffer);
 
 	private:
-		static inline std::shared_ptr<GRI::Image> sm_main_camera;
+		static inline std::shared_ptr<GRI::Texture> sm_main_camera;
 
 	private:
 		Editor() = delete;

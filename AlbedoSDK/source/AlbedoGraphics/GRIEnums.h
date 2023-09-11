@@ -4,7 +4,6 @@
 
 namespace Albedo
 {
-   
 	typedef enum QueueFamilyType_
 	{
 		QueueFamilyType_Graphics,

@@ -1,6 +1,7 @@
 #include "GRI.h"
 #include "internal/RHI.h"
 #include <AlbedoCore/Log/log.h>
+#include <AlbedoCore/Math/integer.h>
 #include <AlbedoUtils/time.h>
 
 #define VMA_IMPLEMENTATION
@@ -35,9 +36,13 @@ namespace Albedo
 
 		destroy_render_targets();
 
+		sm_preframe_tasks.clear();
+
 		sm_normal_command_pools.clear();
 		sm_auto_free_command_pools.clear();
 		sm_auto_reset_command_pools.clear();
+
+		sm_samplers.clear();
 
 		sm_descriptor_pools.clear();
 		sm_descriptor_set_layouts.clear();
@@ -94,6 +99,7 @@ namespace Albedo
 					.queue_family = queue,
 					.type = CommandPoolType_Normal,
 				});
+				commandPool->add_gri_tag(GRIObject::Tag::Global);
 			}
 			return commandPool;
 		}
@@ -134,15 +140,29 @@ namespace Albedo
 
 	void
 	GRI::
-	CreateGlobalDescriptorSetLayout(std::string id, const std::vector<VkDescriptorSetLayoutBinding>& descriptor_bindings)
+	RegisterGlobalDescriptorSetLayout(std::string id, std::shared_ptr<DescriptorSetLayout> descriptor_set_layout)
 	{
 		auto target = sm_descriptor_set_layouts.find(id);
 		if (target == sm_descriptor_set_layouts.end())
 		{
-			Log::Debug("Albedo GRI is creating a new Descriptor Set Layout.");
-			sm_descriptor_set_layouts.emplace(std::move(id), DescriptorSetLayout::Create(descriptor_bindings));
+			Log::Debug("Albedo GRI is registering a new Descriptor Set Layout.");
+			descriptor_set_layout->add_gri_tag(GRIObject::Tag::Global);
+			sm_descriptor_set_layouts.emplace(std::move(id), std::move(descriptor_set_layout));
 		}
-		else Log::Fatal("Failed to create duplicate Vulkan Descriptor Set Layouts!");
+		else Log::Fatal("Failed to register duplicate Vulkan Descriptor Set Layouts!");
+	}
+
+	void
+	GRI::RegisterGlobalSampler(std::string id, std::shared_ptr<Sampler> sampler)
+	{
+		auto target = sm_samplers.find(id);
+		if (target == sm_samplers.end())
+		{
+			Log::Debug("Albedo GRI is registering a new Sampelr.");
+			sampler->add_gri_tag(GRIObject::Tag::Global);
+			sm_samplers.emplace(std::move(id), std::move(sampler));
+		}
+		else Log::Fatal("Failed to register duplicate Vulkan Sampelr!");
 	}
 
 	std::shared_ptr<GRI::DescriptorPool>
@@ -169,7 +189,7 @@ namespace Albedo
 					{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	100 },
 					{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			100 },
 				}, LIMIT_SETS);
-
+			target->add_gri_tag(GRIObject::Tag::Global);
 			return target;
 		}
 		else return target;
@@ -265,6 +285,19 @@ namespace Albedo
 	{
 		return RenderTarget::zbuffer;
 	}
+
+	void
+	GRI::PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer,
+		std::thread::id thread_id/* = std::this_thread::get_id()*/)
+	{
+		assert(commandbuffer->m_handle != VK_NULL_HANDLE);
+		assert(CommandPoolType_Transient == commandbuffer->m_parent->m_settings.type);
+		assert(GRI::GRIObject::Tag::Global & commandbuffer->m_gri_tags); // Create via GRI::GetGlobalCommandPool
+		sm_preframe_tasks[thread_id][commandbuffer->m_parent->m_settings.queue_family]
+			.commandbuffers
+			.emplace_back(commandbuffer->m_handle);
+		commandbuffer->m_handle = VK_NULL_HANDLE; // Handing over Life Management to GRI
+	}
 	
 	GRI::Fence::
 	Fence(FenceType type)
@@ -355,6 +388,16 @@ namespace Albedo
 			Log::Fatal("Failed to create the Vulkan Command Buffer!");
 	}
 
+	GRI::
+	CommandBuffer::
+	~CommandBuffer() noexcept
+	{
+		if (VK_NULL_HANDLE == m_handle) return;
+
+		vkFreeCommandBuffers(g_rhi->device, *m_parent, 1, &m_handle);
+		m_handle = VK_NULL_HANDLE;
+	}
+
 	void 
 	GRI::CommandBuffer::
 	Begin()
@@ -364,7 +407,7 @@ namespace Albedo
 		VkCommandBufferBeginInfo commandBufferBeginInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.flags = 0x0,
 			.pInheritanceInfo = nullptr
 		};
 		if (vkBeginCommandBuffer(m_handle, &commandBufferBeginInfo) != VK_SUCCESS)
@@ -394,18 +437,22 @@ namespace Albedo
 		{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			.waitSemaphoreCount = static_cast<uint32_t>(submitinfo.wait_semaphores.size()),
-			.pWaitSemaphores = submitinfo.wait_semaphores.data(),
-			.pWaitDstStageMask = &submitinfo.wait_stages,
+			.pWaitSemaphores	= submitinfo.wait_semaphores.data(),
+			.pWaitDstStageMask  = &submitinfo.wait_stages,
 			.commandBufferCount = 1,
-			.pCommandBuffers = &m_handle,
+			.pCommandBuffers	= &m_handle,
 			.signalSemaphoreCount = static_cast<uint32_t>(submitinfo.signal_semaphores.size()),
-			.pSignalSemaphores = submitinfo.signal_semaphores.data()
+			.pSignalSemaphores	= submitinfo.signal_semaphores.data()
 		};
+
+		if (vkQueueSubmit(GetQueue(m_parent->m_settings.queue_family), 
+			1, &submitInfo, submitinfo.signal_fence) != VK_SUCCESS)
+			Log::Fatal("Failed to submit the Vulkan Command Buffer!");
 	}
 
 	void 
-	GRI::AutoFreeCommandBuffer::
-	AutoFreeCommandBuffer::Begin()
+	GRI::TransientCommandBuffer::
+	TransientCommandBuffer::Begin()
 	{
 		assert(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
 
@@ -419,47 +466,6 @@ namespace Albedo
 			Log::Fatal("Failed to begin the Vulkan Command Buffer!");
 
 		m_is_recording = true;
-	}
-
-	void GRI::AutoFreeCommandBuffer::
-	End()
-	{
-		assert(IsRecording() && "You cannot End() an idle Vulkan Command Buffer!");
-
-		if (vkEndCommandBuffer(m_handle) != VK_SUCCESS)
-			Log::Fatal("Failed to end the Vulkan Command Buffer!");
-
-		m_is_recording = false;
-	}
-
-	// Do not pass Fence to AutoFreeCommandBuffer
-	void 
-	GRI::AutoFreeCommandBuffer::
-	Submit(const SubmitInfo& submitinfo)
-	{
-		assert(!IsRecording() && "You should call End() before Submit()!");
-
-		VkSubmitInfo submitInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.waitSemaphoreCount = static_cast<uint32_t>(submitinfo.wait_semaphores.size()),
-			.pWaitSemaphores = submitinfo.wait_semaphores.data(),
-			.pWaitDstStageMask = &submitinfo.wait_stages,
-			.commandBufferCount = 1,
-			.pCommandBuffers = &m_handle,
-			.signalSemaphoreCount = static_cast<uint32_t>(submitinfo.signal_semaphores.size()),
-			.pSignalSemaphores = submitinfo.signal_semaphores.data()
-		};
-
-		Fence fence{FenceType_Unsignaled};
-		{
-			if (vkQueueSubmit(GetQueue(m_parent->GetSettings().queue_family), 
-			1, &submitInfo, fence) != VK_SUCCESS)
-			Log::Fatal("Failed to submit the Vulkan Command Buffer!");
-		}
-		fence.Wait();
-
-		vkFreeCommandBuffers(g_rhi->device, *m_parent, 1, &m_handle);
 	}
 
 	void 
@@ -473,46 +479,13 @@ namespace Albedo
 		VkCommandBufferBeginInfo commandBufferBeginInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.flags = 0x0,
 			.pInheritanceInfo = nullptr
 		};
 		if (vkBeginCommandBuffer(m_handle, &commandBufferBeginInfo) != VK_SUCCESS)
 			Log::Fatal("Failed to begin the Vulkan Command Buffer!");
 
 		m_is_recording = true;
-	}
-	void 
-	GRI::AutoResetCommandBuffer::
-	End()
-	{
-		assert(IsRecording() && "You cannot End() an idle Vulkan Command Buffer!");
-
-		if (vkEndCommandBuffer(m_handle) != VK_SUCCESS)
-			Log::Fatal("Failed to end the Vulkan Command Buffer!");
-
-		m_is_recording = false;
-	}
-	void 
-	GRI::AutoResetCommandBuffer::
-	Submit(const SubmitInfo& submitinfo)
-	{
-		assert(!IsRecording() && "You should call End() before Submit()!");
-
-		VkSubmitInfo submitInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.waitSemaphoreCount = static_cast<uint32_t>(submitinfo.wait_semaphores.size()),
-			.pWaitSemaphores = submitinfo.wait_semaphores.data(),
-			.pWaitDstStageMask = &submitinfo.wait_stages,
-			.commandBufferCount = 1,
-			.pCommandBuffers = &m_handle,
-			.signalSemaphoreCount = static_cast<uint32_t>(submitinfo.signal_semaphores.size()),
-			.pSignalSemaphores = submitinfo.signal_semaphores.data()
-		};
-
-		if (vkQueueSubmit(GetQueue(m_parent->GetSettings().queue_family), 
-			1, &submitInfo, submitinfo.signal_fence) != VK_SUCCESS)
-			Log::Fatal("Failed to submit the Vulkan Command Buffer!");
 	}
    
 	GRI::CommandPool::
@@ -547,17 +520,24 @@ namespace Albedo
 	GRI::CommandPool::
 	AllocateCommandBuffer(const CommandBuffer::CreateInfo& createinfo/* = {}*/)
 	{
+		std::shared_ptr<GRI::CommandBuffer> commandbuffer;
+
 		switch (m_settings.type)
 		{
 		case CommandPoolType_Normal:
-			return std::make_shared<CommandBuffer>(shared_from_this(), createinfo);
+			commandbuffer = std::make_shared<CommandBuffer>(shared_from_this(), createinfo);
+			break;
 		case CommandPoolType_Resettable:
-			return std::make_shared<AutoResetCommandBuffer>(shared_from_this(), createinfo);
+			commandbuffer = std::make_shared<AutoResetCommandBuffer>(shared_from_this(), createinfo);
+			break;
 		case CommandPoolType_Transient:
-			return std::make_shared<AutoFreeCommandBuffer>(shared_from_this(), createinfo);
+			commandbuffer = std::make_shared<TransientCommandBuffer>(shared_from_this(), createinfo);
+			break;
 		default:assert(false);
 		}
-		return nullptr;
+
+		commandbuffer->add_gri_tag(GRIObject::Tag::Global);
+		return commandbuffer;
 	}
 
 	GRI::DescriptorSetLayout::
@@ -631,22 +611,40 @@ namespace Albedo
 	GRI::DescriptorSet::
 	WriteBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer)
 	{
-		auto& bindinginfo = m_layout.GetBinding(binding);
+		auto& bindinginfo = m_layout->GetBinding(binding);
 
-		
+		VkDescriptorBufferInfo descriptorBufferInfo
+		{
+			.buffer = *buffer,
+			.offset = 0,
+			.range  = VK_WHOLE_SIZE // buffer->GetSize()
+		};
+
+		return VkWriteDescriptorSet
+		{
+			.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet			= m_handle,
+			.dstBinding		= binding,
+			.dstArrayElement= 0,
+			.descriptorCount= 1,
+			.descriptorType = bindinginfo.descriptorType,
+			.pImageInfo		= nullptr,
+			.pBufferInfo	= &descriptorBufferInfo,
+			.pTexelBufferView = nullptr
+		};
 	}
 
 	VkWriteDescriptorSet
 	GRI::DescriptorSet::
 	WriteTexture(uint32_t binding, std::shared_ptr<Texture> texture)
 	{
-		auto& bindinginfo = m_layout.GetBinding(binding);
+		auto& bindinginfo = m_layout->GetBinding(binding);
 
 		VkDescriptorImageInfo descriptorImageInfo
 		{
-			.sampler	= image->Get(), 
-			.imageView	= image->GetView(),-p
-			.imageLayout= image->GetLayout()
+			.sampler	= *texture->m_sampler, 
+			.imageView	= texture->m_image->GetView(),
+			.imageLayout= texture->m_image->GetLayout(),
 		};
 
 		return VkWriteDescriptorSet
@@ -1220,6 +1218,28 @@ namespace Albedo
 		m_handle = VK_NULL_HANDLE;
 	}
 
+	GRI::Texture::
+	Texture(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler) :
+		m_image{ std::move(image) },
+		m_sampler{ std::move(sampler) }
+	{
+		assert(m_image != nullptr);
+		assert(m_sampler != nullptr);
+		auto& extent = m_image->GetExtent();
+		// Judge if both width and height is the power of 2.
+		if (!IsPowerOfTwo(extent.width) || !IsPowerOfTwo(extent.height))
+		{
+			Log::Warn("Bad Texture Extent({}, {}), it is better to create a texture with a power of two size.",
+				extent.width, extent.height);
+		}	
+	}
+
+	GRI::Texture::
+	~Texture() noexcept
+	{
+
+	}
+
 	GRI::RenderPass::
 	RenderPass(std::string name, uint32_t priority) :
 		m_name{ std::move(name) },
@@ -1790,9 +1810,11 @@ namespace Albedo
 			create_render_targets();
 			throw SIGNAL_RECREATE_SWAPCHAIN{};
 		}
-		else RT.fence_in_flight.Reset();
-
 		if (result != VK_SUCCESS) Log::Fatal("Failed to retrive the next image of the Vulkan Swap Chain!");	
+
+
+		do_preframe_tasks();
+		RT.fence_in_flight.Reset();
 	}
 
 	/**
@@ -1991,6 +2013,61 @@ namespace Albedo
 				.wait_semaphores	= {},
 				.signal_semaphores	= {},
 			});
+		PrevRT.fence_in_flight.Wait();
+	}
+
+	void
+	GRI::
+	ScreenShot(std::shared_ptr<Texture> output)
+	{
+		ScreenShot(output->m_image);
+	}
+
+	void
+	GRI::
+	do_preframe_tasks()
+	{
+		// Submit Tasks
+		for (auto& [thread, taskinfo] : sm_preframe_tasks)
+		{
+			for (auto& [queue_family, tasks] : taskinfo)
+			{
+				if (tasks.commandbuffers.empty()) continue;
+
+				VkSubmitInfo submitinfo
+				{
+					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+					.waitSemaphoreCount = 0,
+					.pWaitSemaphores	= nullptr,
+					.pWaitDstStageMask  = nullptr,
+					.commandBufferCount = static_cast<uint32_t>(tasks.commandbuffers.size()),
+					.pCommandBuffers	= tasks.commandbuffers.data(),
+					.signalSemaphoreCount = 0,
+					.pSignalSemaphores	= nullptr,
+				};
+				vkQueueSubmit(GetQueue(queue_family), 1, &submitinfo, tasks.fence);
+			}
+		}
+
+		// Wait Tasks
+		for (auto& [thread, taskinfo] : sm_preframe_tasks)
+		{
+			for (auto& [queue_family, tasks] : taskinfo)
+			{
+				if (tasks.commandbuffers.empty()) continue;
+
+				tasks.fence.Wait();
+				{
+					vkFreeCommandBuffers(
+						g_rhi->device,
+						*GetGlobalCommandPool(CommandPoolType_Transient,queue_family, thread),
+						static_cast<uint32_t>(tasks.commandbuffers.size()),
+						tasks.commandbuffers.data());
+					tasks.commandbuffers.clear();
+				}
+				tasks.fence.Reset();
+			}
+		}	
 	}
 
 	void
@@ -1998,6 +2075,7 @@ namespace Albedo
 	create_render_targets()
 	{
 		sm_render_targets.resize(g_rhi->swapchain.images.size());
+
 		auto commandbuffer = GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
 							 ->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
@@ -2038,7 +2116,7 @@ namespace Albedo
 			RenderTarget::zbuffer->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		}
 		commandbuffer->End();
-		commandbuffer->Submit({.wait_stages = VK_PIPELINE_STAGE_TRANSFER_BIT});
+		PushPreframeTask(commandbuffer);
 	}
 
 	void

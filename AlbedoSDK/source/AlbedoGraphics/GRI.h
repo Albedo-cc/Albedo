@@ -36,8 +36,8 @@ namespace Albedo
 
     class GRI
     {
-	//[OVERVIEW]-------------------------------------------------------------------------------------------------------------------
-	/*Command*/			class CommandPool; class CommandBuffer; class AutoFreeCommandBuffer; class AutoResetCommandBuffer;
+	//[GRI OBJECTS]----------------------------------------------------------------------------------------------------------------
+	/*Command*/			class CommandPool; class CommandBuffer; class TransientCommandBuffer; class AutoResetCommandBuffer;
 	/*Synchronization*/	class Fence; class Semaphore;
 	/*Memory*/			class Shader; class Buffer; class Image;
 	/*Interface Class*/	class RenderPass; class GraphicsPipeline;
@@ -49,8 +49,8 @@ namespace Albedo
 	//-----------------------------------------------------------------------------------------------------------------------------
 	
 	public: // User-level Interfaces
-		static void CreateGlobalDescriptorSetLayout(std::string id, const std::vector<VkDescriptorSetLayoutBinding>& descriptor_bindings);
-		//static void CreateGlobalSampler
+		static void RegisterGlobalDescriptorSetLayout(std::string id, std::shared_ptr<DescriptorSetLayout> descriptor_set_layout);
+		static void RegisterGlobalSampler(std::string id, std::shared_ptr<Sampler> sampler);
 
 		static auto GetGlobalDescriptorSetLayout(std::string_view id) -> std::shared_ptr<GRI::DescriptorSetLayout>;
 		static auto GetGlobalDescriptorPool(std::thread::id thread_id = std::this_thread::get_id()) -> std::shared_ptr<GRI::DescriptorPool>;
@@ -64,7 +64,10 @@ namespace Albedo
 		static auto GetRenderTargetFormat()	 -> VkFormat;
 		static auto GetZBuffer()			 -> const std::shared_ptr<const GRI::Image>&;
 
+		static void PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer, std::thread::id thread_id = std::this_thread::get_id());
+
 		static void ScreenShot(std::shared_ptr<Image> output);
+		static void ScreenShot(std::shared_ptr<Texture> output);
 
 	public: // Developer-level Interface
 		class SIGNAL_RECREATE_SWAPCHAIN : public std::exception {};
@@ -77,9 +80,20 @@ namespace Albedo
         static void Initialize(const GRICreateInfo& createinfo);
         static void Terminate() noexcept;
 
-	public: // Widgets
-        class Fence final
+	private:
+		class GRIObject
 		{
+			friend class GRI;
+			enum Tag : uint8_t {None = 0, Global = 1 << 0, };
+			void add_gri_tag(Tag tag) { m_gri_tags = Tag(m_gri_tags | tag); }
+			Tag m_gri_tags{ None };
+		};
+
+	public: // GRI Objects
+        class Fence final
+			:public GRIObject
+		{
+			friend class GRI;
 		public:
 			void Wait(uint64_t timeout = std::numeric_limits<uint64_t>::max());
 			void Reset();
@@ -97,7 +111,9 @@ namespace Albedo
 		};
 
 		class Semaphore final
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			static inline auto Create(SemaphoreType type) { return Semaphore{type}; }
 			Semaphore() = delete;
@@ -110,7 +126,9 @@ namespace Albedo
 		};
 
 		class CommandBuffer
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			struct CreateInfo
 			{
@@ -119,7 +137,7 @@ namespace Albedo
 
 			struct SubmitInfo
 			{
-				VkPipelineStageFlags			  wait_stages;
+				VkPipelineStageFlags			  wait_stages{ 0 };
 				VkFence							  signal_fence{ VK_NULL_HANDLE };
 				std::vector<VkSemaphore>		  wait_semaphores;
 				std::vector<VkSemaphore>		  signal_semaphores;
@@ -136,6 +154,7 @@ namespace Albedo
 		public:
 			CommandBuffer() = delete;
 			CommandBuffer(std::shared_ptr<CommandPool> command_pool, const CreateInfo& createinfo);
+			virtual ~CommandBuffer() noexcept;
 
 		protected:
 			VkCommandBuffer				 m_handle{ VK_NULL_HANDLE };
@@ -144,25 +163,27 @@ namespace Albedo
 			bool						 m_is_recording = false;
 		};
 
-		class AutoFreeCommandBuffer final : public CommandBuffer
+		class TransientCommandBuffer final : public CommandBuffer
 		{
+			friend class GRI;
 		public:
-			virtual auto Begin()  -> void override;
-			virtual auto End()	  -> void override;
-			virtual auto Submit(const CommandBuffer::SubmitInfo& submitinfo) -> void override;
+			virtual void Begin() override;
+			//virtual void End()  override;
+			//virtual void Submit(const CommandBuffer::SubmitInfo& submitinfo) override;
 
 		public:
-			AutoFreeCommandBuffer() = delete;
-			AutoFreeCommandBuffer(std::shared_ptr<CommandPool> command_pool, const CreateInfo& createinfo):
+			TransientCommandBuffer() = delete;
+			TransientCommandBuffer(std::shared_ptr<CommandPool> command_pool, const CreateInfo& createinfo):
 				CommandBuffer{command_pool, createinfo}{}
 		};
 
 		class AutoResetCommandBuffer final : public CommandBuffer
 		{
+			friend class GRI;
 		public:
-			virtual auto Begin()  -> void override;
-			virtual auto End()	  -> void override;
-			virtual auto Submit(const CommandBuffer::SubmitInfo& submitinfo) -> void override;
+			virtual void Begin() override;
+			//virtual void End()  override;
+			//virtual void Submit(const CommandBuffer::SubmitInfo& submitinfo) override;
 
 		public:
 			AutoResetCommandBuffer() = delete;
@@ -171,8 +192,10 @@ namespace Albedo
 		};
 
 		class CommandPool final:
+			public GRIObject,
 			public std::enable_shared_from_this<CommandPool>
 		{
+			friend class GRI;
 		public:
 			struct CreateInfo
 			{
@@ -198,7 +221,9 @@ namespace Albedo
 		};
 
 		class DescriptorSetLayout final
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			auto GetBinding(uint32_t index) const -> const VkDescriptorSetLayoutBinding&
 			{assert(m_bindings.size() > index); return m_bindings[index]; }
@@ -217,8 +242,10 @@ namespace Albedo
 		};
 
 		class DescriptorPool final:
+			public GRIObject,
 			public std::enable_shared_from_this<DescriptorPool>
 		{
+			friend class GRI;
 		public:
 			auto AllocateDescriptorSet(std::shared_ptr<DescriptorSetLayout> layout) -> std::shared_ptr<DescriptorSet>;
 			operator VkDescriptorPool() const { return m_handle; }
@@ -236,7 +263,9 @@ namespace Albedo
 
 		static void UpdateDescriptorSets(const std::vector<VkWriteDescriptorSet>& updateinfo);
 		class DescriptorSet final
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			// GRI::UpdateDescriptorSets({SetA.WriteBuffer(...), SetB.WriteImage(...), ...}
 			auto WriteBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer) -> VkWriteDescriptorSet;
@@ -256,7 +285,9 @@ namespace Albedo
 		};
 
 		class Shader final
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			auto GetSize() const -> VkDeviceSize { return m_code.size(); }
 			auto GetCode() const -> const std::vector<char>& { return m_code; }
@@ -269,7 +300,7 @@ namespace Albedo
 			{ return std::make_shared<GRI::Shader>(type, code); }
 			Shader() = delete;
 			Shader(ShaderType type, std::vector<char> code);
-			~Shader() noexcept = default;
+			~Shader() noexcept;
 
 		private:
 			VkShaderModule m_handle{ VK_NULL_HANDLE };
@@ -278,7 +309,9 @@ namespace Albedo
 		};
 		
 		class Buffer final
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			enum Property { Readable = 1 << 0, Writable = 1 << 1, Persistent = 1 << 2, };
 			struct CreateInfo // Create by GRI
@@ -318,7 +351,9 @@ namespace Albedo
 		};
 
 		class Image final
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			struct CreateInfo // Create by GRI
 			{
@@ -370,7 +405,9 @@ namespace Albedo
 		};
 
 		class Sampler
+			:public GRIObject
 		{
+			friend class GRI;
 		public:
 			struct CreateInfo
 			{
@@ -388,8 +425,8 @@ namespace Albedo
 					struct { VkFilter magnify, minimize; };
 				} filter;
 				VkBorderColor		 border_color = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-				VkSamplerMipmapMode  mipmap_mode = VK_SAMPLER_MIPMAP_MODE_BOX;
-				VkCompareOp			 compare_mode= VK_COMPARE_OP_NEVER;
+				VkSamplerMipmapMode  mipmap_mode  = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+				VkCompareOp			 compare_mode = VK_COMPARE_OP_NEVER;
 				VkBool32             enable_anisotropy = VK_TRUE;
 			};
 
@@ -409,8 +446,19 @@ namespace Albedo
 		};
 
 		class Texture
+			:public GRIObject
 		{
+			friend class GRI;
+			friend class DescriptorSet;
 		public:
+			operator VkImage() const { return *m_image; }
+
+		public:
+			static inline auto Create(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler)
+			{ return std::make_shared<Texture>(image, sampler); }
+			Texture(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler);
+			Texture() = delete;
+			~Texture() noexcept;
 
 		private:
 			std::shared_ptr<Image>   m_image;
@@ -419,6 +467,7 @@ namespace Albedo
 
 		class RenderPass
 		{
+			friend class GRI;
 		public:
 			virtual void Begin(std::shared_ptr<CommandBuffer> commandbuffer);
 			virtual void End(std::shared_ptr<CommandBuffer> commandbuffer);
@@ -509,6 +558,7 @@ namespace Albedo
 
 		class GraphicsPipeline
 		{
+			friend class GRI;
 			friend class RenderPass; // Create in RenderPass
 		protected:
 			// Please Bind before Start!
@@ -561,6 +611,20 @@ namespace Albedo
 		// Global Descriptor Objects
 		static inline std::unordered_map<std::string, std::shared_ptr<DescriptorSetLayout>>sm_descriptor_set_layouts;
 		static inline std::unordered_map<std::thread::id, std::shared_ptr<DescriptorPool>> sm_descriptor_pools;
+
+		// Global Samplers
+		static inline std::unordered_map<std::string, std::shared_ptr<Sampler>> sm_samplers;
+
+	private:
+		// Frame Tasks
+		struct FrameTask
+		{
+			Fence fence{ FenceType_Unsignaled };
+			std::vector<VkCommandBuffer> commandbuffers;
+		};
+		using FrameTaskMap = std::unordered_map<QueueFamilyType, FrameTask>;
+		static inline std::unordered_map<std::thread::id, FrameTaskMap> sm_preframe_tasks;
+		static void do_preframe_tasks();
 
 	private:
 		struct RenderTarget

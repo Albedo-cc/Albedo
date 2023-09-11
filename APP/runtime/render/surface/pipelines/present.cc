@@ -9,15 +9,15 @@ namespace Albedo{
 namespace APP
 {
 	
-	EditorPipeline::
-	EditorPipeline():
-		GRI::GraphicsPipeline("Surface::Editor")
+	PresentPipeline::
+	PresentPipeline():
+		GRI::GraphicsPipeline("Surface::Present")
 	{
 
 	}
 
 	void
-	EditorPipeline::
+	PresentPipeline::
 	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		assert(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
@@ -25,7 +25,7 @@ namespace APP
 	}
 
 	void
-	EditorPipeline::
+	PresentPipeline::
 	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");

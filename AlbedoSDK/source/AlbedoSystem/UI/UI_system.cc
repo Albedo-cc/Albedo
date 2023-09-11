@@ -50,6 +50,7 @@ namespace Albedo
 		ImGui_ImplGlfw_InitForVulkan(WindowSystem::GetWindow(), INSTALL_IMGUI_CALLBACKS); // Install callbacks via ImGUI
 		ImGui_ImplVulkan_Init(&ImGui_InitInfo, createinfo.renderpass);
 
+		GRI::Fence fence{ FenceType_Unsignaled };
 		auto commandbuffer =
 			GRI::GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
@@ -59,7 +60,8 @@ namespace Albedo
 			ImGui_ImplVulkan_CreateFontsTexture(*commandbuffer);
 		}
 		commandbuffer->End();
-		commandbuffer->Submit({.wait_stages = VK_PIPELINE_STAGE_TRANSFER_BIT});
+		commandbuffer->Submit({.signal_fence = fence });
+		fence.Wait();
 
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 	}

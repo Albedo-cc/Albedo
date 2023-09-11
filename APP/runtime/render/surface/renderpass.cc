@@ -17,8 +17,8 @@ namespace APP
 		// [0]: Present
 		add_subpass(GRI::RenderPass::SubpassSetting
 			{
-				.name					 = "Surface::Editor",
-				.pipeline				 = std::make_unique<EditorPipeline>(),
+				.name					 = "Surface::Present",
+				.pipeline				 = std::make_unique<PresentPipeline>(),
 				.color_attachments		 = {get_system_target_reference(ST_Color)},
 				//.depth_stencil_attachment= get_system_target_reference(ST_ZBuffer),
 				.source_stage_mask		 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,

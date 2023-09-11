@@ -48,7 +48,7 @@ namespace APP
 		Renderer::Initialize();
 
 		auto ui_renderpass = Renderer::SearchRenderPass("Surface");
-		auto ui_subpass    = ui_renderpass->SeachSubpass("Surface::Editor");
+		auto ui_subpass    = ui_renderpass->SeachSubpass("Surface::Present");
 
 		UISystem::Initialize(UISystem::CreateInfo
 		{
