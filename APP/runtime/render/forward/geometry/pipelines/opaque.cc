@@ -58,11 +58,11 @@ namespace APP
 		// You may need to call vkCmdNextSubpass(...);
 	}
 
-	VkPipelineVertexInputStateCreateInfo
+	const VkPipelineVertexInputStateCreateInfo&
 	OpaquePipeline::
 	vertex_input_state()
 	{
-		return VkPipelineVertexInputStateCreateInfo
+		static VkPipelineVertexInputStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
 			.vertexBindingDescriptionCount = 0,
@@ -70,13 +70,14 @@ namespace APP
 			.vertexAttributeDescriptionCount = 0,
 			.pVertexAttributeDescriptions = nullptr,
 		};
+		return state;
 	}
 
-	VkPipelineDepthStencilStateCreateInfo
+	const VkPipelineDepthStencilStateCreateInfo&
 	OpaquePipeline::
 	depth_stencil_state()
 	{
-		return VkPipelineDepthStencilStateCreateInfo
+		static VkPipelineDepthStencilStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			.depthTestEnable		= VK_TRUE,
@@ -89,6 +90,7 @@ namespace APP
 			.minDepthBounds = 0.0,
 			.maxDepthBounds = 1.0
 		};
+		return state;
 	}
 
 	/*VkPipelineDynamicStateCreateInfo

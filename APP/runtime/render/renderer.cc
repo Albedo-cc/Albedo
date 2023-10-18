@@ -22,7 +22,14 @@ namespace APP
 
 			frame.commandbuffer_geometry->Begin();
 			{
-				sm_renderpasses[Geometry]->Begin(frame.commandbuffer_geometry);
+				auto subpass_iter = sm_renderpasses[Geometry]->Begin(frame.commandbuffer_geometry);
+				{
+					do
+					{
+						subpass_iter.Begin(frame.commandbuffer_geometry);
+						subpass_iter.End(frame.commandbuffer_geometry);
+					} while (subpass_iter.Next());
+				}
 				sm_renderpasses[Geometry]->End(frame.commandbuffer_geometry);
 			}
 			frame.commandbuffer_geometry->End();
@@ -33,20 +40,7 @@ namespace APP
 					.signal_semaphores = {frame.semaphore_geometry_pass},	
 				});
 
-			frame.commandbuffer_surface->Begin();
-			{
-				sm_renderpasses[Surface]->Begin(frame.commandbuffer_surface);
-				sm_renderpasses[Surface]->End(frame.commandbuffer_surface);
-			}
-			frame.commandbuffer_surface->End();
-			frame.commandbuffer_surface->Submit(
-				{
-					.wait_stages	   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-					.wait_semaphores   = {frame.semaphore_geometry_pass},
-					.signal_semaphores = {frame.semaphore_surface_pass},	
-				});
-
-			GRI::PresentFrame({ frame.semaphore_surface_pass });
+			GRI::PresentFrame({ frame.semaphore_geometry_pass });
 		}
 		catch (GRI::SIGNAL_RECREATE_SWAPCHAIN)
 		{
@@ -99,6 +93,19 @@ namespace APP
 					.descriptorCount = 0, // Disable for now
 				}
 			}));
+
+		//GRI::RegisterGlobalDescriptorSetLayout(
+		//	"[0]CIS", // Bind0 Combined Image Sampler.
+		//	GRI::DescriptorSetLayout::Create({
+		//		VkDescriptorSetLayoutBinding
+		//		{
+		//			.binding = 0,
+		//			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		//			.descriptorCount = 1,
+		//			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+		//			.pImmutableSamplers = nullptr,
+		//		}
+		//	}));
 	}
 
 	void
@@ -106,7 +113,6 @@ namespace APP
 	create_renderpasses()
 	{
 		sm_renderpasses.emplace_back(new GeometryPass());
-		sm_renderpasses.emplace_back(new SurfacePass());
 
 		// Sort Render Passes by Priority
 		std::sort(sm_renderpasses.begin(), sm_renderpasses.end(),
@@ -138,10 +144,6 @@ namespace APP
 		for (auto& frame : sm_frames)
 		{
 			frame.commandbuffer_geometry = 
-				GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
-				->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
-
-			frame.commandbuffer_surface = 
 				GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
 				->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 		}

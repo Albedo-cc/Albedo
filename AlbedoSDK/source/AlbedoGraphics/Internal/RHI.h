@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @file       context.h
+ * @file       RHI.h
  * @brief      RHI(Render Handware Interface), Developer-level interface, it is recommanded that use GRI.h
  * @author     LJYC(https://github.com/LJYC-ME)
  */
@@ -145,7 +145,7 @@ namespace Albedo
 		struct PipelineCache
 		{
 			VkPipelineCache handle	   {VK_NULL_HANDLE};
-			const char*		file	   = ALBEDO_SDK_PIPELINE_CACHE_FILE;
+			const char*		file	   = "pipelines.cache";
 			bool			is_expired = false;
 			operator VkPipelineCache() const { return handle; }
 		}pipeline_cache;

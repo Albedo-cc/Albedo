@@ -10,6 +10,7 @@ namespace Albedo
 		QueueFamilyType_Present,
 		QueueFamilyType_Transfer,
 		QueueFamilyType_Compute,
+		MAX_QUEUEFAMILY_TYPE,
 	}QueueFamilyType;
 
 	typedef enum ShaderType_

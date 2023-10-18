@@ -2,12 +2,12 @@
 #include "config.h"
 #include "local.h"
 #include "../runtime/runtime.h"
-#include "../editor/editor.h"
 #include "../sandbox/sandbox.h"
 
 // Sort by Initialization Order
 #include <AlbedoCore/Log/log.h>
 #include <AlbedoGraphics/GRI.h>
+#include <AlbedoEditor/editor.h>
 #include <AlbedoSystem/Window/window_system.h>
 
 namespace Albedo{
@@ -34,6 +34,14 @@ namespace APP
 			.app_window   = WindowSystem::GetWindow(),
 			.msg_callback = messenger_callback,
 		});
+
+		// Init Editor
+		Editor::Initialize(
+		{
+			.font_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\fonts\\calibri.ttf",
+			.font_size = 16.0,
+		});
+
 	}
 
 	void Run()
@@ -41,7 +49,6 @@ namespace APP
 		Log::Info("{} is running.", APP_NAME);
 
 		Runtime::Initialize();	
-		Editor::Initialize();
 
 		while (Runtime::Tick())
 		{
@@ -49,13 +56,13 @@ namespace APP
 		}
 
 		Runtime::Terminate();
-		Editor::Terminate();
 	}
 
 	int Terminate() noexcept
 	{
 		Log::Info("{} is being terminated...", APP_NAME);
 
+		Editor::Terminate();
 		GRI::Terminate();
 		WindowSystem::Terminate();
 

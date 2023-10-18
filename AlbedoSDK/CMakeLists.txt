@@ -16,9 +16,7 @@ include(check_in_source_build)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # [Macros]
-set(ALBEDO_SDK_PIPELINE_CACHE_PATH "$<TARGET_FILE_DIR:${ALBEDO_APP_NAME}>")
-set(ALBEDO_SDK_PIPELINE_CACHE_NAME "pipeline.cache")
-add_compile_definitions(ALBEDO_SDK_PIPELINE_CACHE_FILE="${ALBEDO_SDK_PIPELINE_CACHE_PATH}/${ALBEDO_SDK_PIPELINE_CACHE_NAME}")
+
 
 # [Project]
 file(GLOB_RECURSE ALBEDO_SDK_HEADER "source/*.h")

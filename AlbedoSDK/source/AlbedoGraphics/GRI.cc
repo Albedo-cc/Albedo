@@ -2,6 +2,7 @@
 #include "internal/RHI.h"
 #include <AlbedoCore/Log/log.h>
 #include <AlbedoCore/Math/integer.h>
+#include <AlbedoEditor/editor.h>
 #include <AlbedoUtils/time.h>
 
 #define VMA_IMPLEMENTATION
@@ -24,7 +25,12 @@ namespace Albedo
 			.msg_callback = createinfo.msg_callback
 		});
 
+		sm_preframe_task_pools.resize(MAX_QUEUEFAMILY_TYPE);
+
 		create_render_targets();
+
+		// Init Default Global Resource
+		RegisterGlobalSampler("Default", Sampler::Create({}));
 	}
 
 	void 
@@ -33,10 +39,9 @@ namespace Albedo
 	{
 		Log::Debug("Albedo GRI is being terminated...");
 		vkDeviceWaitIdle(g_rhi->device);
-
+		
 		destroy_render_targets();
-
-		sm_preframe_tasks.clear();
+		sm_preframe_task_pools.clear();
 
 		sm_normal_command_pools.clear();
 		sm_auto_free_command_pools.clear();
@@ -77,6 +82,15 @@ namespace Albedo
 		vmaDestroyAllocator(vma);
 		vma.handle = VK_NULL_HANDLE;
 	}
+
+	void
+	GRI::
+	recreate_swapchain()
+	{
+		g_rhi->recreate_swapchain();
+		create_render_targets();
+		Editor::Recreate();
+	}
 	
 	std::shared_ptr<GRI::CommandPool>
 	GRI::
@@ -99,7 +113,6 @@ namespace Albedo
 					.queue_family = queue,
 					.type = CommandPoolType_Normal,
 				});
-				commandPool->add_gri_tag(GRIObject::Tag::Global);
 			}
 			return commandPool;
 		}
@@ -146,7 +159,6 @@ namespace Albedo
 		if (target == sm_descriptor_set_layouts.end())
 		{
 			Log::Debug("Albedo GRI is registering a new Descriptor Set Layout.");
-			descriptor_set_layout->add_gri_tag(GRIObject::Tag::Global);
 			sm_descriptor_set_layouts.emplace(std::move(id), std::move(descriptor_set_layout));
 		}
 		else Log::Fatal("Failed to register duplicate Vulkan Descriptor Set Layouts!");
@@ -159,7 +171,6 @@ namespace Albedo
 		if (target == sm_samplers.end())
 		{
 			Log::Debug("Albedo GRI is registering a new Sampelr.");
-			sampler->add_gri_tag(GRIObject::Tag::Global);
 			sm_samplers.emplace(std::move(id), std::move(sampler));
 		}
 		else Log::Fatal("Failed to register duplicate Vulkan Sampelr!");
@@ -189,7 +200,6 @@ namespace Albedo
 					{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	100 },
 					{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			100 },
 				}, LIMIT_SETS);
-			target->add_gri_tag(GRIObject::Tag::Global);
 			return target;
 		}
 		else return target;
@@ -205,6 +215,18 @@ namespace Albedo
 			return target->second;
 		}
 		else Log::Fatal("Failed to get {} Descriptor Set Layouts!", id);
+	}
+
+	std::shared_ptr<GRI::Sampler>
+	GRI::
+	GetGlobalSampler(std::string id)
+	{
+		auto target = sm_samplers.find(id.data());
+		if (target != sm_samplers.end())
+		{
+			return target->second;
+		}
+		else Log::Fatal("Failed to get {} Sampler!", id);
 	}
 
 	VkQueue
@@ -225,7 +247,7 @@ namespace Albedo
 		case QueueFamilyType_Compute:
 			assert(g_rhi->device.queue_families.compute.queues.size() > index);
 			return g_rhi->device.queue_families.compute.queues[index];
-		default: assert(false);
+		default: Log::Fatal("Failed to get Queue ({},{})!",queue_family, index);
 		}
 	}
 
@@ -247,7 +269,7 @@ namespace Albedo
 		case QueueFamilyType_Compute:
 			assert(g_rhi->device.queue_families.compute.index.has_value());
 			return g_rhi->device.queue_families.compute.index.value();
-		default: assert(false);
+		default: Log::Fatal("Failed to find Queue Family Type ({})!", queue_family);
 		}
 	}
 
@@ -287,16 +309,21 @@ namespace Albedo
 	}
 
 	void
-	GRI::PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer,
-		std::thread::id thread_id/* = std::this_thread::get_id()*/)
+	GRI::
+	PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->m_handle != VK_NULL_HANDLE);
 		assert(CommandPoolType_Transient == commandbuffer->m_parent->m_settings.type);
-		assert(GRI::GRIObject::Tag::Global & commandbuffer->m_gri_tags); // Create via GRI::GetGlobalCommandPool
-		sm_preframe_tasks[thread_id][commandbuffer->m_parent->m_settings.queue_family]
-			.commandbuffers
+		assert(!commandbuffer->IsRecording());
+		assert(commandbuffer.use_count() == 2);
+
+		sm_preframe_task_pools[commandbuffer->m_parent->m_settings.queue_family]
+			.task_set[*commandbuffer->m_parent]
 			.emplace_back(commandbuffer->m_handle);
+
 		commandbuffer->m_handle = VK_NULL_HANDLE; // Handing over Life Management to GRI
+		commandbuffer.reset();
+
+		sm_signal_slots[SignalSlot_PreframeTask] = Signaled;
 	}
 	
 	GRI::Fence::
@@ -536,7 +563,6 @@ namespace Albedo
 		default:assert(false);
 		}
 
-		commandbuffer->add_gri_tag(GRIObject::Tag::Global);
 		return commandbuffer;
 	}
 
@@ -613,12 +639,12 @@ namespace Albedo
 	{
 		auto& bindinginfo = m_layout->GetBinding(binding);
 
-		VkDescriptorBufferInfo descriptorBufferInfo
+		static VkDescriptorBufferInfo descriptorBufferInfo
 		{
-			.buffer = *buffer,
 			.offset = 0,
 			.range  = VK_WHOLE_SIZE // buffer->GetSize()
 		};
+		descriptorBufferInfo.buffer = *buffer;
 
 		return VkWriteDescriptorSet
 		{
@@ -640,12 +666,10 @@ namespace Albedo
 	{
 		auto& bindinginfo = m_layout->GetBinding(binding);
 
-		VkDescriptorImageInfo descriptorImageInfo
-		{
-			.sampler	= *texture->m_sampler, 
-			.imageView	= texture->m_image->GetView(),
-			.imageLayout= texture->m_image->GetLayout(),
-		};
+		static VkDescriptorImageInfo imageinfo{};
+		imageinfo.sampler	  = *texture->m_sampler;
+		imageinfo.imageView	  = texture->m_image->GetView();
+		imageinfo.imageLayout = texture->m_image->GetLayout();
 
 		return VkWriteDescriptorSet
 		{
@@ -655,7 +679,7 @@ namespace Albedo
 			.dstArrayElement= 0,
 			.descriptorCount= 1,
 			.descriptorType	= bindinginfo.descriptorType,
-			.pImageInfo		= &descriptorImageInfo,
+			.pImageInfo		= &imageinfo,
 			.pBufferInfo	= nullptr,
 			.pTexelBufferView = nullptr,
 		};
@@ -685,6 +709,8 @@ namespace Albedo
 	GRI::DescriptorSet::
 	~DescriptorSet() noexcept
 	{
+		if (VK_NULL_HANDLE == m_handle) return;
+
 		vkFreeDescriptorSets(g_rhi->device, *m_parent, 1, &m_handle);
 		m_handle = VK_NULL_HANDLE;
 	}
@@ -910,9 +936,9 @@ namespace Albedo
 	void
 	GRI::Image::
 	fill_convert_layout_info(
+		VkImageMemoryBarrier& barrier,
 		VkImageLayout source_layout,
 		VkImageLayout target_layout,
-		VkImageMemoryBarrier& barrier,
 		VkPipelineStageFlags& from_stage,
 		VkPipelineStageFlags& to_stage) const
 	{
@@ -948,7 +974,7 @@ namespace Albedo
 			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
-								VK_ACCESS_SHADER_WRITE_BIT;
+										VK_ACCESS_SHADER_WRITE_BIT;
 				from_stage	= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 				break;
@@ -961,8 +987,15 @@ namespace Albedo
 			{
 			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
 				barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT |
-							VK_ACCESS_SHADER_WRITE_BIT;
+										VK_ACCESS_SHADER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				from_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT |
+										VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				from_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 				to_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
 				break;
@@ -976,7 +1009,7 @@ namespace Albedo
 			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
-								VK_ACCESS_SHADER_WRITE_BIT;
+										VK_ACCESS_SHADER_WRITE_BIT;
 				from_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
 				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 				break;
@@ -987,6 +1020,13 @@ namespace Albedo
 		{
 			switch (target_layout)
 			{
+			case VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL:
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
+										VK_ACCESS_SHADER_WRITE_BIT;
+				from_stage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				to_stage	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				break;
 			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -1018,6 +1058,81 @@ namespace Albedo
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.image = m_handle;
 		barrier.subresourceRange = GetSubresourceRange();
+	}
+
+	void
+	GRI::Image::
+	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent)
+	{
+		if (!extent.width || !extent.height || !extent.depth)
+			Log::Fatal("Failed to resize Image with extent ({}, {}, {}).",
+			extent.width, extent.height, extent.depth);
+		
+		m_settings.extent = extent;
+
+		vmaDestroyImage(g_rhi->vma, m_handle, m_allocation);
+		m_handle = VK_NULL_HANDLE;
+		vkDestroyImageView(g_rhi->device, m_view, g_rhi->allocator);
+		m_view	 = VK_NULL_HANDLE;
+
+		VkImageType image_type = m_settings.extent.depth > 1 ? VK_IMAGE_TYPE_3D : VkImageType(VK_IMAGE_TYPE_1D + (m_settings.extent.height > 1));
+		VkImageCreateInfo imageCreateInfo
+		{
+			.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+			.flags			= 0x0,
+			.imageType		= image_type,
+			.format			= m_settings.format,
+			.extent			= m_settings.extent,
+			.mipLevels		= m_settings.mipLevels,
+			.arrayLayers	= m_settings.arrayLayers,
+			.samples		= m_settings.samples,
+			.tiling			= m_settings.tiling, // P206
+			.usage			= m_settings.usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			.sharingMode	= VK_SHARING_MODE_EXCLUSIVE, // The image will only be used by one queue family: the one that supports graphics (and therefore also) transfer operations.
+			.initialLayout	= VK_IMAGE_LAYOUT_UNDEFINED, // P207 Top
+		};
+
+		VmaAllocationCreateInfo allocationInfo
+		{
+			.flags = 0x0,
+			.usage = VMA_MEMORY_USAGE_AUTO,
+			.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		};
+
+		if (vmaCreateImage(
+			g_rhi->vma,
+			&imageCreateInfo,
+			&allocationInfo,
+			&m_handle,
+			&m_allocation,
+			nullptr) != VK_SUCCESS)
+			Log::Fatal("Failed to create the Vulkan Image!");
+
+		VkImageViewCreateInfo imageViewCreateInfo
+		{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image		= m_handle,
+			.viewType	= VkImageViewType(image_type),
+			.format		= m_settings.format,
+			.components = VK_COMPONENT_SWIZZLE_IDENTITY,
+			.subresourceRange
+			{
+				.aspectMask		= m_settings.aspect,
+				.baseMipLevel	= 0,
+				.levelCount		= m_settings.mipLevels,
+				.baseArrayLayer = 0,
+				.layerCount		= m_settings.arrayLayers,
+			}
+		};
+		if (vkCreateImageView(
+			g_rhi->device,
+			&imageViewCreateInfo,
+			g_rhi->allocator,
+			&m_view
+			) != VK_SUCCESS)
+			Log::Fatal("Failed to create the Vulkan Image View!");
+
+		ConvertLayout(commandbuffer, m_layout);
 	}
 
 	void
@@ -1074,14 +1189,19 @@ namespace Albedo
 		VkImageMemoryBarrier barrier_to_transfer{};
 		VkImageMemoryBarrier barrier_to_origin{};
 		VkPipelineStageFlags from_stage{}, to_stage{};
-		fill_convert_layout_info(
-			m_layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			barrier_to_transfer, from_stage, to_stage);
-		vkCmdPipelineBarrier(*commandbuffer, from_stage, to_stage,
-			0x0,		// Dependency Flags
-			0, nullptr,	// Memory Barrier
-			0, nullptr,	// Buffer Memory Barrier
-			1, &barrier_to_transfer);
+
+		if (VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL != m_layout)
+		{
+			fill_convert_layout_info(barrier_to_transfer,
+				m_layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				from_stage, to_stage);
+			vkCmdPipelineBarrier(*commandbuffer, from_stage, to_stage,
+				0x0,		// Dependency Flags
+				0, nullptr,	// Memory Barrier
+				0, nullptr,	// Buffer Memory Barrier
+				1, &barrier_to_transfer);
+		}
+		
 		target->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		// Blit Image
@@ -1092,14 +1212,17 @@ namespace Albedo
 			VK_FILTER_LINEAR);
 
 		// Convert Layouts to Origin
-		fill_convert_layout_info(
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_layout,
-			barrier_to_origin, from_stage, to_stage);
-		vkCmdPipelineBarrier(*commandbuffer, from_stage, to_stage,
-			0x0,		// Dependency Flags
-			0, nullptr,	// Memory Barrier
-			0, nullptr,	// Buffer Memory Barrier
-			1, &barrier_to_origin);
+		if (VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL != m_layout)
+		{
+			fill_convert_layout_info(barrier_to_origin, 
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_layout,
+				from_stage, to_stage);
+			vkCmdPipelineBarrier(*commandbuffer, from_stage, to_stage,
+				0x0,		// Dependency Flags
+				0, nullptr,	// Memory Barrier
+				0, nullptr,	// Buffer Memory Barrier
+				1, &barrier_to_origin);
+		}
 		target->ConvertLayout(commandbuffer, targetOldLayout);
 	}
 
@@ -1108,14 +1231,11 @@ namespace Albedo
 	ConvertLayout(std::shared_ptr<GRI::CommandBuffer> commandbuffer, VkImageLayout target_layout)
 	{
 		assert(commandbuffer->IsRecording());
-		if (target_layout == m_layout)
-		{
-			return Log::Warn("You are converting VkImage to the same layout!");
-		}
+		if (target_layout == m_layout) return;
 
 		VkImageMemoryBarrier barrier{};
 		VkPipelineStageFlags from_stage{}, to_stage{};
-		fill_convert_layout_info(m_layout, target_layout, barrier, from_stage, to_stage);
+		fill_convert_layout_info(barrier, m_layout, target_layout, from_stage, to_stage);
 
 		vkCmdPipelineBarrier(
 			*commandbuffer,
@@ -1218,6 +1338,13 @@ namespace Albedo
 		m_handle = VK_NULL_HANDLE;
 	}
 
+	void
+	GRI::Texture::
+	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent)
+	{
+		m_image->Resize(commandbuffer, extent);
+	}
+
 	GRI::Texture::
 	Texture(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler) :
 		m_image{ std::move(image) },
@@ -1246,48 +1373,7 @@ namespace Albedo
 		m_priority{ priority },
 		m_render_area{ {0,0},{g_rhi->swapchain.extent} }
 	{
-		// Add Attachments
-		assert(ST_Color == add_attachment(AttachmentSetting
-			{
-				.description
-				{
-					.format			= g_rhi->swapchain.format,
-					.samples		= VK_SAMPLE_COUNT_1_BIT,
-					.loadOp			= sm_renderpass_count? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR,
-					.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-					.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					.finalLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				},
-			}));
-
-		assert(ST_ZBuffer == add_attachment(AttachmentSetting
-			{
-				.description
-				{
-					.format			= GRI::GetZBuffer()->GetFormat(),
-					.samples		= VK_SAMPLE_COUNT_1_BIT,
-					.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR,
-					.storeOp		= VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-					.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-					.finalLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-				},
-			}));
-
-		// Add Framebuffers
-		for (size_t i = 0; i < sm_render_targets.size(); ++i)
-		{
-			add_framebuffer(FramebufferSetting
-				{
-					.render_targets = 
-						{sm_render_targets[i].image->GetView(),
-						 RenderTarget::zbuffer->GetView()}
-				});
-		}
-
+		m_framebuffers.resize(sm_render_targets.size());
 		sm_renderpass_count++;
 	}
 
@@ -1312,16 +1398,47 @@ namespace Albedo
 
 	void
 	GRI::RenderPass::
-	BUILD_ALL()
+	BEGIN_BUILD()
 	{
-		BUILD_SELF();
-		BUILD_SUBPASSES();
-		BUILD_FRAMEBUFFERS();
+		// Add System Attachments
+		add_attachment(AttachmentSetting{ // ST_Color
+			.description
+			{
+				.format			= GRI::GetRenderTargetFormat(),
+				.samples		= VK_SAMPLE_COUNT_1_BIT,
+				.loadOp			= VK_ATTACHMENT_LOAD_OP_LOAD,
+				.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.finalLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		}});
+		for (size_t i = 0; i < m_framebuffers.size(); ++i)
+		{
+			m_framebuffers[i].render_targets.emplace_back(sm_render_targets[i].image->GetView());
+		}
+
+		add_attachment(AttachmentSetting{ // ST_ZBuffer
+		.description
+		{
+			.format			= GRI::GetZBuffer()->GetFormat(),
+			.samples		= VK_SAMPLE_COUNT_1_BIT,
+			.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp		= VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.finalLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		}});
+		for (size_t i = 0; i < m_framebuffers.size(); ++i)
+		{
+			m_framebuffers[i].render_targets.emplace_back(RenderTarget::zbuffer->GetView());
+		}
 	}
 
 	void
 	GRI::RenderPass::
-	BUILD_SELF()
+	END_BUILD()
 	{
 		assert(VK_SUBPASS_EXTERNAL == uint32_t(-1));
 		std::vector<VkSubpassDescription> subpass_descriptions(m_subpasses.size());
@@ -1351,11 +1468,11 @@ namespace Albedo
 		{
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			.attachmentCount = static_cast<uint32_t>(m_attachments.descriptions.size()),
-			.pAttachments = m_attachments.descriptions.data(),
-			.subpassCount = static_cast<uint32_t>(subpass_descriptions.size()),
-			.pSubpasses = subpass_descriptions.data(),
+			.pAttachments	 = m_attachments.descriptions.data(),
+			.subpassCount	 = static_cast<uint32_t>(subpass_descriptions.size()),
+			.pSubpasses		 = subpass_descriptions.data(),
 			.dependencyCount = static_cast<uint32_t>(subpass_dependencies.size()),
-			.pDependencies = subpass_dependencies.data()
+			.pDependencies	 = subpass_dependencies.data()
 		};
 
 		if (vkCreateRenderPass(
@@ -1364,16 +1481,11 @@ namespace Albedo
 			g_rhi->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Render Pass!");
-	}
 
-	void
-	GRI::RenderPass::
-	BUILD_SUBPASSES()
-	{
 		for (size_t i = 0; i < m_subpasses.size(); ++i)
 		{
 			auto& pipeline = m_subpasses[i].pipeline;
-			if (pipeline->m_signature) continue;
+			assert (pipeline->m_handle == VK_NULL_HANDLE);
 
 			std::vector<VkPipelineShaderStageCreateInfo> shaders(2);
 			shaders[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1386,16 +1498,6 @@ namespace Albedo
 			shaders[1].module = *pipeline->m_shader_module.fragment_shader;
 			shaders[1].pName  = "main";
 
-			auto vertex_inpute_stage	= pipeline->vertex_input_state();
-			auto input_assembly_stage	= pipeline->input_assembly_state();
-			auto tessellation_stage		= pipeline->tessellation_state();
-			auto viewport_stage			= pipeline->viewport_state();
-			auto rasterization_stage	= pipeline->rasterization_state();
-			auto multisampling_stage	= pipeline->multisampling_state();
-			auto depth_stencil_stage	= pipeline->depth_stencil_state();
-			auto color_blend_stage		= pipeline->color_blend_state();
-			auto dynamic_stage			= pipeline->dynamic_state();
-
 			VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo
 			{
 				.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -1405,15 +1507,15 @@ namespace Albedo
 				.stageCount = static_cast<uint32_t>(shaders.size()),
 				.pStages	= shaders.data(),
 				// Pipeline Stages
-				.pVertexInputState	= &vertex_inpute_stage,
-				.pInputAssemblyState= &input_assembly_stage,
-				.pTessellationState = &tessellation_stage,
-				.pViewportState		= &viewport_stage,
-				.pRasterizationState= &rasterization_stage,
-				.pMultisampleState	= &multisampling_stage,
-				.pDepthStencilState = &depth_stencil_stage,
-				.pColorBlendState	= &color_blend_stage,
-				.pDynamicState		= &dynamic_stage,
+				.pVertexInputState	= &pipeline->vertex_input_state(),
+				.pInputAssemblyState= &pipeline->input_assembly_state(),
+				.pTessellationState = &pipeline->tessellation_state(),
+				.pViewportState		= &pipeline->viewport_state(),
+				.pRasterizationState= &pipeline->rasterization_state(),
+				.pMultisampleState	= &pipeline->multisampling_state(),
+				.pDepthStencilState = &pipeline->depth_stencil_state(),
+				.pColorBlendState	= &pipeline->color_blend_state(),
+				.pDynamicState		= &pipeline->dynamic_state(),
 				// Pipeline Info
 				.layout				= pipeline->m_pipeline_layout,
 				.renderPass			= m_handle,
@@ -1430,13 +1532,8 @@ namespace Albedo
 				g_rhi->allocator,
 				&pipeline->m_handle) != VK_SUCCESS)
 				Log::Fatal("Failed to create the Vulkan Graphics Pipeline!");
-			}
-	}
+		}
 
-	void
-	GRI::RenderPass::
-	BUILD_FRAMEBUFFERS()
-	{
 		for (size_t i = 0; i < m_framebuffers.size(); ++i)
 		{
 			VkFramebufferCreateInfo framebufferCreateInfo
@@ -1480,14 +1577,6 @@ namespace Albedo
 		return index;
 	}
 
-	void
-	GRI::RenderPass::
-	add_framebuffer(FramebufferSetting setting)
-	{
-		auto& framebuffer = m_framebuffers.emplace_back();
-		framebuffer.render_targets = std::move(setting.render_targets);
-	}
-
 	VkAttachmentReference
 	GRI::RenderPass::
 	get_system_target_reference(SystemTarget target)
@@ -1501,7 +1590,7 @@ namespace Albedo
 		return references[target];
 	}
 
-	void
+	GRI::RenderPass::SubpassIterator
 	GRI::RenderPass::
 	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
@@ -1525,12 +1614,7 @@ namespace Albedo
 		// Begin Render Pass
 		vkCmdBeginRenderPass(*commandbuffer, &renderPassBeginInfo, contents);
 
-		// Begin Subpasses
-		for (auto& subpass : m_subpasses)
-		{
-			subpass.pipeline->Begin(commandbuffer);
-			subpass.pipeline->End(commandbuffer);
-		}
+		return { m_subpasses.begin(), m_subpasses.end() };
 	}
 
 	void
@@ -1541,7 +1625,6 @@ namespace Albedo
 		vkCmdEndRenderPass(*commandbuffer);
 	}
 
-	
 	uint32_t
 	GRI::RenderPass::
 	SeachSubpass(std::string_view name) const
@@ -1552,6 +1635,31 @@ namespace Albedo
 			if (m_subpasses[i].name == name) return i;
 		}
 		Log::Error("Failed to find subpass({}) in renderpass({})!", name, m_name);
+	}
+
+	void
+	GRI::Pipeline::
+	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
+	{
+		assert(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
+		vkCmdBindPipeline(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_handle);
+	}
+
+	void
+	GRI::Pipeline::
+	End(std::shared_ptr<CommandBuffer> commandbuffer)
+	{
+		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
+		// You may need to call vkCmdNextSubpass(...);
+	}
+
+	GRI::Pipeline::
+	~Pipeline() noexcept
+	{
+		vkDestroyPipelineLayout(g_rhi->device, m_pipeline_layout, g_rhi->allocator);
+		m_pipeline_layout = VK_NULL_HANDLE;
+		vkDestroyPipeline(g_rhi->device, m_handle, g_rhi->allocator);
+		m_handle = VK_NULL_HANDLE;
 	}
 
 	GRI::GraphicsPipeline::
@@ -1608,44 +1716,24 @@ namespace Albedo
 			Log::Fatal("Failed to create the Vulkan Pipeline Layout!");
 	}
 
-	GRI::
-	GraphicsPipeline::
-	GraphicsPipeline(const char* signature):
-		m_signature{signature}
+	GRI::GraphicsPipeline::
+	GraphicsPipeline()
 	{
-		Log::Debug("{} skipped initializing current Graphics Pipeline.", signature);
+		Log::Debug("Creating a Graphics Pipeline without Shader Module!");
 	}
 
 	GRI::GraphicsPipeline::
 	~GraphicsPipeline() noexcept
 	{
-		vkDestroyPipelineLayout(g_rhi->device, m_pipeline_layout, g_rhi->allocator);
-		m_pipeline_layout = VK_NULL_HANDLE;
 		vkDestroyPipeline(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
-	void
-	GRI::GraphicsPipeline::
-	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
-	{
-		assert(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
-		vkCmdBindPipeline(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_handle);
-	}
-
-	void
-	GRI::GraphicsPipeline::
-	End(std::shared_ptr<CommandBuffer> commandbuffer)
-	{
-		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
-		// You may need to call vkCmdNextSubpass(...);
-	}
-
-	VkPipelineVertexInputStateCreateInfo
+	const VkPipelineVertexInputStateCreateInfo&
 	GRI::GraphicsPipeline::
 	vertex_input_state()
 	{
-		return
+		static VkPipelineVertexInputStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
 			.vertexBindingDescriptionCount	= 0,
@@ -1653,50 +1741,56 @@ namespace Albedo
 			.vertexAttributeDescriptionCount= 0,
 			.pVertexAttributeDescriptions	= nullptr,
 		};
+		return state;
 	}
 
-	VkPipelineTessellationStateCreateInfo
+	const VkPipelineTessellationStateCreateInfo &
 	GRI::GraphicsPipeline::
 	tessellation_state()
 	{
-		return
+		static VkPipelineTessellationStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
 			.patchControlPoints = 0, // Disabled
 		};
+		return state;
 	}
 
-	VkPipelineInputAssemblyStateCreateInfo
+	const VkPipelineInputAssemblyStateCreateInfo&
 	GRI::GraphicsPipeline::
 	input_assembly_state()
 	{
-		return
+		static VkPipelineInputAssemblyStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 			.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 			.primitiveRestartEnable = VK_FALSE,
 		};
+		return state;
 	}
 
-	VkPipelineViewportStateCreateInfo
+	const VkPipelineViewportStateCreateInfo&
 	GRI::GraphicsPipeline::
 	viewport_state()
 	{
-		return
+		static VkPipelineViewportStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 			.viewportCount	= 1,
 			.pViewports		= &m_viewport,
 			.scissorCount	= 1,
-			.pScissors		= &m_scissor
+			.pScissors		= &m_scissor,
 		};
+		state.pViewports = &m_viewport;
+		state.pScissors  = &m_scissor;
+		return state;
 	}
 
-	VkPipelineRasterizationStateCreateInfo
+	const VkPipelineRasterizationStateCreateInfo&
 	GRI::GraphicsPipeline::
 	rasterization_state()
 	{
-		return
+		static VkPipelineRasterizationStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			.depthClampEnable		= VK_FALSE, // Fragments that are beyond the near and far planes are clamped to them as opposed to discarding them
@@ -1710,13 +1804,14 @@ namespace Albedo
 			.depthBiasSlopeFactor	= 0.0f, // This is sometimes used for shadow mapping
 			.lineWidth				= 1.0f // Any line thicker than 1.0f requires you to enable the wideLines GPU feature.			
 		};
+		return state;
 	}
 
-	VkPipelineMultisampleStateCreateInfo
+	const VkPipelineMultisampleStateCreateInfo&
 	GRI::GraphicsPipeline::
 	multisampling_state()
 	{
-		return
+		static VkPipelineMultisampleStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 			.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
@@ -1726,13 +1821,14 @@ namespace Albedo
 			.alphaToCoverageEnable= VK_FALSE,
 			.alphaToOneEnable	  = VK_FALSE,
 		};
+		return state;
 	}
 
-	VkPipelineDepthStencilStateCreateInfo
+	const VkPipelineDepthStencilStateCreateInfo&
 	GRI::GraphicsPipeline::
 	depth_stencil_state()
 	{
-		return
+		static VkPipelineDepthStencilStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			// Depth Test
@@ -1747,13 +1843,14 @@ namespace Albedo
 			.minDepthBounds		= 0.0,
 			.maxDepthBounds		= 1.0,
 		};
+		return state;
 	}
 
-	VkPipelineColorBlendStateCreateInfo
+	const VkPipelineColorBlendStateCreateInfo&
 	GRI::GraphicsPipeline::	
 	color_blend_state()
 	{
-		return
+		static VkPipelineColorBlendStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 			.logicOpEnable		= VK_FALSE, // VK_FALSE: Mix Mode | VK_TRUE: Combine Mode
@@ -1762,17 +1859,20 @@ namespace Albedo
 			.pAttachments		= &m_color_blend,
 			.blendConstants		= {0.0f, 0.0f, 0.0f, 0.0f}
 		};
+		state.pAttachments = &m_color_blend;
+		return state;
 	}
 
-	VkPipelineDynamicStateCreateInfo
+	const VkPipelineDynamicStateCreateInfo&
 	GRI::GraphicsPipeline::
 	dynamic_state()
 	{
-		return
+		static VkPipelineDynamicStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
 			.dynamicStateCount = 0,
 		};
+		return state;
 	}
 
 	/**
@@ -1791,6 +1891,8 @@ namespace Albedo
 		VkFence		signal_fence) 
 	throw (SIGNAL_RECREATE_SWAPCHAIN)
 	{
+		do_preframe_tasks();
+
 		auto& RT = sm_render_targets[GetRenderTargetCursor()];
 		RT.fence_in_flight.Wait();
 
@@ -1806,14 +1908,11 @@ namespace Albedo
 		if (VK_ERROR_OUT_OF_DATE_KHR == result ||
 			VK_SUBOPTIMAL_KHR		 == result)
 		{
-			g_rhi->recreate_swapchain();
-			create_render_targets();
+			recreate_swapchain();
 			throw SIGNAL_RECREATE_SWAPCHAIN{};
 		}
 		if (result != VK_SUCCESS) Log::Fatal("Failed to retrive the next image of the Vulkan Swap Chain!");	
 
-
-		do_preframe_tasks();
 		RT.fence_in_flight.Reset();
 	}
 
@@ -1831,115 +1930,134 @@ namespace Albedo
 	throw (SIGNAL_RECREATE_SWAPCHAIN)
 	{
 		auto& RT = sm_render_targets[GetRenderTargetCursor()];
-		auto& current_swapchain_image = g_rhi->swapchain.images[g_rhi->swapchain.cursor];
+		VkSemaphore present_wait_semaphore;
 
-		VkOffset3D srcBlitOffset{ RT.image->GetExtent().width, RT.image->GetExtent().height, 1 };
-		VkOffset3D dstBlitOffset{ g_rhi->swapchain.extent.width, g_rhi->swapchain.extent.height, 1 };
-		VkImageBlit blitRegion
+		if (Editor::IsEnabled())
 		{
-			.srcSubresource
-			{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.mipLevel	= 0,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-			.srcOffsets = {{0,0,0}, srcBlitOffset},
-			.dstSubresource
-			{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.mipLevel	= 0,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-			.dstOffsets = {{0,0,0}, dstBlitOffset},
-		};
-
-		VkImageMemoryBarrier barrier_present_to_transfer
-		{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, // VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = current_swapchain_image,
-			.subresourceRange
-			{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1
-			}
-		};
-
-		VkImageMemoryBarrier barrier_transfer_to_present
-		{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = current_swapchain_image,
-			.subresourceRange
-			{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1
-			}
-		};
-
-		RT.commandbuffer->Begin();
-		{
-			vkCmdPipelineBarrier(*RT.commandbuffer,
-								VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-								VK_PIPELINE_STAGE_TRANSFER_BIT,
-								0x0,		// Dependency Flags
-								0, nullptr,	// Memory Barrier
-								0, nullptr,	// Buffer Memory Barrier
-								1, &barrier_present_to_transfer);
-
-			auto oldLayout = RT.image->GetLayout();
-			RT.image->ConvertLayout(RT.commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-			vkCmdBlitImage(*RT.commandbuffer,
-							*RT.image, RT.image->GetLayout(),
-							current_swapchain_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							1, &blitRegion,
-							VK_FILTER_LINEAR);
-
-			vkCmdPipelineBarrier(*RT.commandbuffer,
-								VK_PIPELINE_STAGE_TRANSFER_BIT,
-								VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-								0x0,		// Dependency Flags
-								0, nullptr,	// Memory Barrier
-								0, nullptr,	// Buffer Memory Barrier
-								1, &barrier_transfer_to_present);
-
-			RT.image->ConvertLayout(RT.commandbuffer, oldLayout);
+			auto& editorinfo = Editor::Render();
+			editorinfo.commandbuffer->Submit(
+				{ 
+					.wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.signal_fence = RT.fence_in_flight,
+					.wait_semaphores = wait_semaphores,
+					.signal_semaphores = {editorinfo.semaphore_editor}, }
+			);
+			present_wait_semaphore = editorinfo.semaphore_editor;
 		}
-		RT.commandbuffer->End();
+		else
+		{
+			auto& current_swapchain_image = g_rhi->swapchain.images[g_rhi->swapchain.cursor];
 
-		RT.commandbuffer->Submit
-		({
-			.wait_stages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			.signal_fence	   = RT.fence_in_flight,
-			.wait_semaphores   = wait_semaphores,
-			.signal_semaphores = {RT.semaphore_ready},
-		});
+			VkOffset3D srcBlitOffset{ RT.image->GetExtent().width, RT.image->GetExtent().height, 1 };
+			VkOffset3D dstBlitOffset{ g_rhi->swapchain.extent.width, g_rhi->swapchain.extent.height, 1 };
+			VkImageBlit blitRegion
+			{
+				.srcSubresource
+				{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.mipLevel	= 0,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+				.srcOffsets = {{0,0,0}, srcBlitOffset},
+				.dstSubresource
+				{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.mipLevel	= 0,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+				.dstOffsets = {{0,0,0}, dstBlitOffset},
+			};
 
-		VkSemaphore present_semaphores = RT.semaphore_ready;
+			VkImageMemoryBarrier barrier_present_to_transfer
+			{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+				.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, // VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = current_swapchain_image,
+				.subresourceRange
+				{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1
+				}
+			};
+
+			VkImageMemoryBarrier barrier_transfer_to_present
+			{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = current_swapchain_image,
+				.subresourceRange
+				{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1
+				}
+			};
+
+			RT.commandbuffer->Begin();
+			{
+				vkCmdPipelineBarrier(*RT.commandbuffer,
+									VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+									VK_PIPELINE_STAGE_TRANSFER_BIT,
+									0x0,		// Dependency Flags
+									0, nullptr,	// Memory Barrier
+									0, nullptr,	// Buffer Memory Barrier
+									1, &barrier_present_to_transfer);
+
+				auto oldLayout = RT.image->GetLayout();
+				RT.image->ConvertLayout(RT.commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+				vkCmdBlitImage(*RT.commandbuffer,
+								*RT.image, RT.image->GetLayout(),
+								current_swapchain_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+								1, &blitRegion,
+								VK_FILTER_LINEAR);
+
+				vkCmdPipelineBarrier(*RT.commandbuffer,
+									VK_PIPELINE_STAGE_TRANSFER_BIT,
+									VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+									0x0,		// Dependency Flags
+									0, nullptr,	// Memory Barrier
+									0, nullptr,	// Buffer Memory Barrier
+									1, &barrier_transfer_to_present);
+
+				RT.image->ConvertLayout(RT.commandbuffer, oldLayout);
+			}
+			RT.commandbuffer->End();
+
+			RT.commandbuffer->Submit
+			({
+				.wait_stages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				.signal_fence	   = RT.fence_in_flight,
+				.wait_semaphores   = wait_semaphores,
+				.signal_semaphores = {RT.semaphore_ready},
+			});
+			
+			present_wait_semaphore = RT.semaphore_ready;
+		}
+		
+		// Submit Present
 		VkPresentInfoKHR presentInfo
 		{
 			.sType				= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			.waitSemaphoreCount = 1,
-			.pWaitSemaphores	= &present_semaphores,
+			.pWaitSemaphores	= &present_wait_semaphore,
 			.swapchainCount		= 1,
 			.pSwapchains		= &g_rhi->swapchain.handle,
 			.pImageIndices		= &g_rhi->swapchain.cursor,
@@ -1951,8 +2069,7 @@ namespace Albedo
 		if (VK_ERROR_OUT_OF_DATE_KHR == result ||
 			VK_SUBOPTIMAL_KHR		 == result)
 		{
-			g_rhi->recreate_swapchain();
-			create_render_targets();
+			recreate_swapchain();
 			throw SIGNAL_RECREATE_SWAPCHAIN{};
 		}
 
@@ -1979,19 +2096,24 @@ namespace Albedo
 	GRI::
 	ClearScreen(std::shared_ptr<CommandBuffer> commandbuffer, const VkClearColorValue& clear_color)
 	{
-		auto& screen = GetCurrentRenderTarget();
+		//[WARN] It is invalid to issue this call inside an active VkRenderPass!
+		auto& screen = sm_render_targets[GetRenderTargetCursor()].image;
+		screen->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		auto subsrcrange = screen->GetSubresourceRange();
 		vkCmdClearColorImage(*commandbuffer,
 			*screen,
 			screen->GetLayout(),
 			&clear_color,
 			1, &subsrcrange);
+		screen->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
 	}
 
 	void
 	GRI::
-	ScreenShot(std::shared_ptr<Image> output)
+	Screenshot(std::shared_ptr<Image> output)
 	{
+		assert(VK_IMAGE_USAGE_TRANSFER_DST_BIT & output->m_settings.usage);
+
 		auto commandbuffer = 
 			GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
@@ -2018,56 +2140,70 @@ namespace Albedo
 
 	void
 	GRI::
-	ScreenShot(std::shared_ptr<Texture> output)
+	Screenshot(std::shared_ptr<Texture> output)
 	{
-		ScreenShot(output->m_image);
+		Screenshot(output->m_image);
 	}
 
 	void
 	GRI::
 	do_preframe_tasks()
 	{
+		if (Unsingaled == sm_signal_slots[SignalSlot_PreframeTask]) return;
+		std::array<bool, MAX_QUEUEFAMILY_TYPE> submitted{};
+
 		// Submit Tasks
-		for (auto& [thread, taskinfo] : sm_preframe_tasks)
-		{
-			for (auto& [queue_family, tasks] : taskinfo)
+		static auto load_and_submit_tasks = 
+			[&submitted](QueueFamilyType queue_family)->void
 			{
-				if (tasks.commandbuffers.empty()) continue;
+				auto& taskpool = sm_preframe_task_pools[queue_family];
+				if (taskpool.task_set.empty()) return;
 
-				VkSubmitInfo submitinfo
+				std::vector<VkSubmitInfo> submitinfos;
+				for (auto& [_, tasks] : taskpool.task_set)
 				{
-					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					.waitSemaphoreCount = 0,
-					.pWaitSemaphores	= nullptr,
-					.pWaitDstStageMask  = nullptr,
-					.commandBufferCount = static_cast<uint32_t>(tasks.commandbuffers.size()),
-					.pCommandBuffers	= tasks.commandbuffers.data(),
-					.signalSemaphoreCount = 0,
-					.pSignalSemaphores	= nullptr,
-				};
-				vkQueueSubmit(GetQueue(queue_family), 1, &submitinfo, tasks.fence);
-			}
-		}
-
-		// Wait Tasks
-		for (auto& [thread, taskinfo] : sm_preframe_tasks)
-		{
-			for (auto& [queue_family, tasks] : taskinfo)
-			{
-				if (tasks.commandbuffers.empty()) continue;
-
-				tasks.fence.Wait();
-				{
-					vkFreeCommandBuffers(
-						g_rhi->device,
-						*GetGlobalCommandPool(CommandPoolType_Transient,queue_family, thread),
-						static_cast<uint32_t>(tasks.commandbuffers.size()),
-						tasks.commandbuffers.data());
-					tasks.commandbuffers.clear();
+					submitinfos.emplace_back(VkSubmitInfo
+					{
+						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+						.waitSemaphoreCount = 0,
+						.pWaitSemaphores	= nullptr,
+						.pWaitDstStageMask  = nullptr,
+						.commandBufferCount = static_cast<uint32_t>(tasks.size()),
+						.pCommandBuffers	= tasks.data(),
+						.signalSemaphoreCount = 0,
+						.pSignalSemaphores	= nullptr,
+					});
 				}
-				tasks.fence.Reset();
-			}
-		}	
+				vkQueueSubmit(GetQueue(queue_family), submitinfos.size(), submitinfos.data(), taskpool.fence);
+
+				submitted[queue_family] = true;
+			};
+
+		load_and_submit_tasks(QueueFamilyType_Graphics);
+		load_and_submit_tasks(QueueFamilyType_Present);
+		load_and_submit_tasks(QueueFamilyType_Transfer);
+		load_and_submit_tasks(QueueFamilyType_Compute);
+		
+		// Wait Tasks
+		static auto wait_and_free_tasks =
+			[&submitted](QueueFamilyType queue_family)->void
+			{
+				if (!submitted[queue_family]) return;
+
+				auto& taskpool = sm_preframe_task_pools[queue_family];
+				taskpool.fence.Wait(); taskpool.fence.Reset();
+				for (auto& [pool, buffers] : taskpool.task_set)
+				{
+					vkFreeCommandBuffers(g_rhi->device, pool, buffers.size(), buffers.data());
+				}
+			};
+
+		wait_and_free_tasks(QueueFamilyType_Graphics);
+		wait_and_free_tasks(QueueFamilyType_Present);
+		wait_and_free_tasks(QueueFamilyType_Transfer);
+		wait_and_free_tasks(QueueFamilyType_Compute);
+
+		sm_signal_slots[SignalSlot_PreframeTask] = Unsingaled;
 	}
 
 	void
@@ -2078,6 +2214,26 @@ namespace Albedo
 
 		auto commandbuffer = GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
 							 ->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+
+		// Convert Swapchain Image Layout
+		VkImageMemoryBarrier barrier
+		{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcAccessMask = 0x0,
+			.dstAccessMask = 0x0,
+			.oldLayout	   = VK_IMAGE_LAYOUT_UNDEFINED,
+			.newLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.subresourceRange
+			{
+				.aspectMask		= VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel	= 0,
+				.levelCount		= 1,
+				.baseArrayLayer = 0,
+				.layerCount		= 1,
+			}
+		};
 
 		commandbuffer->Begin();
 		{
@@ -2100,6 +2256,17 @@ namespace Albedo
 				RT.image->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
 				RT.commandbuffer = GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
 								   ->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+
+				// Convert Swapchain Image Layout
+				barrier.image = g_rhi->swapchain.images[i];
+				vkCmdPipelineBarrier(
+					*commandbuffer,
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+					VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+					0x0,		// Dependency Flags
+					0, nullptr,	// Memory Barrier
+					0, nullptr,	// Buffer Memory Barrier
+					1, &barrier);
 			}
 			// Create ZBuffer(Shared)
 			RenderTarget::zbuffer = Image::Create(Image::CreateInfo
@@ -2116,7 +2283,9 @@ namespace Albedo
 			RenderTarget::zbuffer->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		}
 		commandbuffer->End();
-		PushPreframeTask(commandbuffer);
+		Fence fence{ FenceType_Unsignaled };
+		commandbuffer->Submit({ .signal_fence = fence });
+		fence.Wait();
 	}
 
 	void

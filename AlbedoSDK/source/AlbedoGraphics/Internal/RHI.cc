@@ -588,6 +588,9 @@ namespace Albedo
 				&swapchain.image_views[idx]) != VK_SUCCESS)
 				throw std::runtime_error("Failed to create all image views");
 		}
+
+		// Reset Cursor
+		swapchain.cursor = 0;
 	}
 
 	void RHI::destroy_swapchain()

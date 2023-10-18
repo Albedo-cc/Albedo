@@ -16,15 +16,13 @@ namespace APP
         static auto SearchRenderPass(std::string_view name) throw(std::runtime_error) -> const GRI::RenderPass*;
 
     private:
-        enum RenderPasses { Geometry, Surface };
+        enum RenderPasses { Geometry };
         static inline std::vector<GRI::RenderPass*> sm_renderpasses;
         struct Frame
         {
             std::shared_ptr<GRI::CommandBuffer> commandbuffer_geometry;
-            std::shared_ptr<GRI::CommandBuffer> commandbuffer_surface;
             GRI::Semaphore  semaphore_image_available = GRI::Semaphore(SemaphoreType_Unsignaled);
             GRI::Semaphore  semaphore_geometry_pass   = GRI::Semaphore(SemaphoreType_Unsignaled);
-            GRI::Semaphore  semaphore_surface_pass    = GRI::Semaphore(SemaphoreType_Unsignaled);
         };
         static inline std::vector<Frame> sm_frames;
 

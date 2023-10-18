@@ -4,7 +4,6 @@
 #include <AlbedoGraphics/GRI.h>
 #include <AlbedoSystem/Control/control_system.h>
 #include <AlbedoSystem/Window/window_system.h>
-#include <AlbedoSystem/UI/UI_system.h>
 #include <AlbedoUtils/time.h>
 
 #include "render/renderer.h"
@@ -47,18 +46,6 @@ namespace APP
 	{
 		Renderer::Initialize();
 
-		auto ui_renderpass = Renderer::SearchRenderPass("Surface");
-		auto ui_subpass    = ui_renderpass->SeachSubpass("Surface::Present");
-
-		UISystem::Initialize(UISystem::CreateInfo
-		{
-			.renderpass = *ui_renderpass,
-			.subpass	= ui_subpass,
-			.descriptor_pool = *GRI::GetGlobalDescriptorPool(),
-			.font_path	= "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\fonts\\calibri.ttf",
-			.font_size	= 16.0f,
-		});
-
 		runtime_timer.Reset();
 		m_is_running = true;
 	}
@@ -70,7 +57,6 @@ namespace APP
 		Log::Info("Runtime Duration: {} s", runtime_timer.Split().seconds());
 
 		Renderer::Destroy();
-		UISystem::Terminate();
 	}
 
 }} // namespace Albedo::APP
