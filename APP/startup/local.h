@@ -1,7 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include <AlbedoCore/Log/log.h>
+
+#include <Albedo.Core.Log>
 
 namespace
 {

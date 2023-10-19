@@ -1,6 +1,6 @@
 #pragma once
 
-#include <AlbedoGraphics/GRI.h>
+#include <Albedo.Graphics>
 
 namespace Albedo{
 namespace APP

@@ -1,0 +1,3 @@
+#pragma once
+
+#include "../source/AlbedoCore/Log/log.h"

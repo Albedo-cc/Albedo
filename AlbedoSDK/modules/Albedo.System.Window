@@ -1,0 +1,3 @@
+#pragma once
+
+#include "../source/AlbedoSystem/Window/window_system.h"

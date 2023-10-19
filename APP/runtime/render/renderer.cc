@@ -1,6 +1,6 @@
 #include "renderer.h"
 
-#include <AlbedoCore/Log/log.h>
+#include <Albedo.Core.Log>
 #include "forward/geometry/renderpass.h"
 #include "surface/renderpass.h"
 

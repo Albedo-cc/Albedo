@@ -5,10 +5,10 @@
 #include "../sandbox/sandbox.h"
 
 // Sort by Initialization Order
-#include <AlbedoCore/Log/log.h>
-#include <AlbedoGraphics/GRI.h>
-#include <AlbedoEditor/editor.h>
-#include <AlbedoSystem/Window/window_system.h>
+#include <Albedo.Core.Log>
+#include <Albedo.Graphics>
+#include <Albedo.Editor>
+#include <Albedo.System.Window>
 
 namespace Albedo{
 namespace APP
@@ -17,7 +17,7 @@ namespace APP
 	void StartUp(int argc, char* argv[])
 	{
 		Log::Info("{} is being started.", APP_NAME);
-
+		
 		// Init Window
 		WindowSystem::Initialize(WindowSystem::CreateInfo
 		{

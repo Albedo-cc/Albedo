@@ -1,10 +1,10 @@
 #include "runtime.h"
 
-#include <AlbedoCore/Log/log.h>
-#include <AlbedoGraphics/GRI.h>
-#include <AlbedoSystem/Control/control_system.h>
-#include <AlbedoSystem/Window/window_system.h>
-#include <AlbedoUtils/time.h>
+#include <Albedo.Core.Log>
+#include <Albedo.Core.Time>
+#include <Albedo.Graphics>
+#include <Albedo.System.Control>
+#include <Albedo.System.Window>
 
 #include "render/renderer.h"
 

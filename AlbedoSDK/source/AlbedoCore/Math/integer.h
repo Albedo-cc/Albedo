@@ -1,15 +1,8 @@
 #pragma once
-#include <concepts>
+#include "concepts.h"
 
 namespace Albedo
 {
-	// Concepts
-	template<typename USInt>
-	concept UnsignedInteger = std::unsigned_integral<USInt>;
-
-	template<typename SInt>
-	concept SignedInteger = std::integral<SInt>;
-
 	// Functions
 	template<UnsignedInteger USInt>
 	bool inline IsPowerOfTwo(USInt number)

@@ -2,8 +2,8 @@
 #include "internal/RHI.h"
 #include <AlbedoCore/Log/log.h>
 #include <AlbedoCore/Math/integer.h>
+#include <AlbedoCore/Time/stopwatch.h>
 #include <AlbedoEditor/editor.h>
-#include <AlbedoUtils/time.h>
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>

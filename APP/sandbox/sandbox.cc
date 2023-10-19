@@ -1,7 +1,7 @@
 #include "sandbox.h"
 
-#include <AlbedoCore/Log/log.h>
-#include <AlbedoEditor/editor.h>
+#include <Albedo.Core.Log>
+#include <Albedo.Editor>
 
 namespace Albedo{
 namespace APP

@@ -1,6 +1,6 @@
 #include "opaque.h"
 #include <fstream>
-#include <AlbedoCore/Log/log.h>
+#include <Albedo.Core.Log>
 
 namespace Albedo{
 namespace APP
