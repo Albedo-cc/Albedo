@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/math/vector.h>
+#include <AlbedoCore/Math/vector.h>
 
 namespace Albedo
 {
@@ -30,14 +30,15 @@ namespace Albedo
 	/* [GetContext Coordinate]
 	 * Example:
 	 * 1. World::Center
-	 * 2. World::Axis.X / World::Axis.Right
+	 * 2. World::Axis.X / World::Axis.Right / World::Axis.Pitch
 	 */
 	public:
-		static inline const Vector3 Center{0, 0, 0};
+		static inline const Vector3D Center{0, 0, 0};
 		static inline const union
 		{
-			struct { const Vector3 X, Y, Z; };
-			struct { const Vector3 Right, Up, Front; };
+			struct { const Vector3D X, Y, Z; };
+			struct { const Vector3D Right, Up, Front; };
+			struct { const Vector3D Pitch, Yaw, Roll; };
 		}Axis{ {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} };
 
 	private:

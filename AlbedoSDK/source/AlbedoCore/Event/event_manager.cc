@@ -42,7 +42,7 @@ namespace Albedo
 				  ++event_iter)
 		{
 			auto event = *event_iter;
-			if (!event)
+			if (event)
 			{
 				if (event->Trig())
 				{

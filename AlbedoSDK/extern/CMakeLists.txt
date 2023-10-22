@@ -28,6 +28,16 @@ if(NOT TARGET VulkanMemoryAllocator)
     set_target_properties(VulkanMemoryAllocator PROPERTIES FOLDER "${PROJECT_NAME}/Extern/VMA")
 endif()
 
+# KTX
+if(NOT TARGET ktx)
+    message(STATUS "\nLoading KTX (Khronos Texture)")
+    
+    add_subdirectory(KTX-Software-4.2.1)
+
+    target_link_libraries(ALBEDO_SDK_EXTERNS INTERFACE ktx)
+    set_target_properties(ktx PROPERTIES FOLDER "${PROJECT_NAME}/Extern/KTX")
+endif()
+
 # Dear ImGui
 if (NOT TARGET imgui)
     message(STATUS "\nLoading Dear ImGui Docking(imgui)")

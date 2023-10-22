@@ -9,7 +9,7 @@ namespace APP
 	GeometryPass::
 	GeometryPass() : GRI::RenderPass{"Geometry", 3000}
 	{
-		BEGIN_BUILD();
+		BEGIN_BUILD(ZWrite);
 		{
 			// Add Attachments (From SystemTarget::MAX_SYSTEM_TARGET)
 		

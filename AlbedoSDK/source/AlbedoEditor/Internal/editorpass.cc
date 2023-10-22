@@ -13,7 +13,6 @@ namespace Albedo
 	EditorPass::
 	EditorPass() : GRI::RenderPass{ "Editor", 0 }
 	{
-		// Customized Build
 		auto color_index = add_attachment(AttachmentSetting
 			{
 				.description
@@ -26,7 +25,8 @@ namespace Albedo
 					.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 					.initialLayout	= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 					.finalLayout	= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				}
+				},
+				.clearColor{{0.01,0.01,0.01, 1.0}}, // Dark Gray
 			});
 
 		uint32_t subpassidx = 0;

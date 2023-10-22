@@ -43,20 +43,23 @@ namespace Albedo
 	/*Memory*/			class Shader; class Buffer; class Image;
 	/*Interface Class*/	class RenderPass; class Pipeline; class GraphicsPipeline;
 	/*Descriptor*/		class DescriptorSetLayout; class DescriptorPool; class DescriptorSet;
-						class Sampler; class Texture;
+	/*Texture*/			class Texture; class Texture2D; class Cubemap;
+	/*Others*/			class Sampler;
 	//[TIPS]-----------------------------------------------------------------------------------------------------------------------
 	// 1. For better Interface Compatibility, you should create GRI objects via [Class]::Create(...).
 	//    Importantly, DO NOT create GRI objects without [Class]::Create(...) by yourself!
 	//-----------------------------------------------------------------------------------------------------------------------------
 	
-	public: // User-level Interfaces
+	public: // User-level Interfaces (e.g. Manage Global GPU Resource)
 		static void RegisterGlobalDescriptorSetLayout(std::string id, std::shared_ptr<DescriptorSetLayout> descriptor_set_layout);
 		static void RegisterGlobalSampler(std::string id, std::shared_ptr<Sampler> sampler);
+		static void RegisterGlobalTexture(std::string id, std::shared_ptr<Texture> texture);
 
-		static auto GetGlobalDescriptorSetLayout(std::string_view id) -> std::shared_ptr<GRI::DescriptorSetLayout>;
+		static auto GetGlobalDescriptorSetLayout(const std::string& id) -> std::shared_ptr<GRI::DescriptorSetLayout>;
 		static auto GetGlobalDescriptorPool(std::thread::id thread_id = std::this_thread::get_id()) -> std::shared_ptr<GRI::DescriptorPool>;
 		static auto GetGlobalCommandPool(CommandPoolType type, QueueFamilyType queue, std::thread::id thread_id = std::this_thread::get_id()) -> std::shared_ptr<GRI::CommandPool>;
-		static auto GetGlobalSampler(std::string id) -> std::shared_ptr<Sampler>;
+		static auto GetGlobalSampler(const std::string& id) -> std::shared_ptr<Sampler>;
+		static auto GetGlobalTexture(const std::string& id) -> std::shared_ptr<Texture>;
 
 		static auto GetQueue(QueueFamilyType queue_family, uint32_t index = 0) -> VkQueue;
 		static auto GetQueueFamilyIndex(QueueFamilyType queue_family) -> uint32_t;
@@ -131,7 +134,6 @@ namespace Albedo
 			struct SubmitInfo
 			{
 				VkPipelineStageFlags			  wait_stages{ 0 };
-				VkFence							  signal_fence{ VK_NULL_HANDLE };
 				std::vector<VkSemaphore>		  wait_semaphores;
 				std::vector<VkSemaphore>		  signal_semaphores;
 			};
@@ -139,9 +141,10 @@ namespace Albedo
 		public:
 			virtual void Begin();
 			virtual void End();
-			virtual void Submit(const SubmitInfo& submitinfo);
+			virtual void Submit(const SubmitInfo& submitinfo, VkFence signal_fence = VK_NULL_HANDLE);
 			auto IsRecording() const -> bool { return m_is_recording; }
 			auto GetSettings() const -> const CreateInfo& { return m_settings; }
+			auto GetSubpassContents() const -> VkSubpassContents {return m_settings.level == VK_COMMAND_BUFFER_LEVEL_PRIMARY ? VK_SUBPASS_CONTENTS_INLINE : VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS;}
 			operator VkCommandBuffer() const { return m_handle; }
 	
 		public:
@@ -196,6 +199,7 @@ namespace Albedo
 			};
 
 		public:
+			void SubmitCommandBuffers(const std::vector<VkSubmitInfo>& submitinfos, VkFence signal_fence = VK_NULL_HANDLE);
 			auto AllocateCommandBuffer(const CommandBuffer::CreateInfo& createinfo = {}) -> std::shared_ptr<CommandBuffer>;
 			auto GetSettings() const -> const CreateInfo& { return m_settings; }
 			operator VkCommandPool() const { return m_handle; }
@@ -347,6 +351,7 @@ namespace Albedo
 				VkImageUsageFlags	usage;
 				VkFormat			format;
 				VkExtent3D			extent;
+				VkImageViewType		viewType	= VK_IMAGE_VIEW_TYPE_MAX_ENUM;//Auto
 				uint32_t			mipLevels	= 1;
 				uint32_t            arrayLayers = 1;
 				VkSampleCountFlagBits   samples   = VK_SAMPLE_COUNT_1_BIT;
@@ -359,6 +364,7 @@ namespace Albedo
 			void Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent);
 			void ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout);
 
+			auto GetSettings()			const -> const CreateInfo& { return m_settings; }
 			auto GetLayout()			const -> VkImageLayout{ return m_layout; }
 			auto GetView()				const -> VkImageView { return m_view; }
 			auto GetFormat()			const -> VkFormat { return m_settings.format; }
@@ -392,7 +398,7 @@ namespace Albedo
 			VmaAllocation	m_allocation	{ VK_NULL_HANDLE };
 		};
 
-		class Sampler
+		class Sampler final
 		{
 			friend class GRI;
 		public:
@@ -435,12 +441,15 @@ namespace Albedo
 		class Texture
 		{
 			friend class GRI;
-			friend class DescriptorSet;
 		public:
+			void Write(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data);
+			void Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Image>  target) const;
+			void Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Texture>  target) const;
 			void Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent);
+			void ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout);
 
-			auto GetImage()	  -> std::shared_ptr<Image>   { return m_image; }
-			auto GetSampler() -> std::shared_ptr<Sampler> { return m_sampler; }
+			auto GetImage()	  const -> const std::shared_ptr<Image>&   { return m_image; }
+			auto GetSampler() const -> const std::shared_ptr<Sampler>& { return m_sampler; }
 			operator VkImage() const { return *m_image; }
 
 		public:
@@ -448,11 +457,45 @@ namespace Albedo
 			{ return std::make_shared<Texture>(image, sampler); }
 			Texture(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler);
 			Texture() = delete;
-			~Texture() noexcept;
+			virtual ~Texture() noexcept;
 
-		private:
+		protected:
 			std::shared_ptr<Image>   m_image;
 			std::shared_ptr<Sampler> m_sampler;
+		};
+
+		class Texture2D
+			:public Texture
+		{
+			friend class GRI;
+		public:
+			void Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent2D& extent);
+
+		public:
+			static inline auto Create(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr)
+			{ return std::make_shared<Texture2D>(image, sampler); }
+			Texture2D(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr);
+			Texture2D() = delete;
+			virtual ~Texture2D() noexcept override;
+		};
+
+		
+		class Cubemap
+			:public Texture
+		{
+			friend class GRI;
+		public:
+			// Vulkan Cubemap uses left-hand coordinate system with +Y is up. (as same as Albedo Coordinate System)
+			enum Face
+			{PositiveX, NegtiveX, PositiveY, NegtiveY, PositiveZ, NegtiveZ, MAX_FACE_NUM};
+		public:
+			//void WriteFace(std::shared_ptr<CommandBuffer> commandbuffer, Face face, std::shared_ptr<Buffer> data);
+
+		public:
+			static inline auto Create(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr)
+			{ return std::make_shared<GRI::Cubemap>(image, sampler); }
+			Cubemap(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr);
+			virtual ~Cubemap() noexcept override;
 		};
 
 		class RenderPass
@@ -465,14 +508,17 @@ namespace Albedo
 				friend class RenderPass;
 			public:
 				auto GetName() const  -> std::string_view { return iter_begin->name; }
-				void Begin(std::shared_ptr<CommandBuffer> commandbuffer) const { iter_begin->pipeline->Begin(commandbuffer); }
-				void End(std::shared_ptr<CommandBuffer> commandbuffer) const { iter_begin->pipeline->End(commandbuffer); }
-				bool Next() { return ++iter_begin != iter_end; }
+				void Begin() const { iter_begin->pipeline->Begin(commandbuffer); }
+				void End() const { iter_begin->pipeline->End(commandbuffer); }
+				bool Next() { if (++iter_begin != iter_end){ vkCmdNextSubpass(*commandbuffer, commandbuffer->GetSubpassContents()); return true;} return false; }
 
 			private:
-				SubpassIterator(std::vector<SubpassSetting>::iterator subpass_begin,
+				SubpassIterator(std::shared_ptr<CommandBuffer> commandbuffer,
+								std::vector<SubpassSetting>::iterator subpass_begin,
 								std::vector<SubpassSetting>::iterator subpass_end) :
+								commandbuffer{ std::move(commandbuffer) },
 								iter_begin{ subpass_begin }, iter_end{subpass_end} {}
+				std::shared_ptr<CommandBuffer> commandbuffer;
 				std::vector<SubpassSetting>::iterator iter_begin;
 				std::vector<SubpassSetting>::iterator iter_end;
 			};
@@ -520,7 +566,8 @@ namespace Albedo
 			};
 
 		protected:
-			void BEGIN_BUILD();
+			enum : uint32_t { ClearSTColor = 1 << 0, ZWrite = 1 << 1 };
+			void BEGIN_BUILD(uint32_t flags = 0);
 			auto add_attachment(AttachmentSetting setting) -> uint32_t;
 			auto add_subpass(SubpassSetting setting)	   -> uint32_t;
 			void END_BUILD();
@@ -619,8 +666,9 @@ namespace Albedo
 		static inline std::unordered_map<std::string, std::shared_ptr<DescriptorSetLayout>>sm_descriptor_set_layouts;
 		static inline std::unordered_map<std::thread::id, std::shared_ptr<DescriptorPool>> sm_descriptor_pools;
 
-		// Global Samplers
-		static inline std::unordered_map<std::string, std::shared_ptr<Sampler>> sm_samplers;
+		// Global Resource
+		static inline std::unordered_map<std::string, std::shared_ptr<Sampler>> sm_global_samplers;
+		static inline std::unordered_map<std::string, std::shared_ptr<Texture>> sm_global_textures;
 
 	private:
 		// GRI Signal Slots

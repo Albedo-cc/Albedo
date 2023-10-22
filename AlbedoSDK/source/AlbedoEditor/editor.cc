@@ -57,7 +57,9 @@ namespace Albedo
 
 		GRI::Fence fence{ FenceType_Unsignaled };
 		auto commandbuffer =
-			GRI::GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
+			GRI::GetGlobalCommandPool(
+				CommandPoolType_Transient,
+				QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
 		std::vector<VkWriteDescriptorSet> destwriteinfo;
@@ -80,7 +82,7 @@ namespace Albedo
 					}
 				}));
 
-				frame_info.main_camera = GRI::Texture::Create(
+				frame_info.main_camera = GRI::Texture2D::Create(
 				GRI::Image::Create(GRI::Image::CreateInfo
 					{
 					.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -93,11 +95,9 @@ namespace Albedo
 					.arrayLayers = 1,
 					.samples = VK_SAMPLE_COUNT_1_BIT,
 					.tiling  = VK_IMAGE_TILING_OPTIMAL,
-					}
-				), GRI::GetGlobalSampler("Default"));
+					}));
 
-				frame_info.main_camera->GetImage()
-					->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				frame_info.main_camera->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				// Update Descriptor Sets
 				destwriteinfo.emplace_back(
@@ -105,12 +105,14 @@ namespace Albedo
 					->WriteTexture(0, frame_info.main_camera));
 
 				frame_info.commandbuffer =
-					GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
+					GRI::GetGlobalCommandPool(
+						CommandPoolType_Resettable,
+						QueueFamilyType_Graphics)
 					->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 			}
 		}
 		commandbuffer->End();
-		commandbuffer->Submit({.signal_fence = fence });
+		commandbuffer->Submit({}, fence);
 		fence.Wait();
 
 		GRI::UpdateDescriptorSets(destwriteinfo);
@@ -156,11 +158,12 @@ namespace Albedo
 			auto subpass_iter = sm_renderpass->Begin(frame.commandbuffer);
 			{
 				assert(subpass_iter.GetName() == "Editor::ImGui");
-				subpass_iter.Begin(frame.commandbuffer);
+				subpass_iter.Begin();
 				{
-					sm_ui_event_manager.TrigAll();
+					sm_ui_event_manager.Process();
 				}
-				subpass_iter.End(frame.commandbuffer);
+				subpass_iter.End();
+				assert(!subpass_iter.Next());
 			}
 			sm_renderpass->End(frame.commandbuffer);
 		}
@@ -176,7 +179,9 @@ namespace Albedo
 		for (auto& frame_info : sm_frame_infos)
 		{
 			frame_info.commandbuffer =
-				GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
+				GRI::GetGlobalCommandPool(
+					CommandPoolType_Resettable,
+					QueueFamilyType_Graphics)
 				->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 		}
 	}

@@ -5,10 +5,10 @@
 namespace Albedo{
 namespace APP
 {
-	const char* vert_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\opaque.vert.spv";
-	const char* frag_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\opaque.frag.spv";
+	static const char* vert_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\opaque.vert.spv";
+	static const char* frag_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\opaque.frag.spv";
 	
-	std::vector<char> ReadShader(const char* path)
+	static std::vector<char> ReadShader(const char* path)
 	{
 		std::vector<char> buffer;
 		// Read File
@@ -34,7 +34,7 @@ namespace APP
 				{
 					*GRI::GetGlobalDescriptorSetLayout("NULL") // Set=0
 				},
-				.vertex_shader   = GRI::Shader::Create(ShaderType_Vertex,	   ReadShader(vert_shader_path)),
+				.vertex_shader   = GRI::Shader::Create(ShaderType_Vertex,	 ReadShader(vert_shader_path)),
 				.fragment_shader = GRI::Shader::Create(ShaderType_Fragment,  ReadShader(frag_shader_path)),
 			})
 	{
@@ -55,13 +55,19 @@ namespace APP
 	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
-		// You may need to call vkCmdNextSubpass(...);
 	}
 
 	const VkPipelineVertexInputStateCreateInfo&
 	OpaquePipeline::
 	vertex_input_state()
 	{
+		static VkVertexInputBindingDescription vertexInputBindingDescription
+		{
+			.binding = 0,
+			.stride  = sizeof(Model::Vertex),
+			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+		};
+
 		static VkPipelineVertexInputStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,

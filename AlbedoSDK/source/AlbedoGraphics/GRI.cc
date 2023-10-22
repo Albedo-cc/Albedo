@@ -31,6 +31,7 @@ namespace Albedo
 
 		// Init Default Global Resource
 		RegisterGlobalSampler("Default", Sampler::Create({}));
+		RegisterGlobalSampler("Cubemap", Sampler::Create({ .wrap_mode{.U = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER } }));
 	}
 
 	void 
@@ -47,7 +48,8 @@ namespace Albedo
 		sm_auto_free_command_pools.clear();
 		sm_auto_reset_command_pools.clear();
 
-		sm_samplers.clear();
+		sm_global_samplers.clear();
+		sm_global_textures.clear();
 
 		sm_descriptor_pools.clear();
 		sm_descriptor_set_layouts.clear();
@@ -158,22 +160,36 @@ namespace Albedo
 		auto target = sm_descriptor_set_layouts.find(id);
 		if (target == sm_descriptor_set_layouts.end())
 		{
-			Log::Debug("Albedo GRI is registering a new Descriptor Set Layout.");
+			Log::Debug("Albedo GRI is registering a new Descriptor Set Layout({}).", id);
 			sm_descriptor_set_layouts.emplace(std::move(id), std::move(descriptor_set_layout));
 		}
-		else Log::Fatal("Failed to register duplicate Vulkan Descriptor Set Layouts!");
+		else Log::Fatal("Failed to register duplicate Vulkan Descriptor Set Layouts({})!", id);
 	}
 
 	void
-	GRI::RegisterGlobalSampler(std::string id, std::shared_ptr<Sampler> sampler)
+	GRI::
+	RegisterGlobalSampler(std::string id, std::shared_ptr<Sampler> sampler)
 	{
-		auto target = sm_samplers.find(id);
-		if (target == sm_samplers.end())
+		auto target = sm_global_samplers.find(id);
+		if (target == sm_global_samplers.end())
 		{
-			Log::Debug("Albedo GRI is registering a new Sampelr.");
-			sm_samplers.emplace(std::move(id), std::move(sampler));
+			Log::Debug("Albedo GRI is registering a new Sampelr({}).", id);
+			sm_global_samplers.emplace(std::move(id), std::move(sampler));
 		}
-		else Log::Fatal("Failed to register duplicate Vulkan Sampelr!");
+		else Log::Fatal("Failed to register duplicate GRI Sampelr({})!", id);
+	}
+
+	void
+	GRI::
+	RegisterGlobalTexture(std::string id, std::shared_ptr<Texture> texture)
+	{
+		auto target = sm_global_textures.find(id);
+		if (target == sm_global_textures.end())
+		{
+			Log::Debug("Albedo GRI is registering a new Texture({}).", id);
+			sm_global_textures.emplace(std::move(id), std::move(texture));
+		}
+		else Log::Fatal("Failed to register duplicate GRI Texture({})!", id);
 	}
 
 	std::shared_ptr<GRI::DescriptorPool>
@@ -207,9 +223,9 @@ namespace Albedo
 
 	std::shared_ptr<GRI::DescriptorSetLayout>
 	GRI::
-	GetGlobalDescriptorSetLayout(std::string_view id)
+	GetGlobalDescriptorSetLayout(const std::string& id)
 	{
-		auto target = sm_descriptor_set_layouts.find(id.data());
+		auto target = sm_descriptor_set_layouts.find(id);
 		if (target != sm_descriptor_set_layouts.end())
 		{
 			return target->second;
@@ -219,14 +235,25 @@ namespace Albedo
 
 	std::shared_ptr<GRI::Sampler>
 	GRI::
-	GetGlobalSampler(std::string id)
+	GetGlobalSampler(const std::string& id)
 	{
-		auto target = sm_samplers.find(id.data());
-		if (target != sm_samplers.end())
+		auto target = sm_global_samplers.find(id.data());
+		if (target != sm_global_samplers.end())
 		{
 			return target->second;
 		}
 		else Log::Fatal("Failed to get {} Sampler!", id);
+	}
+
+	std::shared_ptr<GRI::Texture>
+	GRI::GetGlobalTexture(const std::string& id)
+	{
+		auto target = sm_global_textures.find(id.data());
+		if (target != sm_global_textures.end())
+		{
+			return target->second;
+		}
+		else Log::Fatal("Failed to get {} Texture!", id);
 	}
 
 	VkQueue
@@ -456,11 +483,11 @@ namespace Albedo
 
 	void 
 	GRI::CommandBuffer::
-	Submit(const SubmitInfo& submitinfo)
+	Submit(const SubmitInfo& submitinfo, VkFence signal_fence/* = VK_NULL_HANDLE*/)
 	{
 		assert(!IsRecording() && "You should call End() before Submit()!");
 
-		VkSubmitInfo submitInfo
+		auto submitInfo = VkSubmitInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			.waitSemaphoreCount = static_cast<uint32_t>(submitinfo.wait_semaphores.size()),
@@ -472,8 +499,11 @@ namespace Albedo
 			.pSignalSemaphores	= submitinfo.signal_semaphores.data()
 		};
 
-		if (vkQueueSubmit(GetQueue(m_parent->m_settings.queue_family), 
-			1, &submitInfo, submitinfo.signal_fence) != VK_SUCCESS)
+		if (vkQueueSubmit(
+			GetQueue(m_parent->m_settings.queue_family), 
+			1,
+			&submitInfo,
+			signal_fence) != VK_SUCCESS)
 			Log::Fatal("Failed to submit the Vulkan Command Buffer!");
 	}
 
@@ -542,7 +572,18 @@ namespace Albedo
 		m_handle = VK_NULL_HANDLE;
 	}
 
-	 // Don't need createinfo unless CommandPoolType_Customize
+	void
+	GRI::CommandPool::
+	SubmitCommandBuffers(const std::vector<VkSubmitInfo>& submitinfos, VkFence signal_fence/* = VK_NULL_HANDLE*/)
+	{
+		if (vkQueueSubmit(GetQueue(m_settings.queue_family), 
+			submitinfos.size(),
+			submitinfos.data(),
+			signal_fence) != VK_SUCCESS)
+			Log::Fatal("Failed to submit the Vulkan Command Buffers!");
+	}
+
+	// Don't need createinfo unless CommandPoolType_Customize
 	std::shared_ptr<GRI::CommandBuffer> 
 	GRI::CommandPool::
 	AllocateCommandBuffer(const CommandBuffer::CreateInfo& createinfo/* = {}*/)
@@ -667,9 +708,9 @@ namespace Albedo
 		auto& bindinginfo = m_layout->GetBinding(binding);
 
 		static VkDescriptorImageInfo imageinfo{};
-		imageinfo.sampler	  = *texture->m_sampler;
-		imageinfo.imageView	  = texture->m_image->GetView();
-		imageinfo.imageLayout = texture->m_image->GetLayout();
+		imageinfo.sampler	  = *texture->GetSampler();
+		imageinfo.imageView	  = texture->GetImage()->GetView();
+		imageinfo.imageLayout = texture->GetImage()->GetLayout();
 
 		return VkWriteDescriptorSet
 		{
@@ -899,11 +940,13 @@ namespace Albedo
 			nullptr) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Image!");
 
+		m_settings.viewType = m_settings.viewType == VK_IMAGE_VIEW_TYPE_MAX_ENUM?
+							  VkImageViewType(image_type) : m_settings.viewType;
 		VkImageViewCreateInfo imageViewCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.image		= m_handle,
-			.viewType	= VkImageViewType(image_type),
+			.viewType	= m_settings.viewType,
 			.format		= m_settings.format,
 			.components = VK_COMPONENT_SWIZZLE_IDENTITY,
 			.subresourceRange
@@ -1269,10 +1312,10 @@ namespace Albedo
 	{
 		return VkImageSubresourceLayers
 		{
-				.aspectMask = m_settings.aspect,
-				.mipLevel	= 0,
-				.baseArrayLayer = 0,
-				.layerCount = m_settings.arrayLayers,
+			.aspectMask = m_settings.aspect,
+			.mipLevel	= 0,
+			.baseArrayLayer = 0,
+			.layerCount = m_settings.arrayLayers,
 		};
 	}
 
@@ -1340,9 +1383,37 @@ namespace Albedo
 
 	void
 	GRI::Texture::
+	Write(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data)
+	{
+		m_image->Write(commandbuffer, data);
+	}
+
+	void
+	GRI::Texture::
+	Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Image>  target) const
+	{
+		m_image->Blit(commandbuffer, target);
+	}
+
+	void
+	GRI::Texture::
+	Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Texture>  target) const
+	{
+		m_image->Blit(commandbuffer, target->m_image);
+	}
+
+	void
+	GRI::Texture::
 	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent)
 	{
 		m_image->Resize(commandbuffer, extent);
+	}
+
+	void
+	GRI::Texture::
+	ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout)
+	{
+		m_image->ConvertLayout(commandbuffer, target_layout);
 	}
 
 	GRI::Texture::
@@ -1364,7 +1435,45 @@ namespace Albedo
 	GRI::Texture::
 	~Texture() noexcept
 	{
+		
+	}
 
+	
+	GRI::Texture2D::
+	Texture2D(std::shared_ptr<Image> image,
+			  std::shared_ptr<Sampler> sampler/* = nullptr*/)
+		:Texture{image, sampler? sampler : GRI::GetGlobalSampler("Default")}
+	{
+		assert(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_2D);
+		assert(image->GetSettings().extent.depth == 1);
+	}
+
+	GRI::Texture2D::
+	~Texture2D() noexcept
+	{
+
+	}
+
+	GRI::Cubemap::
+	Cubemap(std::shared_ptr<Image> image,
+			std::shared_ptr<Sampler> sampler/* = nullptr*/)
+		:Texture{ image, sampler ? sampler : GRI::GetGlobalSampler("Cubemap")}
+	{
+		assert(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_CUBE);
+		assert(image->GetSettings().extent.depth == 1);
+	}
+
+	GRI::Cubemap::
+	~Cubemap() noexcept
+	{
+		
+	}
+
+	void
+	GRI::Texture2D::
+	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent2D& extent)
+	{
+		Texture::Resize(commandbuffer, { extent.width, extent.height, 1 });
 	}
 
 	GRI::RenderPass::
@@ -1398,15 +1507,15 @@ namespace Albedo
 
 	void
 	GRI::RenderPass::
-	BEGIN_BUILD()
+	BEGIN_BUILD(uint32_t flags/* = 0*/)
 	{
-		// Add System Attachments
 		add_attachment(AttachmentSetting{ // ST_Color
 			.description
 			{
 				.format			= GRI::GetRenderTargetFormat(),
 				.samples		= VK_SAMPLE_COUNT_1_BIT,
-				.loadOp			= VK_ATTACHMENT_LOAD_OP_LOAD,
+				.loadOp			= ClearSTColor & flags? 
+								  VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
 				.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
 				.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -1418,21 +1527,24 @@ namespace Albedo
 			m_framebuffers[i].render_targets.emplace_back(sm_render_targets[i].image->GetView());
 		}
 
-		add_attachment(AttachmentSetting{ // ST_ZBuffer
-		.description
+		if (ZWrite & flags)
 		{
-			.format			= GRI::GetZBuffer()->GetFormat(),
-			.samples		= VK_SAMPLE_COUNT_1_BIT,
-			.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR,
-			.storeOp		= VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.initialLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			.finalLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		}});
-		for (size_t i = 0; i < m_framebuffers.size(); ++i)
-		{
-			m_framebuffers[i].render_targets.emplace_back(RenderTarget::zbuffer->GetView());
+			add_attachment(AttachmentSetting{ // ST_ZBuffer
+			.description
+			{
+				.format			= GRI::GetZBuffer()->GetFormat(),
+				.samples		= VK_SAMPLE_COUNT_1_BIT,
+				.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+				.finalLayout	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			}});
+			for (size_t i = 0; i < m_framebuffers.size(); ++i)
+			{
+				m_framebuffers[i].render_targets.emplace_back(RenderTarget::zbuffer->GetView());
+			}
 		}
 	}
 
@@ -1608,13 +1720,12 @@ namespace Albedo
 		};
 
 		// Subpass Contents
-		VkSubpassContents contents = commandbuffer->GetSettings().level == VK_COMMAND_BUFFER_LEVEL_PRIMARY? 
-									VK_SUBPASS_CONTENTS_INLINE : VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS;
+		VkSubpassContents contents = commandbuffer->GetSubpassContents();
 
 		// Begin Render Pass
 		vkCmdBeginRenderPass(*commandbuffer, &renderPassBeginInfo, contents);
 
-		return { m_subpasses.begin(), m_subpasses.end() };
+		return { commandbuffer, m_subpasses.begin(), m_subpasses.end() };
 	}
 
 	void
@@ -1938,9 +2049,9 @@ namespace Albedo
 			editorinfo.commandbuffer->Submit(
 				{ 
 					.wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-					.signal_fence = RT.fence_in_flight,
 					.wait_semaphores = wait_semaphores,
-					.signal_semaphores = {editorinfo.semaphore_editor}, }
+					.signal_semaphores = {editorinfo.semaphore_editor},
+				}, RT.fence_in_flight
 			);
 			present_wait_semaphore = editorinfo.semaphore_editor;
 		}
@@ -2044,10 +2155,9 @@ namespace Albedo
 			RT.commandbuffer->Submit
 			({
 				.wait_stages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-				.signal_fence	   = RT.fence_in_flight,
 				.wait_semaphores   = wait_semaphores,
 				.signal_semaphores = {RT.semaphore_ready},
-			});
+			}, RT.fence_in_flight);
 			
 			present_wait_semaphore = RT.semaphore_ready;
 		}
@@ -2115,7 +2225,9 @@ namespace Albedo
 		assert(VK_IMAGE_USAGE_TRANSFER_DST_BIT & output->m_settings.usage);
 
 		auto commandbuffer = 
-			GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
+			GetGlobalCommandPool(
+			CommandPoolType_Transient,
+			QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
 		uint32_t prev_cursor = (GetRenderTargetCursor() + (sm_render_targets.size() - 1)) % sm_render_targets.size();
@@ -2131,10 +2243,9 @@ namespace Albedo
 		commandbuffer->Submit(
 			{
 				.wait_stages  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-				.signal_fence		= PrevRT.fence_in_flight,
 				.wait_semaphores	= {},
 				.signal_semaphores	= {},
-			});
+			}, PrevRT.fence_in_flight);
 		PrevRT.fence_in_flight.Wait();
 	}
 
@@ -2212,8 +2323,10 @@ namespace Albedo
 	{
 		sm_render_targets.resize(g_rhi->swapchain.images.size());
 
-		auto commandbuffer = GetGlobalCommandPool(CommandPoolType_Transient, QueueFamilyType_Graphics)
-							 ->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+		auto commandbuffer = GetGlobalCommandPool(
+			CommandPoolType_Transient,
+			QueueFamilyType_Graphics)
+			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
 		// Convert Swapchain Image Layout
 		VkImageMemoryBarrier barrier
@@ -2254,8 +2367,10 @@ namespace Albedo
 						.tiling  = VK_IMAGE_TILING_OPTIMAL,
 					});
 				RT.image->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
-				RT.commandbuffer = GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
-								   ->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+				RT.commandbuffer = GetGlobalCommandPool(
+					CommandPoolType_Resettable,
+					QueueFamilyType_Graphics)
+					->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
 				// Convert Swapchain Image Layout
 				barrier.image = g_rhi->swapchain.images[i];
@@ -2284,7 +2399,7 @@ namespace Albedo
 		}
 		commandbuffer->End();
 		Fence fence{ FenceType_Unsignaled };
-		commandbuffer->Submit({ .signal_fence = fence });
+		commandbuffer->Submit({}, fence);
 		fence.Wait();
 	}
 

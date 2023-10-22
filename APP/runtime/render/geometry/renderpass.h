@@ -14,7 +14,7 @@ namespace APP
 
 	public:
 		GeometryPass();
-		virtual ~GeometryPass() noexcept override {};
+		//virtual ~GeometryPass() noexcept override {};
 	};
 	
 }} // namespace Albedo::APP

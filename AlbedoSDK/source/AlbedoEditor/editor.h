@@ -41,7 +41,7 @@ namespace Albedo
         static inline std::shared_ptr<EditorPass> sm_renderpass;
         struct FrameInfo
         {
-            std::shared_ptr<GRI::Texture> main_camera;
+            std::shared_ptr<GRI::Texture2D>     main_camera;
             std::shared_ptr<GRI::CommandBuffer> commandbuffer;
             std::shared_ptr<GRI::DescriptorSet> descriptor_set;
             GRI::Semaphore semaphore_editor{ SemaphoreType_Unsignaled };

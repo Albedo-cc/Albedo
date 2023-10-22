@@ -1,3 +1,4 @@
 #pragma once
 
 #include "../source/AlbedoGraphics/GRI.h"
+#include "../source/AlbedoGraphics/model.h"

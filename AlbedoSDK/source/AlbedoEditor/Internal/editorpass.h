@@ -9,7 +9,7 @@ namespace Albedo
 		:public GRI::RenderPass
 	{
 	public:
-		enum Subpass { ImGui, MAX_SUBPASS };
+		enum Subpass { ImGui };
 
 	public:
 		EditorPass();

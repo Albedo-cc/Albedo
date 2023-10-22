@@ -1,7 +1,9 @@
 #include "renderer.h"
 
 #include <Albedo.Core.Log>
-#include "forward/geometry/renderpass.h"
+
+#include "background/renderpass.h"
+#include "geometry/renderpass.h"
 #include "surface/renderpass.h"
 
 #include <algorithm>
@@ -20,27 +22,35 @@ namespace APP
 			auto& frame = sm_frames[GRI::GetRenderTargetCursor()];
 			GRI::WaitNextFrame(frame.semaphore_image_available, VK_NULL_HANDLE);
 
-			frame.commandbuffer_geometry->Begin();
+			for (size_t passidx = 0; passidx < frame.renderpasses.size(); ++passidx)
 			{
-				auto subpass_iter = sm_renderpasses[Geometry]->Begin(frame.commandbuffer_geometry);
+				auto& renderpass = frame.renderpasses[passidx];
+				renderpass.commandbuffer->Begin();
 				{
-					do
+					auto subpass_iter = sm_renderpasses[passidx]->Begin(renderpass.commandbuffer);
 					{
-						subpass_iter.Begin(frame.commandbuffer_geometry);
-						subpass_iter.End(frame.commandbuffer_geometry);
-					} while (subpass_iter.Next());
+						do
+						{
+							subpass_iter.Begin();
+							subpass_iter.End();
+						} while (subpass_iter.Next());
+					}
+					sm_renderpasses[passidx]->End(renderpass.commandbuffer);
 				}
-				sm_renderpasses[Geometry]->End(frame.commandbuffer_geometry);
-			}
-			frame.commandbuffer_geometry->End();
-			frame.commandbuffer_geometry->Submit(
-				{
-					.wait_stages	   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-					.wait_semaphores   = {frame.semaphore_image_available},
-					.signal_semaphores = {frame.semaphore_geometry_pass},	
-				});
+				renderpass.commandbuffer->End();
 
-			GRI::PresentFrame({ frame.semaphore_geometry_pass });
+				GRI::CommandBuffer::SubmitInfo submitinfo
+				{
+					.wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.wait_semaphores = {frame.semaphore_image_available},
+					.signal_semaphores = {renderpass.semaphore},
+				};
+				if (passidx) submitinfo.wait_semaphores[0] = frame.renderpasses[passidx - 1].semaphore;
+
+				renderpass.commandbuffer->Submit(submitinfo);
+			}
+
+			GRI::PresentFrame({ frame.renderpasses.back().semaphore });
 		}
 		catch (GRI::SIGNAL_RECREATE_SWAPCHAIN)
 		{
@@ -112,7 +122,12 @@ namespace APP
 	Renderer::
 	create_renderpasses()
 	{
+		// System Render Passes
+		sm_renderpasses.emplace_back(new BackgroundPass());
 		sm_renderpasses.emplace_back(new GeometryPass());
+
+		// User Render Passes
+		// ...
 
 		// Sort Render Passes by Priority
 		std::sort(sm_renderpasses.begin(), sm_renderpasses.end(),
@@ -143,9 +158,7 @@ namespace APP
 		sm_frames.resize(GRI::GetRenderTargetCount());
 		for (auto& frame : sm_frames)
 		{
-			frame.commandbuffer_geometry = 
-				GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Graphics)
-				->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+			frame.renderpasses.resize(sm_renderpasses.size());
 		}
 	}
 

@@ -1,29 +1,27 @@
 #pragma once
 
+#include "concepts.h"
 #include <limits>
+#include <cmath>
 
 namespace Albedo
 {
-#ifndef ALBEDO_CORE_LOW_PRECISION_MODE
-   	using Precision = double;
-#else
-    using Precision = float;
-#endif
-	using FloatType = Precision;
-
-    bool inline FloatEqual(FloatType a, FloatType b)
+    template<FloatingPoint T>
+    bool inline FloatEqual(T a, T b)
     {
-        return std::abs(a - b) < std::numeric_limits<FloatType>::epsilon();
+        return std::abs(a - b) < std::numeric_limits<T>::epsilon();
     }
 
-    bool inline FloatGreater(FloatType a, FloatType b)
+    template<FloatingPoint T>
+    bool inline FloatGreater(T a, T b)
     {
-        return a - b >= std::numeric_limits<FloatType>::epsilon();
+        return a - b >= std::numeric_limits<T>::epsilon();
     }
 
-    bool inline FloatLess(FloatType a, FloatType b)
+    template<FloatingPoint T>
+    bool inline FloatLess(T a, T b)
     {
-        return b - a >= std::numeric_limits<FloatType>::epsilon();
+        return b - a >= std::numeric_limits<T>::epsilon();
     }
 
 } // namespace Albedo

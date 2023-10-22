@@ -1,11 +1,12 @@
 # TODO
 ## Vital
+- [ ] 2023-10-22 - Subresouce for Mipmap Levels.
+- [ ] 2023-10-22 - Dynamic Uniform Buffers.
 - [ ] 2023-10-18 - CMake Asset Directory copyifdifferent (target AlbedoPrebuilder).
-- [ ] 2023-09-12 - Integrate KTX & FreeImage.
-- [ ] 2023-09-12 - Delete GRIPushPreframeTask(), instead, using a Global CommandBuffer in Transfer Queue.
 - [ ] 2023-09-5  - Implement ZReverse.
 
 ## Optimization
+- [ ] 2023-09-12 - Delete GRIPushPreframeTask(), instead, using a Global CommandBuffer in Transfer Queue.
 - [ ] 2023-09-2  - GRI manage Global Shaders.
 - [ ] 2023-09-1  - Move commandbuffers to each Render Pass?
 

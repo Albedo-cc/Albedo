@@ -4,7 +4,6 @@
 
 namespace Albedo
 {
-
     class Duration
     {
     public:
