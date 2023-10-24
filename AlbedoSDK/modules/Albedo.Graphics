@@ -2,3 +2,4 @@
 
 #include "../source/AlbedoGraphics/GRI.h"
 #include "../source/AlbedoGraphics/model.h"
+#include "../source/AlbedoGraphics/widgets.h"

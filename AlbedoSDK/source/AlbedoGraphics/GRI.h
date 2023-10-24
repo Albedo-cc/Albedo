@@ -44,7 +44,8 @@ namespace Albedo
 	/*Interface Class*/	class RenderPass; class Pipeline; class GraphicsPipeline;
 	/*Descriptor*/		class DescriptorSetLayout; class DescriptorPool; class DescriptorSet;
 	/*Texture*/			class Texture; class Texture2D; class Cubemap;
-	/*Others*/			class Sampler;
+	/*Sampler*/			class Sampler;
+	/*Template*/		class FrameObject; class FrameObjectManager;
 	//[TIPS]-----------------------------------------------------------------------------------------------------------------------
 	// 1. For better Interface Compatibility, you should create GRI objects via [Class]::Create(...).
 	//    Importantly, DO NOT create GRI objects without [Class]::Create(...) by yourself!
@@ -73,6 +74,8 @@ namespace Albedo
 
 		static void Screenshot(std::shared_ptr<Image> output);
 		static void Screenshot(std::shared_ptr<Texture> output);
+
+		static auto MakeID(const std::vector<VkDescriptorType>& types_in_order) -> std::string;
 
 	public: // Developer-level Interface
 		class SIGNAL_RECREATE_SWAPCHAIN : public std::exception {};
@@ -220,8 +223,7 @@ namespace Albedo
 		{
 			friend class GRI;
 		public:
-			auto GetBinding(uint32_t index) const -> const VkDescriptorSetLayoutBinding&
-			{assert(m_bindings.size() > index); return m_bindings[index]; }
+			auto GetBinding(uint32_t index) const -> const VkDescriptorSetLayoutBinding&;
 			operator VkDescriptorSetLayout() const { return m_handle; }
 
 		public:
@@ -488,6 +490,7 @@ namespace Albedo
 			// Vulkan Cubemap uses left-hand coordinate system with +Y is up. (as same as Albedo Coordinate System)
 			enum Face
 			{PositiveX, NegtiveX, PositiveY, NegtiveY, PositiveZ, NegtiveZ, MAX_FACE_NUM};
+			static constexpr uint32_t VertexCount = 24; // Ref::cubemap.vert
 		public:
 			//void WriteFace(std::shared_ptr<CommandBuffer> commandbuffer, Face face, std::shared_ptr<Buffer> data);
 
@@ -607,8 +610,8 @@ namespace Albedo
 		{
 			friend class GRI;
 		protected:
-			virtual void Begin(std::shared_ptr<CommandBuffer> commandbuffer) = 0; // We gave a sample in GRI.cc
-			virtual void End(std::shared_ptr<CommandBuffer> commandbuffer)	 = 0; // We gave a sample in GRI.cc
+			virtual void Begin(std::shared_ptr<CommandBuffer> commandbuffer);
+			virtual void End(std::shared_ptr<CommandBuffer> commandbuffer)	;
 			operator VkPipeline() const { return m_handle; }
 
 		public:
@@ -710,4 +713,5 @@ namespace Albedo
         GRI& operator=(const GRI&) = delete;
         GRI& operator=(GRI&&)      = delete;
     };
+
 } // namespace Albedo

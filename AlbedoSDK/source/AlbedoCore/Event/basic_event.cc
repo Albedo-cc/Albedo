@@ -1,6 +1,8 @@
 #include "basic_event.h"
 
 #include <AlbedoCore/Log/log.h>
+#include <AlbedoCore/Norm/assert.h>
+#include <AlbedoCore/Norm/assert.h>
 
 namespace Albedo
 {
@@ -14,7 +16,7 @@ namespace Albedo
 
 	void BasicEvent::Act()
 	{
-		assert(m_action);
+		ALBEDO_ASSERT(m_action);
 		m_action();
 	}
 
@@ -26,8 +28,8 @@ namespace Albedo
 		m_condition{std::move(condition)},
 		m_action{std::move(action)}
 	{
-		assert(!m_name.empty());
-		assert(m_action);
+		ALBEDO_ASSERT(!m_name.empty());
+		ALBEDO_ASSERT(m_action);
 		sm_event_count++;
 	}
 

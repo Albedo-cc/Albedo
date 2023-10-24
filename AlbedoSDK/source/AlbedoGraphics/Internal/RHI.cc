@@ -22,7 +22,7 @@ namespace Albedo
 
 	void RHI::Initialize(const RHICreateInfo& createinfo)
 	{
-		assert(createinfo.app_window   != nullptr);
+		ALBEDO_ASSERT(createinfo.app_window   != nullptr);
 		instance.app_name	 = createinfo.app_name;
 		instance.app_version = createinfo.app_version;
 		window.pointer		 = createinfo.app_window;		  
@@ -78,7 +78,7 @@ namespace Albedo
 
     RHI::~RHI() noexcept
     {
-        assert(instance == VK_NULL_HANDLE && "Please call GRI::Terminate()");
+        ALBEDO_ASSERT(instance == VK_NULL_HANDLE && "Please call GRI::Terminate()");
     }
 
 	void RHI::Terminate() noexcept
@@ -174,7 +174,7 @@ namespace Albedo
 	void RHI::destroy_instance()
 	{
         auto loadFunction = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-        assert(loadFunction && "Failed to load function: vkDestroyDebugUtilsMessengerEXT");
+        ALBEDO_ASSERT(loadFunction && "Failed to load function: vkDestroyDebugUtilsMessengerEXT");
         loadFunction(instance, messenger, allocator);
         vkDestroyInstance(instance, allocator);
         instance.handle = VK_NULL_HANDLE;
@@ -321,7 +321,7 @@ namespace Albedo
 				device.queue_families.present.index	 = selected[GOAL_1];
 				device.queue_families.transfer.index = selected[GOAL_2];
 				device.queue_families.compute.index  = selected[GOAL_3];
-				assert(device.queue_families.graphics.index.has_value());
+				ALBEDO_ASSERT(device.queue_families.graphics.index.has_value());
 				return true;
 			}
 		} 
@@ -375,7 +375,7 @@ namespace Albedo
 		std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos;
 
 		// Graphics & Present Queue Family
-		assert(device.queue_families.graphics == device.queue_families.present);
+		ALBEDO_ASSERT(device.queue_families.graphics == device.queue_families.present);
 		std::vector<float> graphics_queue_priorities;
 		{
 			for (const auto& queue : device.queue_families.graphics.queues)
@@ -391,7 +391,7 @@ namespace Albedo
 		}
 
 		// Compute Queue Family
-		assert(device.queue_families.compute != device.queue_families.graphics && 
+		ALBEDO_ASSERT(device.queue_families.compute != device.queue_families.graphics && 
 			   device.queue_families.compute != device.queue_families.transfer);
 		std::vector<float> compute_queue_priorities;
 		{
@@ -408,7 +408,7 @@ namespace Albedo
 		}
 
 		// Transfer Queue Family
-		assert(device.queue_families.transfer != device.queue_families.graphics);
+		ALBEDO_ASSERT(device.queue_families.transfer != device.queue_families.graphics);
 		std::vector<float> transfer_queue_priorities;
 		{
 			for (const auto& queue : device.queue_families.transfer.queues) 
@@ -439,7 +439,7 @@ namespace Albedo
 			throw std::runtime_error("Failed to create the logical device!");
 
 		// Graphics & Present Queue Family
-		assert(device.queue_families.graphics == device.queue_families.present);
+		ALBEDO_ASSERT(device.queue_families.graphics == device.queue_families.present);
 		for (uint32_t i = 0; i < device.queue_families.graphics.queues.size(); ++i)
 		{
 			auto& queue_family = device.queue_families.graphics;
@@ -521,7 +521,7 @@ namespace Albedo
 				current_surface_capabilities.minImageCount + 1,
 				current_surface_capabilities.minImageCount + 1,
 				current_surface_capabilities.maxImageCount);
-		assert(swapchain_image_count != 0 && "0 means no limits");
+		ALBEDO_ASSERT(swapchain_image_count != 0 && "0 means no limits");
 		swapchain.images.resize(swapchain_image_count);
 
 		bool is_exclusive_device = (device.queue_families.graphics.index == device.queue_families.present.index);

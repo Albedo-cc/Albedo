@@ -103,19 +103,6 @@ namespace APP
 					.descriptorCount = 0, // Disable for now
 				}
 			}));
-
-		//GRI::RegisterGlobalDescriptorSetLayout(
-		//	"[0]CIS", // Bind0 Combined Image Sampler.
-		//	GRI::DescriptorSetLayout::Create({
-		//		VkDescriptorSetLayoutBinding
-		//		{
-		//			.binding = 0,
-		//			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		//			.descriptorCount = 1,
-		//			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-		//			.pImmutableSamplers = nullptr,
-		//		}
-		//	}));
 	}
 
 	void
@@ -123,7 +110,7 @@ namespace APP
 	create_renderpasses()
 	{
 		// System Render Passes
-		sm_renderpasses.emplace_back(new BackgroundPass());
+		//sm_renderpasses.emplace_back(new BackgroundPass());
 		sm_renderpasses.emplace_back(new GeometryPass());
 
 		// User Render Passes

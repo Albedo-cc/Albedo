@@ -1,6 +1,8 @@
 #include "editor.h"
 
 #include <AlbedoCore/Log/log.h>
+#include <AlbedoCore/Norm/assert.h>
+#include <AlbedoCore/Norm/assert.h>
 #include <AlbedoGraphics/Internal/RHI.h>
 #include <AlbedoSystem/Window/window_system.h>
 
@@ -19,7 +21,7 @@ namespace Albedo
 
 		sm_renderpass = std::make_shared<EditorPass>();
 
-		assert(g_rhi != nullptr && "Forget to Initialize RHI?");
+		ALBEDO_ASSERT(g_rhi != nullptr && "Forget to Initialize RHI?");
 
 		// Initialize Dear ImGUI
 		ImGui_ImplVulkan_InitInfo ImGui_InitInfo
@@ -70,17 +72,8 @@ namespace Albedo
 			for (auto& frame_info : sm_frame_infos)
 			{
 				frame_info.descriptor_set = GRI::GetGlobalDescriptorPool()
-				->AllocateDescriptorSet(
-					GRI::DescriptorSetLayout::Create({
-					VkDescriptorSetLayoutBinding
-					{
-						.binding		 = 0,
-						.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-						.descriptorCount = 1,
-						.stageFlags		 = VK_SHADER_STAGE_FRAGMENT_BIT,
-						.pImmutableSamplers = nullptr,
-					}
-				}));
+				->AllocateDescriptorSet(GRI::GetGlobalDescriptorSetLayout
+				(GRI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER})));
 
 				frame_info.main_camera = GRI::Texture2D::Create(
 				GRI::Image::Create(GRI::Image::CreateInfo
@@ -157,13 +150,13 @@ namespace Albedo
 
 			auto subpass_iter = sm_renderpass->Begin(frame.commandbuffer);
 			{
-				assert(subpass_iter.GetName() == "Editor::ImGui");
+				ALBEDO_ASSERT(subpass_iter.GetName() == "Editor::ImGui");
 				subpass_iter.Begin();
 				{
 					sm_ui_event_manager.Process();
 				}
 				subpass_iter.End();
-				assert(!subpass_iter.Next());
+				ALBEDO_ASSERT(!subpass_iter.Next());
 			}
 			sm_renderpass->End(frame.commandbuffer);
 		}

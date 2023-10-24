@@ -1,9 +1,15 @@
 #pragma once
+
 #include <concepts>
 
 namespace Albedo
 {
-
+	
+	// Basic Concepts
+	template <typename T>
+	concept HashableType = requires(T type) {{ std::hash<T>{}(type) } -> std::same_as<std::size_t>;};
+	
+	// Numerical Concepts
 	template<typename T>
 	concept UnsignedInteger = std::unsigned_integral<T>;
 

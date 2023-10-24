@@ -25,6 +25,7 @@ source_group(TREE "${PROJECT_SOURCE_DIR}/source" FILES ${ALBEDO_SDK_HEADER} ${AL
 add_library(${PROJECT_NAME} STATIC ${ALBEDO_SDK_HEADER} ${ALBEDO_SDK_SOURCE})
 add_subdirectory(extern)
 target_link_libraries(${PROJECT_NAME} PUBLIC ALBEDO_SDK_EXTERNS)
-target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/source")
-target_include_directories(${PROJECT_NAME} INTERFACE "${PROJECT_SOURCE_DIR}/modules")
+target_include_directories(${PROJECT_NAME}
+                            PUBLIC     "${PROJECT_SOURCE_DIR}/source"
+                            INTERFACE  "${PROJECT_SOURCE_DIR}/modules")
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "${PROJECT_NAME}")

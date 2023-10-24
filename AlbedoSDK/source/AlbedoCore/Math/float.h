@@ -1,6 +1,6 @@
 #pragma once
 
-#include "concepts.h"
+#include <AlbedoCore/Norm/concepts.h>
 #include <limits>
 #include <cmath>
 

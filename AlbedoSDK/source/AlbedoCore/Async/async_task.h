@@ -1,4 +1,5 @@
 #include <AlbedoCore/Log/log.h>
+#include <AlbedoCore/Norm/assert.h>
 
 #include <future>
 #include <functional>
@@ -25,7 +26,7 @@ namespace Albedo
             m_task{std::move(task)},
             m_future{std::async(mode,[this]()->Result_T
             {
-                assert(m_task != nullptr);
+                ALBEDO_ASSERT(m_task != nullptr);
                 return m_task();
             })}
         {/*Empty*/ }

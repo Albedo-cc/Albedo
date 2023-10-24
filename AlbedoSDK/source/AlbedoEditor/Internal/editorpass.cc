@@ -2,6 +2,8 @@
 
 #include <imgui.h>
 #include <AlbedoCore/Log/log.h>
+#include <AlbedoCore/Norm/assert.h>
+#include <AlbedoCore/Norm/assert.h>
 #include <AlbedoGraphics/Internal/RHI.h>
 
 #include "../editor.h"
@@ -41,9 +43,9 @@ namespace Albedo
 				.destination_stage_mask	 = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				.destination_access_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			});
-		assert(Subpass::ImGui == subpassidx);
+		ALBEDO_ASSERT(Subpass::ImGui == subpassidx);
 
-		assert(VK_SUBPASS_EXTERNAL == uint32_t(-1));
+		ALBEDO_ASSERT(VK_SUBPASS_EXTERNAL == uint32_t(-1));
 		std::vector<VkSubpassDescription> subpass_descriptions(m_subpasses.size());
 		std::vector<VkSubpassDependency>  subpass_dependencies(m_subpasses.size());
 		for (uint32_t i = 0; i < subpass_dependencies.size(); ++i)

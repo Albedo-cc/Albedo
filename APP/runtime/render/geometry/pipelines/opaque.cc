@@ -45,8 +45,7 @@ namespace APP
 	OpaquePipeline::
 	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
-		vkCmdBindPipeline(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_handle);
+		Pipeline::Begin(commandbuffer);
 		vkCmdDraw(*commandbuffer, 6, 1, 0, 0);
 	}
 
@@ -54,7 +53,7 @@ namespace APP
 	OpaquePipeline::
 	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
+		Pipeline::End(commandbuffer);
 	}
 
 	const VkPipelineVertexInputStateCreateInfo&

@@ -6,11 +6,11 @@
  */
 
 // Header Mess
+#include <AlbedoCore/Norm/assert.h>
 #include <vulkan/vulkan.h>
 
 #include <stdexcept>
 #include <optional>
-#include <cassert>
 #include <memory>
 #include <vector>
 
@@ -105,7 +105,7 @@ namespace Albedo
 				QueueFamily() = delete;
 				QueueFamily(const std::vector<float>& priorities): queues(priorities.size())
 				{ for (int i = 0; i < queues.size(); ++i) queues[i].priority = priorities[i]; }
-				operator uint32_t() { assert(index.has_value()); return index.value(); }
+				operator uint32_t() { ALBEDO_ASSERT(index.has_value()); return index.value(); }
 			};
 			struct
 			{

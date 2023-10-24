@@ -1,5 +1,6 @@
 #pragma once
-#include "concepts.h"
+
+#include <AlbedoCore/Norm/concepts.h>
 
 namespace Albedo
 {

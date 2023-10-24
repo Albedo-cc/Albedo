@@ -1,5 +1,6 @@
 # TODO
 ## Vital
+- [ ] 2023-10-22 - Template< PerframeResource managed by GRI(recreation).
 - [ ] 2023-10-22 - Subresouce for Mipmap Levels.
 - [ ] 2023-10-22 - Dynamic Uniform Buffers.
 - [ ] 2023-10-18 - CMake Asset Directory copyifdifferent (target AlbedoPrebuilder).

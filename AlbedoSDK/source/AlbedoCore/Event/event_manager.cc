@@ -42,14 +42,12 @@ namespace Albedo
 				  ++event_iter)
 		{
 			auto event = *event_iter;
-			if (event)
+			if (!event)
 			{
-				if (event->Trig())
-				{
-					event->Act();
-				}
+				m_events.erase(event_iter);
+				if (m_events.empty()) break;
 			}
-			else m_events.erase(event_iter);
+			else if (event->Trig()) event->Act();
 		}
 	}
 
@@ -59,7 +57,7 @@ namespace Albedo
 	{
 		for (auto& event : m_events)
 		{
-			event->Act();
+			if (event) event->Act();
 		}
 	}
 

@@ -27,7 +27,7 @@ namespace Albedo
 
 	class World
 	{
-	/* [GetContext Coordinate]
+	/* [World Coordinate]
 	 * Example:
 	 * 1. World::Center
 	 * 2. World::Axis.X / World::Axis.Right / World::Axis.Pitch

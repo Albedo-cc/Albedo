@@ -1,0 +1,5 @@
+#pragma once
+
+#include "Albedo.System.Asset"
+#include "Albedo.System.Control"
+#include "Albedo.System.Window"

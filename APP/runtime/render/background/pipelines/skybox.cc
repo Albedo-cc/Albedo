@@ -5,7 +5,7 @@
 namespace Albedo{
 namespace APP
 {
-	static const char* vert_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\skybox.vert.spv";
+	static const char* vert_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\cubemap.vert.spv";
 	static const char* frag_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\skybox.frag.spv";
 	
 	static std::vector<char> ReadShader(const char* path)
@@ -32,7 +32,7 @@ namespace APP
 			{
 				.descriptor_set_layouts =
 				{
-					*GRI::GetGlobalDescriptorSetLayout("NULL") // Set=0
+					*GRI::GetGlobalDescriptorSetLayout(GRI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER})),
 				},
 				.vertex_shader   = GRI::Shader::Create(ShaderType_Vertex,	 ReadShader(vert_shader_path)),
 				.fragment_shader = GRI::Shader::Create(ShaderType_Fragment,  ReadShader(frag_shader_path)),
@@ -45,16 +45,18 @@ namespace APP
 	SkyboxPipeline::
 	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
-		vkCmdBindPipeline(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_handle);
-		vkCmdDraw(*commandbuffer, 6, 1, 0, 0);
+		Pipeline::Begin(commandbuffer);
+		/*vkCmdBindDescriptorSets(commandbuffer, 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			m_pipeline_layout, 0, 1, , 0);*/
+		vkCmdDraw(*commandbuffer, GRI::Cubemap::VertexCount, 1, 0, 0);
 	}
 
 	void
 	SkyboxPipeline::
 	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
+		Pipeline::End(commandbuffer);
 	}
 
 	const VkPipelineVertexInputStateCreateInfo&

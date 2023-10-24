@@ -1,6 +1,9 @@
 #include "GRI.h"
 #include "internal/RHI.h"
+#include "widgets.h"
+
 #include <AlbedoCore/Log/log.h>
+#include <AlbedoCore/Norm/assert.h>
 #include <AlbedoCore/Math/integer.h>
 #include <AlbedoCore/Time/stopwatch.h>
 #include <AlbedoEditor/editor.h>
@@ -32,6 +35,20 @@ namespace Albedo
 		// Init Default Global Resource
 		RegisterGlobalSampler("Default", Sampler::Create({}));
 		RegisterGlobalSampler("Cubemap", Sampler::Create({ .wrap_mode{.U = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER } }));
+
+		GRI::RegisterGlobalDescriptorSetLayout(
+			// [0]CIS
+			GRI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER}),
+			GRI::DescriptorSetLayout::Create({
+				VkDescriptorSetLayoutBinding
+				{
+					.binding = 0,
+					.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+					.pImmutableSamplers = nullptr,
+				}
+			}));
 	}
 
 	void 
@@ -90,6 +107,7 @@ namespace Albedo
 	recreate_swapchain()
 	{
 		g_rhi->recreate_swapchain();
+		destroy_render_targets();
 		create_render_targets();
 		Editor::Recreate();
 	}
@@ -148,7 +166,7 @@ namespace Albedo
 			}
 			return commandPool;
 		}
-		default:assert(false);
+		default:ALBEDO_ASSERT(false);
 		}
 		return nullptr;
 	}
@@ -190,6 +208,35 @@ namespace Albedo
 			sm_global_textures.emplace(std::move(id), std::move(texture));
 		}
 		else Log::Fatal("Failed to register duplicate GRI Texture({})!", id);
+	}
+
+	std::string
+	GRI::MakeID(const std::vector<VkDescriptorType>& types_in_order)
+	{
+		ALBEDO_ASSERT(types_in_order.size() < 10 && "Unexpected Size!");
+		static std::string alias[]
+		{
+			"S  ",	//VK_DESCRIPTOR_TYPE_SAMPLER = 0
+			"CIS",	//VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER = 1
+			"SaI",	//VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE = 2
+			"StI",	//VK_DESCRIPTOR_TYPE_STORAGE_IMAGE = 3
+			"UTB",	//VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER = 4
+			"STB",	//VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER = 5
+			"UB ",	//VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER = 6
+			"SB ",	//VK_DESCRIPTOR_TYPE_STORAGE_BUFFER = 7
+			"UBD",	//VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC = 8
+			"SBD",	//VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC = 9
+			"IA ",	//VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT = 10
+		};
+
+		std::string id;
+		id.reserve(types_in_order.size() * (1 + alias[0].size()));
+		for (size_t i = 0; i < types_in_order.size(); ++i)
+		{
+			ALBEDO_ASSERT(types_in_order[i] <= VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
+			id += char('0' + i) + alias[types_in_order[i]];
+		}
+		return id;
 	}
 
 	std::shared_ptr<GRI::DescriptorPool>
@@ -263,16 +310,16 @@ namespace Albedo
 		switch (queue_family)
 		{
 		case QueueFamilyType_Graphics:
-			assert(g_rhi->device.queue_families.graphics.queues.size() > index);
+			ALBEDO_ASSERT(g_rhi->device.queue_families.graphics.queues.size() > index);
 			return g_rhi->device.queue_families.graphics.queues[index];
 		case QueueFamilyType_Present:
-			assert(g_rhi->device.queue_families.present.queues.size() > index);
+			ALBEDO_ASSERT(g_rhi->device.queue_families.present.queues.size() > index);
 			return g_rhi->device.queue_families.present.queues[index];
 		case QueueFamilyType_Transfer:
-			assert(g_rhi->device.queue_families.transfer.queues.size() > index);
+			ALBEDO_ASSERT(g_rhi->device.queue_families.transfer.queues.size() > index);
 			return g_rhi->device.queue_families.transfer.queues[index];
 		case QueueFamilyType_Compute:
-			assert(g_rhi->device.queue_families.compute.queues.size() > index);
+			ALBEDO_ASSERT(g_rhi->device.queue_families.compute.queues.size() > index);
 			return g_rhi->device.queue_families.compute.queues[index];
 		default: Log::Fatal("Failed to get Queue ({},{})!",queue_family, index);
 		}
@@ -285,16 +332,16 @@ namespace Albedo
 		switch (queue_family)
 		{
 		case QueueFamilyType_Graphics:
-			assert(g_rhi->device.queue_families.graphics.index.has_value());
+			ALBEDO_ASSERT(g_rhi->device.queue_families.graphics.index.has_value());
 			return g_rhi->device.queue_families.graphics.index.value();
 		case QueueFamilyType_Present:
-			assert(g_rhi->device.queue_families.present.index.has_value());
+			ALBEDO_ASSERT(g_rhi->device.queue_families.present.index.has_value());
 			return g_rhi->device.queue_families.present.index.value();
 		case QueueFamilyType_Transfer:
-			assert(g_rhi->device.queue_families.transfer.index.has_value());
+			ALBEDO_ASSERT(g_rhi->device.queue_families.transfer.index.has_value());
 			return g_rhi->device.queue_families.transfer.index.value();
 		case QueueFamilyType_Compute:
-			assert(g_rhi->device.queue_families.compute.index.has_value());
+			ALBEDO_ASSERT(g_rhi->device.queue_families.compute.index.has_value());
 			return g_rhi->device.queue_families.compute.index.value();
 		default: Log::Fatal("Failed to find Queue Family Type ({})!", queue_family);
 		}
@@ -339,9 +386,9 @@ namespace Albedo
 	GRI::
 	PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
-		assert(CommandPoolType_Transient == commandbuffer->m_parent->m_settings.type);
-		assert(!commandbuffer->IsRecording());
-		assert(commandbuffer.use_count() == 2);
+		ALBEDO_ASSERT(CommandPoolType_Transient == commandbuffer->m_parent->m_settings.type);
+		ALBEDO_ASSERT(!commandbuffer->IsRecording());
+		ALBEDO_ASSERT(commandbuffer.use_count() == 2);
 
 		sm_preframe_task_pools[commandbuffer->m_parent->m_settings.queue_family]
 			.task_set[*commandbuffer->m_parent]
@@ -456,7 +503,7 @@ namespace Albedo
 	GRI::CommandBuffer::
 	Begin()
 	{
-		assert(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
+		ALBEDO_ASSERT(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
 
 		VkCommandBufferBeginInfo commandBufferBeginInfo
 		{
@@ -473,7 +520,7 @@ namespace Albedo
 	GRI::CommandBuffer::
 	End()
 	{
-		assert(IsRecording() && "You cannot End() an idle Vulkan Command Buffer!");
+		ALBEDO_ASSERT(IsRecording() && "You cannot End() an idle Vulkan Command Buffer!");
 
 		if (vkEndCommandBuffer(m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to end the Vulkan Command Buffer!");
@@ -485,7 +532,7 @@ namespace Albedo
 	GRI::CommandBuffer::
 	Submit(const SubmitInfo& submitinfo, VkFence signal_fence/* = VK_NULL_HANDLE*/)
 	{
-		assert(!IsRecording() && "You should call End() before Submit()!");
+		ALBEDO_ASSERT(!IsRecording() && "You should call End() before Submit()!");
 
 		auto submitInfo = VkSubmitInfo
 		{
@@ -511,7 +558,7 @@ namespace Albedo
 	GRI::TransientCommandBuffer::
 	TransientCommandBuffer::Begin()
 	{
-		assert(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
+		ALBEDO_ASSERT(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
 
 		VkCommandBufferBeginInfo commandBufferBeginInfo
 		{
@@ -529,7 +576,7 @@ namespace Albedo
 	GRI::AutoResetCommandBuffer::
 	Begin()
 	{
-		assert(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
+		ALBEDO_ASSERT(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
 
 		vkResetCommandBuffer(m_handle, 0);
 
@@ -601,7 +648,7 @@ namespace Albedo
 		case CommandPoolType_Transient:
 			commandbuffer = std::make_shared<TransientCommandBuffer>(shared_from_this(), createinfo);
 			break;
-		default:assert(false);
+		default:ALBEDO_ASSERT(false);
 		}
 
 		return commandbuffer;
@@ -633,6 +680,14 @@ namespace Albedo
 		m_handle = VK_NULL_HANDLE;
 	}
 
+	const VkDescriptorSetLayoutBinding&
+	GRI::DescriptorSetLayout::
+	GetBinding(uint32_t index) const
+	{
+		ALBEDO_ASSERT(m_bindings.size() > index);
+		return m_bindings[index];
+	}
+
 	GRI::DescriptorPool::
 	DescriptorPool(const std::vector<VkDescriptorPoolSize>& pool_size, uint32_t limit_max_sets)
 	{
@@ -655,7 +710,7 @@ namespace Albedo
 	GRI::DescriptorPool::
 	~DescriptorPool() noexcept
 	{
-		//assert(weak_from_this().use_count() == 1 && "You should free all descriptor sets created by current descriptor pool first.");
+		//ALBEDO_ASSERT(weak_from_this().use_count() == 1 && "You should free all descriptor sets created by current descriptor pool first.");
 		vkDestroyDescriptorPool(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
@@ -827,7 +882,7 @@ namespace Albedo
 	GRI::Buffer::
 	Write(void* data)
 	{
-		assert(m_allocation->IsMappingAllowed() && "This buffer is not mapping-allowed!");
+		ALBEDO_ASSERT(m_allocation->IsMappingAllowed() && "This buffer is not mapping-allowed!");
 
 		void* mappedArea;
 		if (m_allocation->IsPersistentMap())
@@ -847,7 +902,7 @@ namespace Albedo
 	GRI::Buffer::
 	Access()
 	{
-		assert(m_allocation->IsPersistentMap() && "This buffer is not persistently mapped!");
+		ALBEDO_ASSERT(m_allocation->IsPersistentMap() && "This buffer is not persistently mapped!");
 		return m_allocation->GetMappedData();
 	}
 
@@ -857,9 +912,9 @@ namespace Albedo
 		   std::shared_ptr<Buffer> target,
 		   const CopyInfo& copyinfo/* = {}*/) const
 	{
-		assert(commandbuffer->IsRecording() && "You have to ensure that the command buffer is recording while using XXXCommand funcitons!");
+		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You have to ensure that the command buffer is recording while using XXXCommand funcitons!");
 		VkDeviceSize range = copyinfo.range ? copyinfo.range : GetSize();
-		assert(range <= (target->GetSize() - copyinfo.target_offset) && "You cannot copy data to another small buffer!");
+		ALBEDO_ASSERT(range <= (target->GetSize() - copyinfo.target_offset) && "You cannot copy data to another small buffer!");
 
 		VkBufferCopy bufferCopy
 		{
@@ -877,9 +932,9 @@ namespace Albedo
 			 std::shared_ptr<Buffer> target,
 			 const CopyInfo& copyinfo/* = {}*/)
 	{
-		assert(commandbuffer->IsRecording() && "You have to ensure that the command buffer is recording while using XXXCommand funcitons!");
+		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You have to ensure that the command buffer is recording while using XXXCommand funcitons!");
 		VkDeviceSize range = copyinfo.range ? copyinfo.range : target->GetSize();
-		assert(range <= (GetSize() - copyinfo.source_offset) && "You cannot copy data from another big buffer!");
+		ALBEDO_ASSERT(range <= (GetSize() - copyinfo.source_offset) && "You cannot copy data from another big buffer!");
 
 		VkBufferCopy bufferCopy
 		{
@@ -1182,8 +1237,8 @@ namespace Albedo
 	GRI::Image::
 	Write(std::shared_ptr<GRI::CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data)
 	{
-		assert(commandbuffer->IsRecording());
-		assert(data->GetSize() <= GetSize() && "It is not recommanded to write the image from a bigger buffer!");
+		ALBEDO_ASSERT(commandbuffer->IsRecording());
+		ALBEDO_ASSERT(data->GetSize() <= GetSize() && "It is not recommanded to write the image from a bigger buffer!");
 		
 		// Copy buffer to image requires the image to be in the right layout first
 		VkBufferImageCopy copyRegion
@@ -1273,7 +1328,7 @@ namespace Albedo
 	GRI::Image::
 	ConvertLayout(std::shared_ptr<GRI::CommandBuffer> commandbuffer, VkImageLayout target_layout)
 	{
-		assert(commandbuffer->IsRecording());
+		ALBEDO_ASSERT(commandbuffer->IsRecording());
 		if (target_layout == m_layout) return;
 
 		VkImageMemoryBarrier barrier{};
@@ -1421,8 +1476,8 @@ namespace Albedo
 		m_image{ std::move(image) },
 		m_sampler{ std::move(sampler) }
 	{
-		assert(m_image != nullptr);
-		assert(m_sampler != nullptr);
+		ALBEDO_ASSERT(m_image != nullptr);
+		ALBEDO_ASSERT(m_sampler != nullptr);
 		auto& extent = m_image->GetExtent();
 		// Judge if both width and height is the power of 2.
 		if (!IsPowerOfTwo(extent.width) || !IsPowerOfTwo(extent.height))
@@ -1444,8 +1499,8 @@ namespace Albedo
 			  std::shared_ptr<Sampler> sampler/* = nullptr*/)
 		:Texture{image, sampler? sampler : GRI::GetGlobalSampler("Default")}
 	{
-		assert(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_2D);
-		assert(image->GetSettings().extent.depth == 1);
+		ALBEDO_ASSERT(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_2D);
+		ALBEDO_ASSERT(image->GetSettings().extent.depth == 1);
 	}
 
 	GRI::Texture2D::
@@ -1459,8 +1514,8 @@ namespace Albedo
 			std::shared_ptr<Sampler> sampler/* = nullptr*/)
 		:Texture{ image, sampler ? sampler : GRI::GetGlobalSampler("Cubemap")}
 	{
-		assert(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_CUBE);
-		assert(image->GetSettings().extent.depth == 1);
+		ALBEDO_ASSERT(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_CUBE);
+		ALBEDO_ASSERT(image->GetSettings().extent.depth == 1);
 	}
 
 	GRI::Cubemap::
@@ -1552,7 +1607,7 @@ namespace Albedo
 	GRI::RenderPass::
 	END_BUILD()
 	{
-		assert(VK_SUBPASS_EXTERNAL == uint32_t(-1));
+		ALBEDO_ASSERT(VK_SUBPASS_EXTERNAL == uint32_t(-1));
 		std::vector<VkSubpassDescription> subpass_descriptions(m_subpasses.size());
 		std::vector<VkSubpassDependency>  subpass_dependencies(m_subpasses.size());
 		for (uint32_t i = 0; i < subpass_dependencies.size(); ++i)
@@ -1682,7 +1737,7 @@ namespace Albedo
 	GRI::RenderPass::
 	add_subpass(SubpassSetting setting)
 	{
-		assert(!setting.name.empty());
+		ALBEDO_ASSERT(!setting.name.empty());
 
 		size_t index = m_subpasses.size();
 		m_subpasses.emplace_back(std::move(setting));
@@ -1693,7 +1748,7 @@ namespace Albedo
 	GRI::RenderPass::
 	get_system_target_reference(SystemTarget target)
 	{
-		assert(target < MAX_SYSTEM_TARGET);
+		ALBEDO_ASSERT(target < MAX_SYSTEM_TARGET);
 		static const VkAttachmentReference references[MAX_SYSTEM_TARGET]
 		{
 			{ST_Color,		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
@@ -1706,7 +1761,7 @@ namespace Albedo
 	GRI::RenderPass::
 	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
-		assert(VK_NULL_HANDLE != m_handle && "Please call build() in constructor!");
+		ALBEDO_ASSERT(VK_NULL_HANDLE != m_handle && "Please call build() in constructor!");
 		// Begin Info
 		auto& current_framebuffer = m_framebuffers[g_rhi->swapchain.cursor];
 		VkRenderPassBeginInfo renderPassBeginInfo
@@ -1732,7 +1787,7 @@ namespace Albedo
 	GRI::RenderPass::
 	End(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->IsRecording() && "You must Begin() the command buffer before End() the render pass!");
+		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You must Begin() the command buffer before End() the render pass!");
 		vkCmdEndRenderPass(*commandbuffer);
 	}
 
@@ -1752,7 +1807,7 @@ namespace Albedo
 	GRI::Pipeline::
 	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
+		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
 		vkCmdBindPipeline(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_handle);
 	}
 
@@ -1760,8 +1815,7 @@ namespace Albedo
 	GRI::Pipeline::
 	End(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
-		assert(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
-		// You may need to call vkCmdNextSubpass(...);
+		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
 	}
 
 	GRI::Pipeline::
@@ -1805,8 +1859,8 @@ namespace Albedo
 		},
 		m_shader_module{std::move(shader_module)}
 	{
-		assert(ShaderType_Vertex   == m_shader_module.vertex_shader->GetType());
-		assert(ShaderType_Fragment == m_shader_module.fragment_shader->GetType());
+		ALBEDO_ASSERT(ShaderType_Vertex   == m_shader_module.vertex_shader->GetType());
+		ALBEDO_ASSERT(ShaderType_Fragment == m_shader_module.fragment_shader->GetType());
 
 		// Create Pipeline Layout
 		std::vector<VkPushConstantRange> push_constants;
@@ -2222,7 +2276,7 @@ namespace Albedo
 	GRI::
 	Screenshot(std::shared_ptr<Image> output)
 	{
-		assert(VK_IMAGE_USAGE_TRANSFER_DST_BIT & output->m_settings.usage);
+		ALBEDO_ASSERT(VK_IMAGE_USAGE_TRANSFER_DST_BIT & output->m_settings.usage);
 
 		auto commandbuffer = 
 			GetGlobalCommandPool(

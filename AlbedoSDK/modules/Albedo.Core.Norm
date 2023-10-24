@@ -1,0 +1,4 @@
+#pragma once
+
+#include "../source/AlbedoCore/Norm/assert.h"
+#include "../source/AlbedoCore/Norm/concepts.h"

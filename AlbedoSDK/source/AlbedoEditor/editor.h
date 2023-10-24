@@ -2,8 +2,8 @@
 
 #include <imgui.h>
 
-#include "../AlbedoGraphics/GRI.h"
-#include "../AlbedoCore/Event/event_manager.h"
+#include <AlbedoGraphics/GRI.h>
+#include <AlbedoCore/Event/event_manager.h>
 
 namespace Albedo
 {
