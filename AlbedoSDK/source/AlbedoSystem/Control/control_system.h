@@ -6,8 +6,7 @@
 #include <string>
 #include <functional>
 
-#include "../../AlbedoCore/Event/basic_event.h"
-//#include <AlbedoCore/Event/basic_event.h>
+#include <AlbedoCore/Event/event_manager.h>
 
 namespace Albedo
 {

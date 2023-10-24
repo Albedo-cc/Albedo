@@ -38,16 +38,16 @@ namespace Albedo
 	Process()
 	{
 		for (auto event_iter = m_events.begin();
-				  event_iter != m_events.end();
-				  ++event_iter)
+				  event_iter != m_events.end();)
 		{
 			auto event = *event_iter;
-			if (!event)
+			if (event)
 			{
-				m_events.erase(event_iter);
-				if (m_events.empty()) break;
+				if (event->Trig())
+					event->Act();
+				++event_iter;
 			}
-			else if (event->Trig()) event->Act();
+			else m_events.erase(event_iter++);
 		}
 	}
 

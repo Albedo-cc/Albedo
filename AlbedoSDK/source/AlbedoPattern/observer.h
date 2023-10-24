@@ -30,16 +30,14 @@ namespace Albedo
 				if (subscriptions.empty()) continue;
 
 				for (auto subscription_iter = subscriptions.begin();
-						  subscription_iter != subscriptions.end();
-						  ++subscription_iter)
+						  subscription_iter != subscriptions.end();)
 				{
-					if (subscription_iter->expired()) // subscriber pointer
+					if (!subscription_iter->expired()) // subscriber pointer
 					{
-					
-						subscriptions.erase(subscription_iter);
-						if (subscriptions.empty()) break;
+						subscription_iter->lock()->WhenNotified();
+						++subscription_iter;
 					}
-					else subscription_iter->lock()->WhenNotified();
+					else subscriptions.erase(subscription_iter++);
 				}
 			}
 		}
