@@ -26,6 +26,7 @@ namespace Albedo
     public:
         struct CreateInfo
         {
+            const char* layout;
             const char* font_path;
             float       font_size;
         };

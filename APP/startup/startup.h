@@ -1,8 +1,8 @@
 #pragma once
-#include "config.h"
+#include <global/config.h>
+#include <runtime/runtime.h>
+#include <sandbox/sandbox.h>
 #include "local.h"
-#include "../runtime/runtime.h"
-#include "../sandbox/sandbox.h"
 
 // Sort by Initialization Order
 #include <Albedo.Core.Log>
@@ -16,21 +16,22 @@ namespace APP
 
 	void StartUp(int argc, char* argv[])
 	{
-		Log::Info("{} is being started.", APP_NAME);
+		auto& CONFIG = APPConfig::GetView(); // Init
+		Log::Info("{} is being started.", CONFIG.app.name);
 		
 		// Init Window
 		WindowSystem::Initialize(WindowSystem::CreateInfo
-		{
-			.title    = APP_NAME,
-			.width	  = 800,
-			.height	  = 600,
-			.maximize = false,
+			{
+			.title	  = CONFIG.app.name.data(),
+			.width	  = CONFIG.window.width,
+			.height	  = CONFIG.window.height,
+			.maximize = CONFIG.window.options.maximize,
 		});
 
 		// Init GRI
 		GRI::Initialize(GRICreateInfo
 		{
-			.app_name     = APP_NAME,
+			.app_name     = CONFIG.app.name.data(),
 			.app_window   = WindowSystem::GetWindow(),
 			.msg_callback = messenger_callback,
 		});
@@ -38,15 +39,16 @@ namespace APP
 		// Init Editor
 		Editor::Initialize(
 		{
-			.font_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\font\\calibri.ttf",
-			.font_size = 16.0,
+			.layout    = CONFIG.editor.layout.data(),
+			.font_path = CONFIG.editor.font.name.data(),
+			.font_size = CONFIG.editor.font.size,
 		});
 
 	}
 
 	void Run()
 	{
-		Log::Info("{} is running.", APP_NAME);
+		Log::Info("{} is running.", APPConfig::GetView().app.name);
 
 		Runtime::Initialize();	
 
@@ -60,7 +62,7 @@ namespace APP
 
 	int Terminate() noexcept
 	{
-		Log::Info("{} is being terminated...", APP_NAME);
+		Log::Info("{} is being terminated...", APPConfig::GetView().app.name);
 
 		Editor::Terminate();
 		GRI::Terminate();

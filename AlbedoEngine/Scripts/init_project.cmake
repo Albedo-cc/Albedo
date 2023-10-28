@@ -2,6 +2,7 @@ if(NOT TARGET ${ALBEDO_APP_NAME})
     message(FATAL_ERROR "Please init project after creating app target.")
 endif()
 
+# Generate Folders
 set(ALBEDO_APP_FOLDERS
     "asset"
     "cache"
@@ -15,6 +16,7 @@ foreach(FOLDER_NAME ${ALBEDO_APP_FOLDERS})
     )
 endforeach()
 
+# Compile Shaders
 set(ALBEDO_SHADER_COMPILER ${Vulkan_GLSLC_EXECUTABLE})
 file(GLOB_RECURSE ALBEDO_SHADER_SOURCE_FILES
     "${ALBEDO_APP_SOURCE_DIR}/asset/shaders/*.vert"
@@ -35,8 +37,9 @@ foreach(SHADER_SOURCE_FILE ${ALBEDO_SHADER_SOURCE_FILES})
 endforeach(SHADER_SOURCE_FILE)
 
 add_custom_target(compile_shaders DEPENDS ${ALBEDO_SHADER_SPIRV_FILES})
+set_target_properties(compile_shaders PROPERTIES FOLDER "AlbedoEngine/Automation")
 
-
+# Copy Assets
 add_custom_command(
     TARGET ${ALBEDO_APP_NAME}
     POST_BUILD
@@ -44,5 +47,16 @@ add_custom_command(
         ARGS -E copy_directory_if_different
         "${ALBEDO_APP_SOURCE_DIR}/asset"
         "${ALBEDO_APP_BINARY_DIR}/asset"
+    COMMENT "Copying APP assets"
+)
+
+# Copy Configs
+add_custom_command(
+    TARGET ${ALBEDO_APP_NAME}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        ARGS -E copy_directory_if_different
+        "${ALBEDO_APP_SOURCE_DIR}/config"
+        "${ALBEDO_APP_BINARY_DIR}/config"
     COMMENT "Copying APP assets"
 )

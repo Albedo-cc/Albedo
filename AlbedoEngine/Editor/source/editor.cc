@@ -45,7 +45,7 @@ namespace Albedo
 		auto& io = ImGui::GetIO();
 
 		// Configuration
-		io.IniFilename = "config/imgui.ini";
+		io.IniFilename = createinfo.layout;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable
 					  ;//|ImGuiConfigFlags_ViewportsEnable;
 

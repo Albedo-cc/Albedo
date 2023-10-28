@@ -51,7 +51,7 @@ endif()
 if (NOT TARGET spdlog)
     message(STATUS "\nLoading spdlog")
     option(SPDLOG_USE_STD_FORMAT "Use std::format instead of fmt library." OFF)
-    add_subdirectory(spdlog)
+    add_subdirectory(spdlog-1.12.0)
     
     target_link_libraries(ALBEDO_RUNTIME_EXTERNS INTERFACE spdlog)
     set_target_properties(spdlog PROPERTIES FOLDER "${PROJECT_NAME}/Runtime/Dependencies/Spdlog")

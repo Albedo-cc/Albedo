@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21.0 FATAL_ERROR)
 
-set(ALBEDO_ENGINE_NAME "Albedo")
-project("AlbedoEngine"
+set(ALBEDO_ENGINE_NAME "AlbedoEngine")
+project(${ALBEDO_ENGINE_NAME}
     LANGUAGES       CXX
     HOMEPAGE_URL    "albedo.cc"
 )
@@ -39,8 +39,7 @@ target_include_directories(
 )
 
 # [Manager]
-add_custom_target(${PROJECT_NAME}) # For adding denpendencies
-target_sources(${PROJECT_NAME} PRIVATE ${ALBEDO_MODULES})
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "${PROJECT_NAME}")
-
-# [Dependencies]
+set(ALBEDO_SDK_NAME "AlbedoSDK")
+add_custom_target(${ALBEDO_SDK_NAME}) # For adding denpendencies
+target_sources(${ALBEDO_SDK_NAME} PRIVATE ${ALBEDO_MODULES})
+set_target_properties(${ALBEDO_SDK_NAME} PROPERTIES FOLDER "${PROJECT_NAME}")

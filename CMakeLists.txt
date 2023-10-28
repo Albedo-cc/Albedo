@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21.0 FATAL_ERROR)
 
-set(ALBEDO_APP_NAME "AlbedoAPP")
+set(ALBEDO_APP_NAME "Albedo")
 project(${ALBEDO_APP_NAME}
     LANGUAGES CXX
     VERSION "0.0.0"
@@ -21,7 +21,6 @@ set(ALBEDO_APP_SOURCE_DIR "${PROJECT_SOURCE_DIR}/APP")
 set(ALBEDO_APP_BINARY_DIR "$<TARGET_FILE_DIR:${ALBEDO_APP_NAME}>")
 add_compile_definitions(ALBEDO_APP_NAME="${ALBEDO_APP_NAME}")
 add_compile_definitions(ALBEDO_APP_VERSION="${PROJECT_VERSION}")
-add_compile_definitions(ALBEDO_APP_ASSET_PATH="${ALBEDO_APP_BINARY_DIR}/asset")
 
 # [Project]
 file(GLOB_RECURSE ALBEDO_APP_HEADER "APP/*.h")
@@ -35,8 +34,9 @@ add_executable( ${ALBEDO_APP_NAME}
 include(init_project)
 
 add_subdirectory(AlbedoEngine)
-target_link_libraries(${ALBEDO_APP_NAME} PRIVATE Albedo)
+target_link_libraries(${ALBEDO_APP_NAME} PRIVATE AlbedoEngine)
 target_sources(${ALBEDO_APP_NAME} PRIVATE README.md TODO.md)
+target_include_directories(${ALBEDO_APP_NAME} PRIVATE "APP")
 
 # [Dependencies]
 

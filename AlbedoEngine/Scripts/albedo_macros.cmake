@@ -3,5 +3,5 @@ if (NOT TARGET AlbedoEngine)
 endif()
 
 macro(add_engine_dependencies new_dependencies)
-    add_dependencies(AlbedoEngine new_dependencies)
+    add_dependencies(${ALBEDO_SDK_NAME} new_dependencies)
 endmacro()

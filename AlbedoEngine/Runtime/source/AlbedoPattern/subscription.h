@@ -4,6 +4,7 @@
 
 #include <list>
 #include <memory>
+#include <functional>
 #include <unordered_map>
 
 namespace Albedo { namespace Pattern 

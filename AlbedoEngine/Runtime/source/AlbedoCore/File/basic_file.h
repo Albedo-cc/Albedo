@@ -1,27 +1,36 @@
+#pragma once
+
 #include <AlbedoCore/Log/log.h>
 #include <AlbedoCore/Norm/assert.h>
-#include <AlbedoCore/Norm/concepts.h>
 #include <AlbedoCore/Norm/types.h>
 
 #include <fstream>
+#include <string>
 #include <string_view>
 
 namespace Albedo
 {
 
-	template<Pointer BufferType>
+	template<typename BufferType>
 	class File
 	{
 	public:
-		virtual void Read(std::string_view path) const throw(std::runtime_error) = 0;
-		virtual void Write() const throw(std::runtime_error) = 0;
-		virtual void Save(std::string_view path = nullptr) const throw(std::runtime_error) = 0;
-
-	protected:
-		BufferType m_buffer;
+		static constexpr size_t WHOLE_SIZE = 0;
 
 	public:
-		File() = default;
+		virtual void Save() const = 0;
+
+		auto		 GetPath() const -> std::string_view { return m_path; }
+		virtual auto GetSize() const -> size_t = 0;
+
+	protected:
+		std::string	m_path;
+		BufferType	m_buffer;
+		EnumBits	m_options;
+
+	public:
+		File() = delete;
+		File(std::string path) : m_path{ std::move(path) } {};
 		virtual ~File() noexcept = default;
 	};
    

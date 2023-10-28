@@ -1,26 +1,17 @@
 {
-    "AlbedoAPP":
-    {
-        "Window":[
-        {"Title":"AlbedoAPP"},
-        {"Extent":[1080,720]},
-        {"Icon":"Albedo128x128.png"},
-        {"Options":[
-            {"Maximize":false},
-            {"Resizable":true}]
-        }
-        ],
-        "Editor":[
-            {"Font":["calibri.ttf", 16.0]},
-            {"Layout":"editor.layout"},
-            {"Options":[
-                {"SaveLayout":true}]
-            }
-        ],
-        "Path":[
-        {"Asset":"asset"},
-        {"Cache":"cache"},
-        {"Config":"config"}
-        ]
+    "Name":"Albedo",
+    "Window":{
+        "Title":"Albedo",
+        "Extent":[1080,720],
+        "Icon":"asset/image/Albedo128x128.png",
+        "Options":{
+            "Maximize":false,
+            "Resizable":true
+    }
+    },
+    "Editor":{
+        "Font":["asset/font/calibri.ttf", 16.0],
+        "Layout":"config/editor.layout",
+        "Options":{ "SaveLayout": true }
     }
 }
