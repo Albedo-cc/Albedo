@@ -1,0 +1,9 @@
+#pragma once
+
+#include "../Runtime/source/AlbedoCore/Math/angle.h"
+#include "../Runtime/source/AlbedoCore/Math/concepts.h"
+#include "../Runtime/source/AlbedoCore/Math/float.h"
+#include "../Runtime/source/AlbedoCore/Math/graphics.h"
+#include "../Runtime/source/AlbedoCore/Math/integer.h"
+#include "../Runtime/source/AlbedoCore/Math/matrix.h"
+#include "../Runtime/source/AlbedoCore/Math/vector.h"

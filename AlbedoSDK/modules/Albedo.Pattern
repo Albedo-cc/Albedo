@@ -1,4 +1,0 @@
-#pragma once
-
-#include "../source/AlbedoPattern/singleton.h"
-#include "../source/AlbedoPattern/observer.h"

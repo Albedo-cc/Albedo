@@ -5,8 +5,8 @@
 namespace Albedo{
 namespace APP
 {
-	static const char* vert_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\cubemap.vert.spv";
-	static const char* frag_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shaders\\skybox.frag.spv";
+	static const char* vert_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shader\\cubemap.vert.spv";
+	static const char* frag_shader_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\shader\\skybox.frag.spv";
 	
 	static std::vector<char> ReadShader(const char* path)
 	{

@@ -38,7 +38,7 @@ namespace APP
 		// Init Editor
 		Editor::Initialize(
 		{
-			.font_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\fonts\\calibri.ttf",
+			.font_path = "C:\\Frozen Zone\\MyGitHub\\Albedo\\APP\\asset\\font\\calibri.ttf",
 			.font_size = 16.0,
 		});
 

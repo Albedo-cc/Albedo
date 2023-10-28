@@ -1,0 +1,26 @@
+{
+    "AlbedoAPP":
+    {
+        "Window":[
+        {"Title":"AlbedoAPP"},
+        {"Extent":[1080,720]},
+        {"Icon":"Albedo128x128.png"},
+        {"Options":[
+            {"Maximize":false},
+            {"Resizable":true}]
+        }
+        ],
+        "Editor":[
+            {"Font":["calibri.ttf", 16.0]},
+            {"Layout":"editor.layout"},
+            {"Options":[
+                {"SaveLayout":true}]
+            }
+        ],
+        "Path":[
+        {"Asset":"asset"},
+        {"Cache":"cache"},
+        {"Config":"config"}
+        ]
+    }
+}

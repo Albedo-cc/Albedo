@@ -1,0 +1,4 @@
+#pragma once
+
+#include "../Runtime/source/AlbedoCore/World/coordinate.h"
+#include "../Runtime/source/AlbedoCore/World/object.h"
