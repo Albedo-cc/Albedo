@@ -19,7 +19,6 @@ namespace APP
 			struct Window
 			{
 				std::string title;
-				std::string icon;
 				int width, height;
 				struct Options
 				{

@@ -1,18 +1,20 @@
 cmake_minimum_required(VERSION 3.21.0 FATAL_ERROR)
 
 set(ALBEDO_ENGINE_NAME "AlbedoEngine")
+set(ALBEDO_SDK_NAME "AlbedoSDK")
 project(${ALBEDO_ENGINE_NAME}
     LANGUAGES       CXX
     HOMEPAGE_URL    "albedo.cc"
 )
 
-# [Configuration]
+# [Environment]
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Explicitly require the standard
 set(CMAKE_CXX_EXTENSIONS OFF) # Vendor-specific Extensions
-
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/Scripts")
 include(check_in_source_build)
+
+set(ENV{ALBEDO_ENGINE_TEXTURE_PROCESSOR} "${PROJECT_SOURCE_DIR}/Binary/Windows/x64/ktx.exe")
 
 # [Options]
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -39,7 +41,6 @@ target_include_directories(
 )
 
 # [Manager]
-set(ALBEDO_SDK_NAME "AlbedoSDK")
 add_custom_target(${ALBEDO_SDK_NAME}) # For adding denpendencies
 target_sources(${ALBEDO_SDK_NAME} PRIVATE ${ALBEDO_MODULES})
 set_target_properties(${ALBEDO_SDK_NAME} PROPERTIES FOLDER "${PROJECT_NAME}")

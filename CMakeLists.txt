@@ -6,7 +6,7 @@ project(${ALBEDO_APP_NAME}
     VERSION "0.0.0"
     HOMEPAGE_URL "")
 
-# [Configuration]
+# [Environment]
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Explicitly require the standard
 set(CMAKE_CXX_EXTENSIONS OFF) # Vendor-specific Extensions
@@ -18,28 +18,39 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE  ${CMAKE_BINARY_DIR}/${ALBEDO_APP_NAM
 
 # [Macros]
 set(ALBEDO_APP_SOURCE_DIR "${PROJECT_SOURCE_DIR}/APP")
-set(ALBEDO_APP_BINARY_DIR "$<TARGET_FILE_DIR:${ALBEDO_APP_NAME}>")
+set(ALBEDO_APP_BINARY_DIR "${CMAKE_BINARY_DIR}/${ALBEDO_APP_NAME}")
+#set(ALBEDO_APP_BINARY_DIR "$<TARGET_FILE_DIR:${ALBEDO_APP_NAME}>")
 add_compile_definitions(ALBEDO_APP_NAME="${ALBEDO_APP_NAME}")
 add_compile_definitions(ALBEDO_APP_VERSION="${PROJECT_VERSION}")
 
 # [Project]
-file(GLOB_RECURSE ALBEDO_APP_HEADER "APP/*.h")
-file(GLOB_RECURSE ALBEDO_APP_SOURCE "APP/*.cc")
-file(GLOB_RECURSE ALBEDO_APP_CONFIG "APP/config/*")
-source_group(TREE "${PROJECT_SOURCE_DIR}/APP" FILES ${ALBEDO_APP_HEADER} ${ALBEDO_APP_SOURCE} ${ALBEDO_APP_CONFIG})
+file(GLOB_RECURSE ALBEDO_APP_HEADER     "${ALBEDO_APP_SOURCE_DIR}/*.h")
+file(GLOB_RECURSE ALBEDO_APP_SOURCE     "${ALBEDO_APP_SOURCE_DIR}/*.cc")
+file(GLOB_RECURSE ALBEDO_APP_ASSET      "${ALBEDO_APP_SOURCE_DIR}/asset/*")
+file(GLOB_RECURSE ALBEDO_APP_SETTINGS   "${ALBEDO_APP_SOURCE_DIR}/settings/*")
+file(GLOB_RECURSE ALBEDO_APP_CONFIG     "${ALBEDO_APP_SOURCE_DIR}/config/*")
+source_group(TREE ${ALBEDO_APP_SOURCE_DIR}
+    FILES
+    ${ALBEDO_APP_HEADER}
+    ${ALBEDO_APP_SOURCE}
+    ${ALBEDO_APP_ASSET}
+    ${ALBEDO_APP_SETTINGS}
+    ${ALBEDO_APP_CONFIG})
 add_executable( ${ALBEDO_APP_NAME} 
                 ${ALBEDO_APP_HEADER} 
                 ${ALBEDO_APP_SOURCE}
-                ${ALBEDO_APP_CONFIG})
-include(init_project)
-
+                ${ALBEDO_APP_SETTINGS})
 add_subdirectory(AlbedoEngine)
+include(INIT_ALBEDO_APP)
+
+
 target_link_libraries(${ALBEDO_APP_NAME} PRIVATE AlbedoEngine)
-target_sources(${ALBEDO_APP_NAME} PRIVATE README.md TODO.md)
 target_include_directories(${ALBEDO_APP_NAME} PRIVATE "APP")
 
-# [Dependencies]
-
+target_sources(${ALBEDO_APP_NAME}
+                PRIVATE 
+                README.md TODO.md
+                ${ALBEDO_APP_CONFIG})
 
 # [Property]
 # Visual Studio

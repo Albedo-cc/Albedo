@@ -3,14 +3,13 @@
     "Window":{
         "Title":"Albedo",
         "Extent":[1080,720],
-        "Icon":"asset/image/Albedo128x128.png",
         "Options":{
             "Maximize":false,
             "Resizable":true
     }
     },
     "Editor":{
-        "Font":["asset/font/calibri.ttf", 16.0],
+        "Font":["asset/font/Arial_Rounded_MT_Bold.ttf", 16.0],
         "Layout":"config/editor.layout",
         "Options":{ "SaveLayout": true }
     }

@@ -20,7 +20,6 @@ namespace APP
 			.window
 			{
 				.title = config["Window"]["Title"],
-				.icon  = config["Window"]["Icon"],
 				.width = config["Window"]["Extent"][0],
 				.height= config["Window"]["Extent"][1],
 				.options

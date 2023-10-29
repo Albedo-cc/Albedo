@@ -29,13 +29,17 @@ if(NOT TARGET VulkanMemoryAllocator)
 endif()
 
 # KTX
-if(NOT TARGET ktx)
+if(NOT TARGET KTX::ktx)
     message(STATUS "\nLoading KTX (Khronos Texture)")
-    
-    add_subdirectory(KTX-Software-4.2.1)
+    add_subdirectory(KTX-Software-4.3.0-alpha3)
+    include("KTX-Software-4.3.0-alpha3/lib/cmake/ktx/KtxConfig.cmake")
+    file(GLOB_RECURSE KTX_HEADERS "KTX-Software-4.3.0-alpha3/include/*.h")
+    source_group("" FILES ${KTX_HEADERS})
+    add_custom_target(KTX ${KTX_HEADERS})
+    target_sources(KTX PRIVATE ${KTX_HEADERS})
 
-    target_link_libraries(ALBEDO_RUNTIME_EXTERNS INTERFACE ktx)
-    set_target_properties(ktx PROPERTIES FOLDER "${PROJECT_NAME}/Runtime/Dependencies/KTX")
+    target_link_libraries(ALBEDO_RUNTIME_EXTERNS INTERFACE KTX::ktx)
+    set_target_properties(KTX PROPERTIES FOLDER "${PROJECT_NAME}/Runtime/Dependencies/KTX")
 endif()
 
 # Dear ImGui
