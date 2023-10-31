@@ -76,8 +76,8 @@ namespace Albedo
 				->AllocateDescriptorSet(GRI::GetGlobalDescriptorSetLayout
 				(GRI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER})));
 
-				frame_info.main_camera = GRI::Texture2D::Create(
-				GRI::Image::Create(GRI::Image::CreateInfo
+				frame_info.main_camera =
+					GRI::Texture2D::Create(GRI::Texture::CreateInfo
 					{
 					.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 					.usage  = VK_IMAGE_USAGE_SAMPLED_BIT |
@@ -89,7 +89,7 @@ namespace Albedo
 					.arrayLayers = 1,
 					.samples = VK_SAMPLE_COUNT_1_BIT,
 					.tiling  = VK_IMAGE_TILING_OPTIMAL,
-					}));
+					});
 
 				frame_info.main_camera->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -147,7 +147,7 @@ namespace Albedo
 		frame.commandbuffer->Begin();
 		{
 			// Capture current scene
-			GRI::GetCurrentRenderTarget()->Blit(frame.commandbuffer, frame.main_camera->GetImage());
+			GRI::GetCurrentRenderTarget()->Blit(frame.commandbuffer, frame.main_camera);
 
 			auto subpass_iter = sm_renderpass->Begin(frame.commandbuffer);
 			{

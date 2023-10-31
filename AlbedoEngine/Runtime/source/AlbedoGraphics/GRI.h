@@ -40,7 +40,7 @@ namespace Albedo
 	//[GRI OBJECTS]----------------------------------------------------------------------------------------------------------------
 	/*Command*/			class CommandPool; class CommandBuffer; class TransientCommandBuffer; class AutoResetCommandBuffer;
 	/*Synchronization*/	class Fence; class Semaphore;
-	/*Memory*/			class Shader; class Buffer; class Image;
+	/*Memory*/			class Shader; class Buffer;
 	/*Interface Class*/	class RenderPass; class Pipeline; class GraphicsPipeline;
 	/*Descriptor*/		class DescriptorSetLayout; class DescriptorPool; class DescriptorSet;
 	/*Texture*/			class Texture; class Texture2D; class Cubemap;
@@ -63,15 +63,14 @@ namespace Albedo
 
 		static auto GetQueue(QueueFamilyType queue_family, uint32_t index = 0) -> VkQueue;
 		static auto GetQueueFamilyIndex(QueueFamilyType queue_family) -> uint32_t;
-		static auto GetCurrentRenderTarget() -> std::shared_ptr<const GRI::Image>;
-		static auto GetZBuffer()			 -> std::shared_ptr<const GRI::Image>;
+		static auto GetCurrentRenderTarget() -> std::shared_ptr<const GRI::Texture>;
+		static auto GetZBuffer()			 -> std::shared_ptr<const GRI::Texture>;
 		static auto GetRenderTargetCount()	 -> size_t;
 		static auto GetRenderTargetCursor()	 -> uint32_t;
 		static auto GetRenderTargetFormat()	 -> VkFormat;
 
 		static void PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer); //[WARN]: will be depreciated!
 
-		static void Screenshot(std::shared_ptr<Image> output);
 		static void Screenshot(std::shared_ptr<Texture> output);
 
 		static auto MakeID(const std::vector<VkDescriptorType>& types_in_order) -> std::string;
@@ -342,63 +341,7 @@ namespace Albedo
 			VmaAllocation m_allocation { VK_NULL_HANDLE };	
 		};
 
-		class Image final
-		{
-			friend class GRI;
-		public:
-			struct CreateInfo // Create by GRI
-			{
-				VkImageAspectFlags	aspect;
-				VkImageUsageFlags	usage;
-				VkFormat			format;
-				VkExtent3D			extent;
-				VkImageViewType		viewType	= VK_IMAGE_VIEW_TYPE_MAX_ENUM;//Auto
-				uint32_t			mipLevels	= 1;
-				uint32_t            arrayLayers = 1;
-				VkSampleCountFlagBits   samples   = VK_SAMPLE_COUNT_1_BIT;
-				VkImageTiling			tiling	  = VK_IMAGE_TILING_OPTIMAL;
-			};
-
-		public:
-			void Write(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data);
-			void Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Image>  target) const;
-			void Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent);
-			void ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout);
-
-			auto GetSettings()			const -> const CreateInfo& { return m_settings; }
-			auto GetLayout()			const -> VkImageLayout{ return m_layout; }
-			auto GetView()				const -> VkImageView { return m_view; }
-			auto GetFormat()			const -> VkFormat { return m_settings.format; }
-			auto GetExtent()			const -> const VkExtent3D& { return m_settings.extent; }
-			auto GetMipmapLevels()		const -> uint32_t { return m_settings.mipLevels; }
-			auto GetArraryLevels()		const -> uint32_t { return m_settings.arrayLayers; }
-			auto GetSubresourceRange()	const ->VkImageSubresourceRange;
-			auto GetSubresourceLayers() const ->VkImageSubresourceLayers;
-			auto GetSize()				const ->VkDeviceSize;
-			operator VkImage()			const { return m_handle; }
-
-			auto HasStencil()		const -> bool;
-			auto HasMipmap()		const -> bool { return m_settings.mipLevels - 1; }
-
-		public:
-			static inline auto Create(GRI::Image::CreateInfo createinfo)
-			{ return std::make_shared<GRI::Image>(createinfo); }
-			Image(CreateInfo createinfo);
-			~Image() noexcept;
-
-		private:
-			void fill_convert_layout_info(VkImageMemoryBarrier& barrier, 
-				VkImageLayout source_layout, VkImageLayout target_layout, 
-				VkPipelineStageFlags& from_stage, VkPipelineStageFlags& to_stage) const;
-
-		private:
-			VkImage			m_handle		{ VK_NULL_HANDLE };
-			VkImageView		m_view			{ VK_NULL_HANDLE };
-			VkImageLayout	m_layout		{ VK_IMAGE_LAYOUT_UNDEFINED };
-			CreateInfo		m_settings;
-			VmaAllocation	m_allocation	{ VK_NULL_HANDLE };
-		};
-
+		
 		class Sampler final
 		{
 			friend class GRI;
@@ -443,25 +386,58 @@ namespace Albedo
 		{
 			friend class GRI;
 		public:
+			struct CreateInfo // Create by GRI
+			{
+				VkImageAspectFlags		 aspect;
+				VkImageUsageFlags		 usage;
+				VkFormat				 format;
+				VkExtent3D				 extent;
+				VkImageViewType			 viewType	= VK_IMAGE_VIEW_TYPE_MAX_ENUM;//Auto
+				uint32_t				 mipLevels	= 1;
+				uint32_t				 arrayLayers= 1;
+				VkSampleCountFlagBits    samples	= VK_SAMPLE_COUNT_1_BIT;
+				VkImageTiling			 tiling		= VK_IMAGE_TILING_OPTIMAL;
+			};
+
+		public:
 			void Write(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data);
-			void Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Image>  target) const;
 			void Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Texture>  target) const;
 			void Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent);
 			void ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout);
 
-			auto GetImage()	  const -> const std::shared_ptr<Image>&   { return m_image; }
-			auto GetSampler() const -> const std::shared_ptr<Sampler>& { return m_sampler; }
-			operator VkImage() const { return *m_image; }
+			auto GetSettings()			const -> const CreateInfo& { return m_settings; }
+			auto GetLayout()			const -> VkImageLayout{ return m_layout; }
+			auto GetView()				const -> VkImageView { return m_view; }
+			auto GetSampler()			const -> std::shared_ptr<Sampler> { return m_sampler; }
+			auto GetFormat()			const -> VkFormat { return m_settings.format; }
+			auto GetExtent()			const -> const VkExtent3D& { return m_settings.extent; }
+			auto GetMipmapLevels()		const -> uint32_t { return m_settings.mipLevels; }
+			auto GetArraryLevels()		const -> uint32_t { return m_settings.arrayLayers; }
+			auto GetSubresourceRange()	const ->VkImageSubresourceRange;
+			auto GetSubresourceLayers() const ->VkImageSubresourceLayers;
+			auto GetSize()				const ->VkDeviceSize;
+			operator VkImage()			const { return m_handle; }
+
+			auto HasStencil()			const -> bool;
+			auto HasMipmap()			const -> bool { return m_settings.mipLevels - 1; }
 
 		public:
-			static inline auto Create(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler)
-			{ return std::make_shared<Texture>(image, sampler); }
-			Texture(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler);
-			Texture() = delete;
+			static inline auto Create(GRI::Texture::CreateInfo createinfo, std::shared_ptr<Sampler> sampler = nullptr/*Auto*/)
+			{ return std::make_shared<GRI::Texture>(createinfo, sampler); }
+			Texture(CreateInfo createinfo, std::shared_ptr<Sampler> sampler = nullptr);
 			virtual ~Texture() noexcept;
 
 		protected:
-			std::shared_ptr<Image>   m_image;
+			void fill_convert_layout_info(VkImageMemoryBarrier& barrier, 
+				VkImageLayout source_layout, VkImageLayout target_layout, 
+				VkPipelineStageFlags& from_stage, VkPipelineStageFlags& to_stage) const;
+
+		protected:
+			VkImage			m_handle		{ VK_NULL_HANDLE };
+			VkImageView		m_view			{ VK_NULL_HANDLE };
+			VkImageLayout	m_layout		{ VK_IMAGE_LAYOUT_UNDEFINED };
+			CreateInfo		m_settings;
+			VmaAllocation	m_allocation	{ VK_NULL_HANDLE };
 			std::shared_ptr<Sampler> m_sampler;
 		};
 
@@ -473,11 +449,10 @@ namespace Albedo
 			void Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent2D& extent);
 
 		public:
-			static inline auto Create(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr)
-			{ return std::make_shared<Texture2D>(image, sampler); }
-			Texture2D(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr);
+			static inline auto Create(GRI::Texture::CreateInfo createinfo, std::shared_ptr<Sampler> sampler = nullptr)
+			{ return std::make_shared<Texture2D>(std::move(createinfo), std::move(sampler)); }
+			Texture2D(GRI::Texture::CreateInfo createinfo, std::shared_ptr<Sampler> sampler = nullptr);
 			Texture2D() = delete;
-			virtual ~Texture2D() noexcept override;
 		};
 
 		
@@ -494,9 +469,9 @@ namespace Albedo
 			//void WriteFace(std::shared_ptr<CommandBuffer> commandbuffer, Face face, std::shared_ptr<Buffer> data);
 
 		public:
-			static inline auto Create(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr)
-			{ return std::make_shared<GRI::Cubemap>(image, sampler); }
-			Cubemap(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler = nullptr);
+			/*static inline auto Create(std::shared_ptr<Texture> image, std::shared_ptr<Sampler> sampler = nullptr)
+			{ return std::make_shared<GRI::Cubemap>(image, sampler); }*/
+			//Cubemap(std::shared_ptr<Texture> image, std::shared_ptr<Sampler> sampler = nullptr);
 			virtual ~Cubemap() noexcept override;
 		};
 
@@ -685,8 +660,8 @@ namespace Albedo
 	private:
 		struct RenderTarget
 		{
-			static inline std::shared_ptr<Image> zbuffer; // Shared
-			std::shared_ptr<Image> image;
+			static inline std::shared_ptr<Texture> zbuffer; // Shared
+			std::shared_ptr<Texture> image;
 			std::shared_ptr<CommandBuffer> commandbuffer;
 			GRI::Fence fence_in_flight{ FenceType_Signaled };
 			Semaphore  semaphore_ready{SemaphoreType_Unsignaled};

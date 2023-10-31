@@ -27,10 +27,6 @@ namespace Albedo
 			.msg_callback = createinfo.msg_callback
 		});
 
-		sm_preframe_task_pools.resize(MAX_QUEUEFAMILY_TYPE);
-
-		create_render_targets();
-
 		// Init Default Global Resource
 		RegisterGlobalSampler("Default", Sampler::Create({}));
 		RegisterGlobalSampler("Cubemap", Sampler::Create({ .wrap_mode{.U = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER } }));
@@ -48,6 +44,12 @@ namespace Albedo
 					.pImmutableSamplers = nullptr,
 				}
 			}));
+
+		
+		sm_preframe_task_pools.resize(MAX_QUEUEFAMILY_TYPE);
+
+		create_render_targets();
+
 	}
 
 	void 
@@ -78,7 +80,7 @@ namespace Albedo
 	create_memory_allocator()
 	{
 		VmaAllocatorCreateInfo vmaAllocatorCreateInfo
-		{ 
+		{
 			.flags = 0x0,							//VmaAllocatorCreateFlagBits
 			.physicalDevice = GPU,
 			.device = device,
@@ -346,7 +348,7 @@ namespace Albedo
 		}
 	}
 
-	std::shared_ptr<const GRI::Image>
+	std::shared_ptr<const GRI::Texture>
 	GRI::
 	GetCurrentRenderTarget()
 	{
@@ -374,7 +376,7 @@ namespace Albedo
 		return g_rhi->swapchain.format;
 	}
 
-	std::shared_ptr<const GRI::Image>
+	std::shared_ptr<const GRI::Texture>
 	GRI::
 	GetZBuffer()
 	{
@@ -761,8 +763,8 @@ namespace Albedo
 
 		static VkDescriptorImageInfo imageinfo{};
 		imageinfo.sampler	  = *texture->GetSampler();
-		imageinfo.imageView	  = texture->GetImage()->GetView();
-		imageinfo.imageLayout = texture->GetImage()->GetLayout();
+		imageinfo.imageView	  = texture->GetView();
+		imageinfo.imageLayout = texture->GetLayout();
 
 		return VkWriteDescriptorSet
 		{
@@ -951,13 +953,24 @@ namespace Albedo
 		return m_allocation->GetSize();
 	}
 
-	GRI::Image::
-	Image(CreateInfo createinfo) :
-		m_settings{ std::move(createinfo) }
+	GRI::Texture::
+	Texture(CreateInfo createinfo, std::shared_ptr<Sampler> sampler/* = nullptr*/) :
+		m_settings{ std::move(createinfo) },
+		m_sampler{ std::move(sampler) }
 	{
+		// Judge if valid extent
 		if (!m_settings.extent.width || !m_settings.extent.height || !m_settings.extent.depth)
+		{
 			Log::Fatal("Failed to create Image with extent ({}, {}, {}).",
-			m_settings.extent.width, m_settings.extent.height, m_settings.extent.depth);
+				m_settings.extent.width, m_settings.extent.height, m_settings.extent.depth);
+		}
+
+		// Judge if both width and height is the power of 2.
+		if (!IsPowerOfTwo(m_settings.extent.width) || !IsPowerOfTwo(m_settings.extent.height))
+		{
+			Log::Warn("Bad Texture Extent({}, {}), it is better to create a texture with a power of two size.",
+				m_settings.extent.width, m_settings.extent.height);
+		}
 
 		VkImageType image_type = m_settings.extent.depth > 1 ? VK_IMAGE_TYPE_3D : VkImageType(VK_IMAGE_TYPE_1D + (m_settings.extent.height > 1));
 		VkImageCreateInfo imageCreateInfo
@@ -1017,10 +1030,16 @@ namespace Albedo
 			&m_view
 			) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Image View!");
+
+		if (!m_sampler)
+		{
+			Log::Debug("Using the default sampler to initialize a texture.");
+			m_sampler = GRI::GetGlobalSampler("Default");
+		}
 	}
 
-	GRI::Image::
-	~Image() noexcept
+	GRI::Texture::
+	~Texture() noexcept
 	{
 		vmaDestroyImage(g_rhi->vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
@@ -1029,7 +1048,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::Image::
+	GRI::Texture::
 	fill_convert_layout_info(
 		VkImageMemoryBarrier& barrier,
 		VkImageLayout source_layout,
@@ -1156,7 +1175,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::Image::
+	GRI::Texture::
 	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent)
 	{
 		if (!extent.width || !extent.height || !extent.depth)
@@ -1231,7 +1250,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::Image::
+	GRI::Texture::
 	Write(std::shared_ptr<GRI::CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording());
@@ -1255,9 +1274,9 @@ namespace Albedo
 	}
 
 	void
-	GRI::Image::
+	GRI::Texture::
 	Blit(std::shared_ptr<GRI::CommandBuffer> commandbuffer,
-		std::shared_ptr<Image>  target) const
+		std::shared_ptr<Texture>  target) const
 	{
 		// Only Blit Mipmap LV.0 by default.
 		VkImageBlit blitRegion
@@ -1322,7 +1341,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::Image::
+	GRI::Texture::
 	ConvertLayout(std::shared_ptr<GRI::CommandBuffer> commandbuffer, VkImageLayout target_layout)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording());
@@ -1345,7 +1364,7 @@ namespace Albedo
 	}
 
 	VkImageSubresourceRange
-	GRI::Image::
+	GRI::Texture::
 	GetSubresourceRange() const
 	{
 		return VkImageSubresourceRange
@@ -1359,7 +1378,7 @@ namespace Albedo
 	}
 
 	VkImageSubresourceLayers
-	GRI::Image::
+	GRI::Texture::
 	GetSubresourceLayers() const
 	{
 		return VkImageSubresourceLayers
@@ -1372,14 +1391,14 @@ namespace Albedo
 	}
 
 	VkDeviceSize
-	GRI::Image::
+	GRI::Texture::
 	GetSize() const
 	{
 		return m_allocation->GetSize();
 	}
 
 	bool
-	GRI::Image::
+	GRI::Texture::
 	HasStencil() const
 	{
 		return (VK_FORMAT_S8_UINT <= m_settings.format &&
@@ -1432,87 +1451,14 @@ namespace Albedo
 		vkDestroySampler(g_rhi->device, m_handle, g_rhi->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
-
-	void
-	GRI::Texture::
-	Write(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data)
-	{
-		m_image->Write(commandbuffer, data);
-	}
-
-	void
-	GRI::Texture::
-	Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Image>  target) const
-	{
-		m_image->Blit(commandbuffer, target);
-	}
-
-	void
-	GRI::Texture::
-	Blit(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Texture>  target) const
-	{
-		m_image->Blit(commandbuffer, target->m_image);
-	}
-
-	void
-	GRI::Texture::
-	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent)
-	{
-		m_image->Resize(commandbuffer, extent);
-	}
-
-	void
-	GRI::Texture::
-	ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout)
-	{
-		m_image->ConvertLayout(commandbuffer, target_layout);
-	}
-
-	GRI::Texture::
-	Texture(std::shared_ptr<Image> image, std::shared_ptr<Sampler> sampler) :
-		m_image{ std::move(image) },
-		m_sampler{ std::move(sampler) }
-	{
-		ALBEDO_ASSERT(m_image != nullptr);
-		ALBEDO_ASSERT(m_sampler != nullptr);
-		auto& extent = m_image->GetExtent();
-		// Judge if both width and height is the power of 2.
-		if (!IsPowerOfTwo(extent.width) || !IsPowerOfTwo(extent.height))
-		{
-			Log::Warn("Bad Texture Extent({}, {}), it is better to create a texture with a power of two size.",
-				extent.width, extent.height);
-		}	
-	}
-
-	GRI::Texture::
-	~Texture() noexcept
-	{
-		
-	}
-
 	
 	GRI::Texture2D::
-	Texture2D(std::shared_ptr<Image> image,
+	Texture2D(GRI::Texture::CreateInfo createinfo,
 			  std::shared_ptr<Sampler> sampler/* = nullptr*/)
-		:Texture{image, sampler? sampler : GRI::GetGlobalSampler("Default")}
+		:Texture{createinfo, sampler? sampler : GRI::GetGlobalSampler("Default")}
 	{
-		ALBEDO_ASSERT(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_2D);
-		ALBEDO_ASSERT(image->GetSettings().extent.depth == 1);
-	}
-
-	GRI::Texture2D::
-	~Texture2D() noexcept
-	{
-
-	}
-
-	GRI::Cubemap::
-	Cubemap(std::shared_ptr<Image> image,
-			std::shared_ptr<Sampler> sampler/* = nullptr*/)
-		:Texture{ image, sampler ? sampler : GRI::GetGlobalSampler("Cubemap")}
-	{
-		ALBEDO_ASSERT(image->GetSettings().viewType == VK_IMAGE_VIEW_TYPE_CUBE);
-		ALBEDO_ASSERT(image->GetSettings().extent.depth == 1);
+		ALBEDO_ASSERT(m_settings.viewType == VK_IMAGE_VIEW_TYPE_2D);
+		ALBEDO_ASSERT(m_settings.extent.depth == 1);
 	}
 
 	GRI::Cubemap::
@@ -2271,7 +2217,7 @@ namespace Albedo
 
 	void
 	GRI::
-	Screenshot(std::shared_ptr<Image> output)
+	Screenshot(std::shared_ptr<Texture> output)
 	{
 		ALBEDO_ASSERT(VK_IMAGE_USAGE_TRANSFER_DST_BIT & output->m_settings.usage);
 
@@ -2298,13 +2244,6 @@ namespace Albedo
 				.signal_semaphores	= {},
 			}, PrevRT.fence_in_flight);
 		PrevRT.fence_in_flight.Wait();
-	}
-
-	void
-	GRI::
-	Screenshot(std::shared_ptr<Texture> output)
-	{
-		Screenshot(output->m_image);
 	}
 
 	void
@@ -2402,7 +2341,7 @@ namespace Albedo
 			for (size_t i = 0; i < sm_render_targets.size(); ++i)
 			{
 				auto& RT = sm_render_targets[i];
-				RT.image = Image::Create(Image::CreateInfo
+				RT.image = Texture::Create(Texture::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 						.usage  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
@@ -2432,7 +2371,7 @@ namespace Albedo
 					1, &barrier);
 			}
 			// Create ZBuffer(Shared)
-			RenderTarget::zbuffer = Image::Create(Image::CreateInfo
+			RenderTarget::zbuffer = Texture::Create(Texture::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_DEPTH_BIT,
 						.usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
