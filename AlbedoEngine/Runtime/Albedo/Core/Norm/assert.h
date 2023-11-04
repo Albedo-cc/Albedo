@@ -1,0 +1,21 @@
+#pragma once
+
+#include <cassert>
+
+//[Levels]
+#define ALBEDO_ASSERT_LEVEL_NORMAL
+#ifndef ALBEDO_ASSERT_LEVEL_NORMAL
+	#define ALBEDO_ASSERT_LEVEL_DEBUG
+#endif
+
+//[Macros]
+#define ALBEDO_UNEXPECTED_ASSERT				assert(false)
+#define ALBEDO_WORK_IN_PROGRESS(PROMPT)			assert(false && PROMPT)
+
+#ifdef ALBEDO_ASSERT_LEVEL_NORMAL
+	#define ALBEDO_ASSERT(EXPRESSION)			assert(EXPRESSION)
+	#define ALBEDO_ASSERT_DEBUG(EXPRESSION)
+#elif ALBEDO_ASSERT_LEVEL_STRICT
+	#define ALBEDO_ASSERT(EXPRESSION)			assert(EXPRESSION)
+	#define ALBEDO_ASSERT_DEBUG(EXPRESSION)		assert(EXPRESSION)
+#endif

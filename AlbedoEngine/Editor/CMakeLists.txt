@@ -5,12 +5,16 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/source"
              FILES ${ALBEDO_EDITOR_HEADER} ${ALBEDO_EDITOR_SOURCE})
 
 add_library(
-    AlbedoEditor STATIC
+    ${ALBEDO_EDITOR_NAME} STATIC
     ${ALBEDO_EDITOR_HEADER} 
     ${ALBEDO_EDITOR_SOURCE}
 )
 
-target_link_libraries(AlbedoEditor PRIVATE AlbedoRuntime)
+target_link_libraries(
+    ${ALBEDO_EDITOR_NAME}
+    PRIVATE
+    ${ALBEDO_RUNTIME_NAME})
+
 set_target_properties(
-    AlbedoEditor
-    PROPERTIES FOLDER "${PROJECT_NAME}/Editor")
+    ${ALBEDO_EDITOR_NAME}
+    PROPERTIES FOLDER "${PROJECT_NAME}")

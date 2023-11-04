@@ -1,0 +1,4 @@
+#pragma once
+
+#include "../Albedo/Core/Event/basic_event.h"
+#include "../Albedo/Core/Event/event_manager.h"

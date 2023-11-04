@@ -1,5 +1,0 @@
-#pragma once
-
-#include "../Runtime/source/AlbedoCore/Norm/assert.h"
-#include "../Runtime/source/AlbedoCore/Norm/concepts.h"
-#include "../Runtime/source/AlbedoCore/Norm/types.h"

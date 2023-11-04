@@ -2,8 +2,8 @@
 
 #include <imgui.h>
 
-#include <AlbedoGraphics/GRI.h>
-#include <AlbedoCore/Event/event_manager.h>
+#include <Albedo/Graphics/GRI.h>
+#include <Albedo/Core/Event/event_manager.h>
 
 namespace Albedo
 {
@@ -26,11 +26,11 @@ namespace Albedo
     public:
         struct CreateInfo
         {
-            const char* layout;
-            const char* font_path;
+            std::string layout;
+            std::string font;
             float       font_size;
         };
-        static void Initialize(const CreateInfo& createinfo);
+        static void Initialize(CreateInfo createinfo);
         static void Terminate() noexcept;
 
     private:
@@ -38,6 +38,8 @@ namespace Albedo
         static void Recreate();
 
     private:
+        static inline CreateInfo m_settings;
+
         static inline EventManager sm_ui_event_manager;
         static inline std::shared_ptr<EditorPass> sm_renderpass;
         struct FrameInfo

@@ -4,7 +4,8 @@ endif()
 
 # Generate Folders
 set(ALBEDO_APP_FOLDERS
-    "asset" "asset/font" "asset/icon" "asset/image" "asset/shader" "asset/texture"
+    "asset" "asset/font" "asset/icon" "asset/image" "asset/shader"
+    "asset/texture" "asset/texture/1D" "asset/texture/2D" "asset/texture/3D"  "asset/texture/Cubemap"
     "cache"
     "config"
     "settings")

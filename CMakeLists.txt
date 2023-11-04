@@ -43,13 +43,12 @@ add_executable( ${ALBEDO_APP_NAME}
 add_subdirectory(AlbedoEngine)
 include(INIT_ALBEDO_APP)
 
-
 target_link_libraries(${ALBEDO_APP_NAME} PRIVATE AlbedoEngine)
 target_include_directories(${ALBEDO_APP_NAME} PRIVATE "APP")
 
 target_sources(${ALBEDO_APP_NAME}
                 PRIVATE 
-                README.md TODO.md
+                README.md TODO.md INSTALL.md
                 ${ALBEDO_APP_CONFIG})
 
 # [Property]

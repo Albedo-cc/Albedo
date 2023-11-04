@@ -9,8 +9,8 @@
     }
     },
     "Editor":{
-        "Font":["asset/font/Arial_Rounded_MT_Bold.ttf", 16.0],
-        "Layout":"config/editor.layout",
+        "Font":["Arial_Rounded_MT_Bold.ttf", 16.0],
+        "Layout":"editor.layout",
         "Options":{ "SaveLayout": true }
     }
 }

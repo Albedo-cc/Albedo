@@ -8,6 +8,7 @@
 #include <Albedo.Core.Log>
 #include <Albedo.Graphics>
 #include <Albedo.Editor>
+#include <Albedo.Platform>
 #include <Albedo.System.Window>
 
 namespace Albedo{
@@ -17,7 +18,7 @@ namespace APP
 	void StartUp(int argc, char* argv[])
 	{
 		auto& CONFIG = APPConfig::GetView(); // Init
-		Log::Info("{} is being started.", CONFIG.app.name);
+		Log::Info("{} is being started in {}.", CONFIG.app.name, Platform::Path::WorkDir);
 		
 		// Init Window
 		WindowSystem::Initialize(WindowSystem::CreateInfo
@@ -39,8 +40,8 @@ namespace APP
 		// Init Editor
 		Editor::Initialize(
 		{
-			.layout    = CONFIG.editor.layout.data(),
-			.font_path = CONFIG.editor.font.name.data(),
+			.layout    = Platform::Path::Config + CONFIG.editor.layout,
+			.font	   = Platform::Path::Asset  + "font/" + CONFIG.editor.font.name,
 			.font_size = CONFIG.editor.font.size,
 		});
 

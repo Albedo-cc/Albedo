@@ -1,0 +1,4 @@
+#pragma once
+
+#include "../Albedo/System/Asset/asset_types.h"
+#include "../Albedo/System/Asset/asset_system.h"

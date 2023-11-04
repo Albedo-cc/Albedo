@@ -1,0 +1,5 @@
+#pragma once
+
+#include "../Albedo/Core/Time/common.h"
+#include "../Albedo/Core/Time/duration.h"
+#include "../Albedo/Core/Time/stopwatch.h"

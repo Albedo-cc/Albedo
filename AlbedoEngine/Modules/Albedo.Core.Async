@@ -1,3 +1,0 @@
-#pragma once
-
-#include "../Runtime/source/AlbedoCore/Async/async_task.h"

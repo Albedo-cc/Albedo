@@ -1,10 +1,10 @@
 #include "editorpass.h"
 
 #include <imgui.h>
-#include <AlbedoCore/Log/log.h>
-#include <AlbedoCore/Norm/assert.h>
-#include <AlbedoCore/Norm/assert.h>
-#include <AlbedoGraphics/Internal/RHI.h>
+#include <Albedo/Core/Log/log.h>
+#include <Albedo/Core/Norm/assert.h>
+#include <Albedo/Core/Norm/assert.h>
+#include <Albedo/Graphics/Internal/RHI.h>
 
 #include "../editor.h"
 #include "pipelines/dearimgui.h"

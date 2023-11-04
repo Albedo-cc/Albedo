@@ -1,13 +1,14 @@
 #include "editor.h"
 
-#include <AlbedoCore/Log/log.h>
-#include <AlbedoCore/Norm/assert.h>
-#include <AlbedoCore/Norm/assert.h>
-#include <AlbedoGraphics/Internal/RHI.h>
-#include <AlbedoSystem/Window/window_system.h>
+#include <Albedo/Core/Log/log.h>
+#include <Albedo/Core/Norm/assert.h>
+#include <Albedo/Core/Norm/assert.h>
+#include <Albedo/Graphics/Internal/RHI.h>
+#include <Albedo/System/Window/window_system.h>
+#include <Albedo/Platform/path.h>
 
-#include <backends/imgui_impl_vulkan.h>
-#include <backends/imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+#include <imgui_impl_glfw.h>
 
 #include "Internal/editorpass.h"
 
@@ -15,9 +16,10 @@ namespace Albedo
 {
 	void
 	Editor::
-	Initialize(const CreateInfo& createinfo)
+	Initialize(CreateInfo createinfo)
 	{
 		Log::Debug("Albedo Editor is being initialized...");
+		m_settings = std::move(createinfo);
 
 		sm_renderpass = std::make_shared<EditorPass>();
 
@@ -45,12 +47,12 @@ namespace Albedo
 		auto& io = ImGui::GetIO();
 
 		// Configuration
-		io.IniFilename = createinfo.layout;
+		io.IniFilename = m_settings.layout.c_str();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable
 					  ;//|ImGuiConfigFlags_ViewportsEnable;
 
-		if (io.Fonts->AddFontFromFileTTF(createinfo.font_path, createinfo.font_size) == NULL)
-			Log::Fatal("Albedo System UI: Failed to load font {}!", createinfo.font_path);
+		if (io.Fonts->AddFontFromFileTTF(m_settings.font.c_str(), createinfo.font_size) == NULL)
+			Log::Fatal("Albedo System UI: Failed to load font {}!", m_settings.font.c_str());
 
 		bool INSTALL_IMGUI_CALLBACKS = true;
 		ImGui_ImplGlfw_InitForVulkan(WindowSystem::GetWindow(), INSTALL_IMGUI_CALLBACKS); // Install callbacks via ImGUI

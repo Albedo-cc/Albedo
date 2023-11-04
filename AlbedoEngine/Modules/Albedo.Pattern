@@ -1,5 +1,0 @@
-#pragma once
-
-#include "../Runtime/source/AlbedoPattern/singleton.h"
-#include "../Runtime/source/AlbedoPattern/subscription.h"
-#include "../Runtime/source/AlbedoPattern/prototype.h"
