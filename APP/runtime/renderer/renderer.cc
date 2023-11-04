@@ -19,7 +19,7 @@ namespace APP
 		try
 		{
 			// Wait for the next frame
-			auto& frame = sm_frames[GRI::GetRenderTargetCursor()];
+			auto& frame = m_frames[GRI::GetRenderTargetCursor()];
 			GRI::WaitNextFrame(frame.semaphore_image_available, VK_NULL_HANDLE);
 
 			for (size_t passidx = 0; passidx < frame.renderpasses.size(); ++passidx)
@@ -27,7 +27,7 @@ namespace APP
 				auto& renderpass = frame.renderpasses[passidx];
 				renderpass.commandbuffer->Begin();
 				{
-					auto subpass_iter = sm_renderpasses[passidx]->Begin(renderpass.commandbuffer);
+					auto subpass_iter = m_renderpasses[passidx]->Begin(renderpass.commandbuffer);
 					{
 						do
 						{
@@ -35,7 +35,7 @@ namespace APP
 							subpass_iter.End();
 						} while (subpass_iter.Next());
 					}
-					sm_renderpasses[passidx]->End(renderpass.commandbuffer);
+					m_renderpasses[passidx]->End(renderpass.commandbuffer);
 				}
 				renderpass.commandbuffer->End();
 
@@ -64,7 +64,7 @@ namespace APP
 	Renderer::SearchRenderPass(std::string_view name)
 	throw(std::runtime_error)
 	{
-		for (const auto& renderpass : sm_renderpasses)
+		for (const auto& renderpass : m_renderpasses)
 		{
 			if (renderpass->GetName() == name) return renderpass;
 		}
@@ -110,14 +110,14 @@ namespace APP
 	create_renderpasses()
 	{
 		// System Render Passes
-		//sm_renderpasses.emplace_back(new BackgroundPass());
-		sm_renderpasses.emplace_back(new GeometryPass());
+		//m_renderpasses.emplace_back(new BackgroundPass());
+		m_renderpasses.emplace_back(new GeometryPass());
 
 		// User Render Passes
 		// ...
 
 		// Sort Render Passes by Priority
-		std::sort(sm_renderpasses.begin(), sm_renderpasses.end(),
+		std::sort(m_renderpasses.begin(), m_renderpasses.end(),
 			[](const GRI::RenderPass* a,
 			   const GRI::RenderPass* b)
 			->bool
@@ -130,11 +130,11 @@ namespace APP
 	Renderer::
 	destory_renderpasses()
 	{
-		for (auto& renderpass : sm_renderpasses)
+		for (auto& renderpass : m_renderpasses)
 		{
 			delete renderpass;
 		}	
-		sm_renderpasses.clear();
+		m_renderpasses.clear();
 	}
 
 
@@ -142,10 +142,10 @@ namespace APP
 	Renderer::
 	create_frames()
 	{
-		sm_frames.resize(GRI::GetRenderTargetCount());
-		for (auto& frame : sm_frames)
+		m_frames.resize(GRI::GetRenderTargetCount());
+		for (auto& frame : m_frames)
 		{
-			frame.renderpasses.resize(sm_renderpasses.size());
+			frame.renderpasses.resize(m_renderpasses.size());
 		}
 	}
 
@@ -153,7 +153,7 @@ namespace APP
 	Renderer::
 	destory_frames()
 	{
-		sm_frames.clear();
+		m_frames.clear();
 	}
 
 }} // namespace Albedo::APP

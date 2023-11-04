@@ -10,7 +10,7 @@ namespace APP
 		:public GRI::RenderPass
 	{
 	public:
-		enum Subpass { Opaque, };
+		enum Subpass { Triangles, Lines, Points };
 
 	public:
 		GeometryPass();

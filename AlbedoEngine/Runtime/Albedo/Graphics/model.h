@@ -13,14 +13,6 @@ namespace Albedo
 	class Model
 	{
 	public:
-		struct Transform
-		{
-			Vector3D	scale{ Vector3D::Ones() };
-			Vector3D	translate{ Vector3D::Zero() };
-			union { struct { Degree roll, pitch, yaw; }; }rotate;
-		};
-
-	public:
 		auto GetTransform() const -> const Transform& { return m_transform; }
 		auto GetModelMatrix() -> Matrix4x4;
 

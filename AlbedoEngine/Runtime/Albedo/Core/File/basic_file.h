@@ -21,7 +21,8 @@ namespace Albedo
 		virtual void Save() const = 0;
 
 		auto		 GetPath() const -> std::string_view { return m_path; }
-		virtual auto GetSize() const -> size_t = 0;
+		virtual auto GetSize() const -> size_t = 0;\
+		operator const BufferType&() const { return m_buffer; }
 
 	protected:
 		std::string	m_path;

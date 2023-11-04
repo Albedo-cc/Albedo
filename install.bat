@@ -10,7 +10,7 @@ AlbedoEngine\Extern\vcpkg\vcpkg install ktx[vulkan] && \
 AlbedoEngine\Extern\vcpkg\vcpkg install yasm-tool:x86-windows && \
 AlbedoEngine\Extern\vcpkg\vcpkg install cgal && \
 ::ImGui
-AlbedoEngine\Extern\vcpkg\vcpkg install imgui[docking-experimental,vulkan-binding, glfw-binding] && \
+AlbedoEngine\Extern\vcpkg\vcpkg install imgui[docking-experimental,vulkan-binding,glfw-binding] && \
 ::ImGui-Docking
 AlbedoEngine\Extern\vcpkg\vcpkg install spdlog && \
 ::TinyglTF

@@ -1,48 +1,31 @@
-#include "opaque.h"
-#include <fstream>
+#include "lines.h"
+
 #include <Albedo.Core.Log>
+#include <Albedo.Core.File>
 
 namespace Albedo{
 namespace APP
 {
 	static const char* vert_shader_path = "asset\\shader\\opaque.vert.spv";
 	static const char* frag_shader_path = "asset\\shader\\opaque.frag.spv";
-	
-	static std::vector<char> ReadShader(const char* path)
-	{
-		std::vector<char> buffer;
-		// Read File
-		std::ifstream file(path, std::ios::ate | std::ios::binary);
-		if (!file.is_open()) Log::Fatal("Failed to open the shader file {}!", path);
 
-		size_t file_size = static_cast<size_t>(file.tellg());
-		buffer.resize(file_size); 
-
-		file.seekg(0);
-		file.read(buffer.data(), file_size);
-
-		file.close();
-
-		return buffer;
-	}
-
-	OpaquePipeline::
-	OpaquePipeline():
+	LinesPipeline::
+	LinesPipeline():
 		GRI::GraphicsPipeline(GRI::GraphicsPipeline::ShaderModule
 			{
 				.descriptor_set_layouts =
-				{
-					*GRI::GetGlobalDescriptorSetLayout("NULL") // Set=0
-				},
-				.vertex_shader   = GRI::Shader::Create(ShaderType_Vertex,	 ReadShader(vert_shader_path)),
-				.fragment_shader = GRI::Shader::Create(ShaderType_Fragment,  ReadShader(frag_shader_path)),
+				{*GRI::GetGlobalDescriptorSetLayout("NULL")}, // Set=0
+				.vertex_shader = 
+				GRI::Shader::Create(ShaderType_Vertex,	 BinaryFile(vert_shader_path)),
+				.fragment_shader = 
+				GRI::Shader::Create(ShaderType_Fragment, BinaryFile(frag_shader_path)),
 			})
 	{
 
 	}
 
 	void
-	OpaquePipeline::
+	LinesPipeline::
 	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		Pipeline::Begin(commandbuffer);
@@ -50,14 +33,14 @@ namespace APP
 	}
 
 	void
-	OpaquePipeline::
+	LinesPipeline::
 	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		Pipeline::End(commandbuffer);
 	}
 
 	const VkPipelineVertexInputStateCreateInfo&
-	OpaquePipeline::
+	LinesPipeline::
 	vertex_input_state()
 	{
 		static VkVertexInputBindingDescription vertexInputBindingDescription
@@ -78,8 +61,21 @@ namespace APP
 		return state;
 	}
 
+	const VkPipelineInputAssemblyStateCreateInfo&
+	LinesPipeline::
+	input_assembly_state()
+	{
+		static VkPipelineInputAssemblyStateCreateInfo state
+		{
+			.sType		= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+			.topology	= VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+			.primitiveRestartEnable = VK_FALSE,
+		};
+		return state;
+	}
+
 	const VkPipelineDepthStencilStateCreateInfo&
-	OpaquePipeline::
+	LinesPipeline::
 	depth_stencil_state()
 	{
 		static VkPipelineDepthStencilStateCreateInfo state
@@ -97,22 +93,5 @@ namespace APP
 		};
 		return state;
 	}
-
-	/*VkPipelineDynamicStateCreateInfo
-	OpaquePipeline::
-	dynamic_state()
-	{
-		static VkDynamicState dynamicStates[]
-		{
-			VK_DYNAMIC_STATE_VIEWPORT,
-			VK_DYNAMIC_STATE_LINE_WIDTH,
-		};
-		return VkPipelineDynamicStateCreateInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-			.dynamicStateCount = 2,
-			.pDynamicStates = dynamicStates,
-		};
-	}*/
 
 }} // namespace Albedo::APP

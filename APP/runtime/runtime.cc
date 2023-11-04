@@ -6,7 +6,7 @@
 #include <Albedo.System.Control>
 #include <Albedo.System.Window>
 
-#include "render/renderer.h"
+#include "renderer/renderer.h"
 
 namespace Albedo{
 namespace APP
@@ -20,7 +20,7 @@ namespace APP
 		WindowSystem::PollEvents();
 		ControlSystem::Process();
 
-		Renderer::Tick();
+		Renderer::GetInstance().Tick();
 
 		return IsRunning();
 	}
@@ -44,7 +44,7 @@ namespace APP
 	Runtime::
 	Initialize()
 	{
-		Renderer::Initialize();
+		Renderer::GetInstance().Initialize();
 
 		runtime_timer.Reset();
 		m_is_running = true;
@@ -56,7 +56,7 @@ namespace APP
 	{
 		Log::Info("Runtime Duration: {} s", runtime_timer.Split().seconds());
 
-		Renderer::Destroy();
+		Renderer::GetInstance().Destroy();
 	}
 
 }} // namespace Albedo::APP

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../Albedo/Core/Math/angle.h"
-#include "../Albedo/Core/Math/concepts.h"
 #include "../Albedo/Core/Math/float.h"
 #include "../Albedo/Core/Math/graphics.h"
 #include "../Albedo/Core/Math/integer.h"

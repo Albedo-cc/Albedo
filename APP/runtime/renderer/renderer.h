@@ -1,23 +1,28 @@
 #pragma once
 
 #include <Albedo.Graphics>
+#include <Albedo.Pattern>
 
 namespace Albedo{
 namespace APP
 {
 	
-    class Renderer
+    class Renderer final
+        : public Pattern::Singleton<Renderer>
     {
+        friend class Runtime;
+        friend class Pattern::Singleton<Renderer>;
     public:
-        static void Initialize();
-        static void Destroy();
-        static void Tick();
+        auto SearchRenderPass(std::string_view name) throw(std::runtime_error) -> const GRI::RenderPass*;
 
-        static auto SearchRenderPass(std::string_view name) throw(std::runtime_error) -> const GRI::RenderPass*;
+    private:
+        void Initialize();
+        void Destroy();
+        void Tick();
 
     private:
         enum RenderPasses { Background, Geometry };
-        static inline std::vector<GRI::RenderPass*> sm_renderpasses;
+        std::vector<GRI::RenderPass*> m_renderpasses;
         struct Frame
         {
             GRI::Semaphore semaphore_image_available = GRI::Semaphore(SemaphoreType_Unsignaled);
@@ -32,17 +37,17 @@ namespace APP
             };
             std::vector<RenderPassResource> renderpasses;
         };
-        static inline std::vector<Frame> sm_frames;
+        std::vector<Frame> m_frames;
 
     private:
-        static void create_decriptor_set_layouts();
-        static void create_renderpasses();
-        static void destory_renderpasses();
-        static void create_frames();
-        static void destory_frames();
+        void create_decriptor_set_layouts();
+        void create_renderpasses();
+        void destory_renderpasses();
+        void create_frames();
+        void destory_frames();
 
     private:
-        Renderer() = delete;
+        Renderer() = default;
     };
 
 }} // namespace Albedo::APP

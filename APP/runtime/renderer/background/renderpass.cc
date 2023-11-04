@@ -14,7 +14,7 @@ namespace APP
 			// Add Attachments (From SystemTarget::MAX_SYSTEM_TARGET)
 		
 			// Add Subpasses
-			// [0]: Opaque
+			// [0]: Triangles
 			add_subpass(GRI::RenderPass::SubpassSetting
 				{
 					.name					 = "Background::Skybox",

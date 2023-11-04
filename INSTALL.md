@@ -36,7 +36,7 @@ target_link_libraries(<TARGET> |PRIVATE| CGAL::CGAL)
 ```
 
 # [ImGui-Docking]()
-- vcpkg install imgui[docking-experimental,vulkan-binding, glfw-binding]
+- vcpkg install imgui[docking-experimental,vulkan-binding,glfw-binding]
 ```CMake
 find_package(imgui REQUIRED)
 target_link_libraries(<TARGET> |PRIVATE| imgui::imgui)

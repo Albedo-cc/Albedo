@@ -18,4 +18,14 @@ namespace Albedo
 	using AngleAxis   = Eigen::AngleAxisf;
 	using AngleAxisHP = Eigen::AngleAxisd;
 
+	struct Transform
+	{
+		Vector3D	scale		{ Vector3D::Ones() };
+		Vector3D	translate	{ Vector3D::Zero() };
+		union { struct { Degree roll, pitch, yaw; }; }rotate{ 0, 0, 0 };
+
+		void GetModelMatrix(Affine3D& out) const;
+		auto GetModelMatrix() const -> Matrix4x4;	
+	};
+
 } // namespace Albedo
