@@ -2,9 +2,11 @@
 
 #include <Albedo.Core.Log>
 
-#include "background/renderpass.h"
-#include "geometry/renderpass.h"
-#include "surface/renderpass.h"
+#include "renderpasses/background/renderpass.h"
+#include "renderpasses/geometry/renderpass.h"
+#include "renderpasses/surface/renderpass.h"
+
+#include "../camera/camera.h"
 
 #include <algorithm>
 
@@ -22,6 +24,10 @@ namespace APP
 			auto& frame = m_frames[GRI::GetRenderTargetCursor()];
 			GRI::WaitNextFrame(frame.semaphore_image_available, VK_NULL_HANDLE);
 
+			// Update Resources
+			update_global_ubo(frame);
+
+			// Render
 			for (size_t passidx = 0; passidx < frame.renderpasses.size(); ++passidx)
 			{
 				auto& renderpass = frame.renderpasses[passidx];
@@ -50,19 +56,19 @@ namespace APP
 				renderpass.commandbuffer->Submit(submitinfo);
 			}
 
+			// Present
 			GRI::PresentFrame({ frame.renderpasses.back().semaphore });
 		}
 		catch (GRI::SIGNAL_RECREATE_SWAPCHAIN)
 		{
 			Log::Debug("Recreating Swapchain...");
-			destory_renderpasses();
-			create_renderpasses();
+			when_recreate_swapchain();
 		}
 	}
 
-	const GRI::RenderPass*
-	Renderer::SearchRenderPass(std::string_view name)
-	throw(std::runtime_error)
+	const std::unique_ptr<GRI::RenderPass>&
+	Renderer::
+	SearchRenderPass(std::string_view name) const
 	{
 		for (const auto& renderpass : m_renderpasses)
 		{
@@ -85,8 +91,15 @@ namespace APP
 	Destroy()
 	{
 		GRI::WaitDeviceIdle();
-		destory_renderpasses();
-		destory_frames();
+		m_frames.clear();
+		m_global_ubo.reset();
+		m_renderpasses.clear();
+	}
+
+	void Renderer::when_recreate_swapchain()
+	{
+		create_renderpasses();
+		create_frames();
 	}
 
 	void
@@ -95,12 +108,15 @@ namespace APP
 	{
 		// Add Descriptor Set Layouts
 		GRI::RegisterGlobalDescriptorSetLayout(
-			"NULL",
+			"GlobalUBO_Camera",
 			GRI::DescriptorSetLayout::Create({
 				VkDescriptorSetLayoutBinding
 				{
 					.binding = 0,
-					.descriptorCount = 0, // Disable for now
+					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+
 				}
 			}));
 	}
@@ -110,16 +126,16 @@ namespace APP
 	create_renderpasses()
 	{
 		// System Render Passes
-		//m_renderpasses.emplace_back(new BackgroundPass());
-		m_renderpasses.emplace_back(new GeometryPass());
+		m_renderpasses.resize(RenderPasses::MAX_RENDERPASS_COUNT);
+		m_renderpasses[RenderPasses::Geometry] = std::make_unique<GeometryPass>();
 
 		// User Render Passes
 		// ...
 
 		// Sort Render Passes by Priority
 		std::sort(m_renderpasses.begin(), m_renderpasses.end(),
-			[](const GRI::RenderPass* a,
-			   const GRI::RenderPass* b)
+			[](const std::unique_ptr<GRI::RenderPass>& a,
+			   const std::unique_ptr<GRI::RenderPass>& b)
 			->bool
 			{
 				return a->GetPriority() > b->GetPriority();
@@ -128,32 +144,42 @@ namespace APP
 
 	void
 	Renderer::
-	destory_renderpasses()
-	{
-		for (auto& renderpass : m_renderpasses)
-		{
-			delete renderpass;
-		}	
-		m_renderpasses.clear();
-	}
-
-
-	void
-	Renderer::
 	create_frames()
 	{
-		m_frames.resize(GRI::GetRenderTargetCount());
-		for (auto& frame : m_frames)
+		if (m_frames.size() != GRI::GetRenderTargetCount())
 		{
-			frame.renderpasses.resize(m_renderpasses.size());
+			m_frames.resize(GRI::GetRenderTargetCount());
+			for (auto& frame : m_frames)
+			{
+				frame.renderpasses.resize(m_renderpasses.size());
+			}
+
+			m_global_ubo = GRI::Buffer::Create(
+				{
+					.size = m_frames.size() * GRI::PadUniformBufferSize(sizeof(GlobalUBO)),
+					.usage= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+					.mode = VK_SHARING_MODE_EXCLUSIVE,
+					.properties = static_cast<GRI::Buffer::Property>(
+						GRI::Buffer::Property::Persistent |
+						GRI::Buffer::Property::Writable),
+				});
+			Log::Debug("Global UBO size: {}", m_global_ubo->GetSize());
 		}
 	}
 
 	void
 	Renderer::
-	destory_frames()
+	update_global_ubo(Frame& current_frame)
 	{
-		m_frames.clear();
+		auto& ubo_data = current_frame.ubo_data;
+		// Camera
+		{
+			auto& c = Camera::GetInstance();
+			ubo_data.m_camera_data.view_matrix = c.GetViewMatrix();
+			ubo_data.m_camera_data.proj_matrix = c.GetProjectMatrix();
+			
+			m_global_ubo->Write(&ubo_data.m_camera_data);
+		}
 	}
 
 }} // namespace Albedo::APP

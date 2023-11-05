@@ -3,6 +3,7 @@
 
 #include <Albedo/Core/Log/log.h>
 #include <Albedo/Core/Norm/assert.h>
+#include <Albedo/Core/Norm/types.h>
 #include <Albedo/Core/Math/integer.h>
 #include <Albedo/Core/Time/stopwatch.h>
 #include "../Editor/source/editor.h"
@@ -265,6 +266,25 @@ namespace Albedo
 			id += char('0' + i) + alias[types_in_order[i]];
 		}
 		return id;
+	}
+
+	size_t
+	GRI::
+	PadUniformBufferSize(size_t original_size)
+	{
+		// Calculate required alignment based on minimum device offset alignment
+		// Thanks to Sascha Willems and his Vulkan samples for the snippet.
+		// https://github.com/SaschaWillems/Vulkan/tree/master/examples/dynamicuniformbuffer
+		size_t minUboAlignment = g_rhi->GPU.properties.limits.minUniformBufferOffsetAlignment;
+		size_t alignedSize = original_size;
+
+		if (minUboAlignment > 0)
+		{
+			alignedSize = (alignedSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
+		}
+		else ALBEDO_UNEXPECTED_ASSERT;
+
+		return alignedSize;
 	}
 
 	std::shared_ptr<GRI::DescriptorPool>
@@ -908,18 +928,28 @@ namespace Albedo
 	GRI::Buffer::
 	Write(void* data)
 	{
+		Write(data, 0, GetSize()); // Write All
+	}
+
+	void
+	GRI::Buffer::
+	Write(void* data, size_t offset, size_t size)
+	{
 		ALBEDO_ASSERT(m_allocation->IsMappingAllowed() && "This buffer is not mapping-allowed!");
+		ALBEDO_ASSERT(offset + size < GetSize() && "Oversized!");
 
 		void* mappedArea;
 		if (m_allocation->IsPersistentMap())
 		{
 			mappedArea = m_allocation->GetMappedData();
-			memcpy(mappedArea, data, m_allocation->GetSize());
+			MakeOffset(&mappedArea, offset);
+			memcpy(mappedArea, data, size);
 		}
 		else
 		{
 			vmaMapMemory(sm_vma, m_allocation, &mappedArea);
-			memcpy(mappedArea, data, GetSize());
+			MakeOffset(&mappedArea, offset);
+			memcpy(mappedArea, data, size);
 			vmaUnmapMemory(sm_vma, m_allocation);
 		}
 	}

@@ -10,20 +10,19 @@
 
 namespace Albedo
 {
-   
-	class ControlSystem
+	using ControlEvent = BasicEvent;
+	class ControlSystem final
 	{
+	public:
+		static void RegisterControlEvent(ControlEvent* event); // new ControlEvent()
+        static void DeleteControlEvent(std::string_view name);
+
 	public:
 		static void Initialize();
 		static void Process();
-
-	public:
-		static auto ControlEvent(); // Singleton
-		static auto UIEvent();		// Singleton
 		 
 	private:
-		static inline std::deque<BasicEvent> m_immediate_events; // Execute in Event Thread
-		static inline std::deque<BasicEvent> m_deferred_events;
+		static inline EventManager m_control_events;
 	};
 
 } // namespace Albedo

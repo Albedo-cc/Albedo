@@ -21,7 +21,7 @@ namespace Albedo
 
     public:
         static auto IsDisplaying()  -> bool;
-        static void PollEvents();
+        static void Process();
 
         static auto GetWindow()     -> GLFWwindow* const { return m_window; }
         static auto GetParameters() -> const CreateInfo& { return m_parameters; }

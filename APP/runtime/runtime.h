@@ -7,14 +7,15 @@ namespace APP
 
 	class Runtime final
 	{
+		friend class AlbedoAPP;
 	public: // User Level Interface
-		static auto Tick() -> bool; // Run
 		static void ShutDown(const char* signature);
 		static auto IsRunning() -> bool;
 
-	public: // System Level Interface
+	private: // System Level Interface
 		static void Initialize();
 		static void Terminate();
+		static auto Tick() -> bool; // Run
 
 	private:
 		static inline bool m_is_running{false};

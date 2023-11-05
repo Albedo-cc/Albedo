@@ -69,7 +69,7 @@ namespace Albedo
         return !glfwWindowShouldClose(m_window);
     }
 
-	void WindowSystem::PollEvents()
+	void WindowSystem::Process()
 	{
 		glfwPollEvents();
 	}

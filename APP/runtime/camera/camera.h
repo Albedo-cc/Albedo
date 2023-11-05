@@ -65,7 +65,7 @@ namespace APP
 		std::optional<Matrix4x4> m_proj_matrix{};
 
 	private:
-		Camera() = default;
+		Camera();
 	};
 
 }} // namespace Albedo::APP

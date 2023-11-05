@@ -3,6 +3,8 @@
 #include <Albedo.Graphics>
 #include <Albedo.Pattern>
 
+#include "data/global_ubo.h"
+
 namespace Albedo{
 namespace APP
 {
@@ -12,8 +14,9 @@ namespace APP
     {
         friend class Runtime;
         friend class Pattern::Singleton<Renderer>;
+        enum RenderPasses { /*Background,*/ Geometry, MAX_RENDERPASS_COUNT };
     public:
-        auto SearchRenderPass(std::string_view name) throw(std::runtime_error) -> const GRI::RenderPass*;
+        auto SearchRenderPass(std::string_view name) const -> const std::unique_ptr<GRI::RenderPass>&;
 
     private:
         void Initialize();
@@ -21,14 +24,17 @@ namespace APP
         void Tick();
 
     private:
-        enum RenderPasses { Background, Geometry };
-        std::vector<GRI::RenderPass*> m_renderpasses;
+        std::shared_ptr<GRI::Buffer>  m_global_ubo;
+        std::vector<std::unique_ptr<GRI::RenderPass>> m_renderpasses;
+
         struct Frame
         {
+            GlobalUBO      ubo_data{};
             GRI::Semaphore semaphore_image_available = GRI::Semaphore(SemaphoreType_Unsignaled);
+            
             struct RenderPassResource
             {
-                GRI::Semaphore semaphore = GRI::Semaphore(SemaphoreType_Unsignaled);
+                GRI::Semaphore  semaphore =GRI::Semaphore(SemaphoreType_Unsignaled);
                 std::shared_ptr<GRI::CommandBuffer> commandbuffer = 
                     GRI::GetGlobalCommandPool(
 				    CommandPoolType_Resettable,
@@ -40,11 +46,13 @@ namespace APP
         std::vector<Frame> m_frames;
 
     private:
-        void create_decriptor_set_layouts();
+        void when_recreate_swapchain();
+        
         void create_renderpasses();
-        void destory_renderpasses();
         void create_frames();
-        void destory_frames();
+        
+        void create_decriptor_set_layouts();
+        void update_global_ubo(Frame& current_frame);
 
     private:
         Renderer() = default;

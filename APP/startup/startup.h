@@ -10,66 +10,78 @@
 #include <Albedo.Editor>
 #include <Albedo.Platform>
 #include <Albedo.System.Window>
+#include <Albedo.System.Control>
 
 namespace Albedo{
 namespace APP
 {
 
-	void StartUp(int argc, char* argv[])
+	class AlbedoAPP
 	{
-		auto& CONFIG = APPConfig::GetView(); // Init
-		Log::Info("{} is being started in {}.", CONFIG.app.name, Platform::Path::WorkDir);
+	public:
+		static void StartUp(static int argc, char* argv[])
+		{
+			auto& CONFIG = APPConfig::GetView(); // Init
+			Log::Info("{} is being started in {}.", CONFIG.app.name, Platform::Path::WorkDir);
 		
-		// Init Window
-		WindowSystem::Initialize(WindowSystem::CreateInfo
+			// Init Window
+			WindowSystem::Initialize(WindowSystem::CreateInfo
+				{
+				.title	  = CONFIG.app.name.data(),
+				.width	  = CONFIG.window.width,
+				.height	  = CONFIG.window.height,
+				.maximize = CONFIG.window.options.maximize,
+			});
+
+			// Init GRI
+			GRI::Initialize(GRICreateInfo
 			{
-			.title	  = CONFIG.app.name.data(),
-			.width	  = CONFIG.window.width,
-			.height	  = CONFIG.window.height,
-			.maximize = CONFIG.window.options.maximize,
-		});
+				.app_name     = CONFIG.app.name.data(),
+				.app_window   = WindowSystem::GetWindow(),
+				.msg_callback = messenger_callback,
+			});
 
-		// Init GRI
-		GRI::Initialize(GRICreateInfo
-		{
-			.app_name     = CONFIG.app.name.data(),
-			.app_window   = WindowSystem::GetWindow(),
-			.msg_callback = messenger_callback,
-		});
+			// Init Editor
+			Editor::Initialize(
+			{
+				.layout    = Platform::Path::Config + CONFIG.editor.layout,
+				.font	   = Platform::Path::Asset  + "font/" + CONFIG.editor.font.name,
+				.font_size = CONFIG.editor.font.size,
+			});
 
-		// Init Editor
-		Editor::Initialize(
-		{
-			.layout    = Platform::Path::Config + CONFIG.editor.layout,
-			.font	   = Platform::Path::Asset  + "font/" + CONFIG.editor.font.name,
-			.font_size = CONFIG.editor.font.size,
-		});
-
-	}
-
-	void Run()
-	{
-		Log::Info("{} is running.", APPConfig::GetView().app.name);
-
-		Runtime::Initialize();	
-
-		while (Runtime::Tick())
-		{
-			Sandbox();
 		}
 
-		Runtime::Terminate();
-	}
+		static void Run()
+		{
+			Log::Info("{} is running.", APPConfig::GetView().app.name);
 
-	int Terminate() noexcept
-	{
-		Log::Info("{} is being terminated...", APPConfig::GetView().app.name);
+			Runtime::Initialize();
 
-		Editor::Terminate();
-		GRI::Terminate();
-		WindowSystem::Terminate();
+			while (Runtime::Tick())
+			{
+				WindowSystem::Process();
+				ControlSystem::Process();
 
-		return EXIT_SUCCESS;
-	}
+				Sandbox();
+			}
+
+			Runtime::Terminate();
+		}
+
+		static int Terminate() noexcept
+		{
+			Log::Info("{} is being terminated...", APPConfig::GetView().app.name);
+
+			Editor::Terminate();
+			GRI::Terminate();
+			WindowSystem::Terminate();
+
+			return EXIT_SUCCESS;
+		}
+
+	private:
+		AlbedoAPP() = delete;
+	};
+
 
 }} // namespace Albedo::APP

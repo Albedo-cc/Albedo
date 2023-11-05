@@ -15,7 +15,7 @@ namespace Albedo
 		void Register(BasicEvent* event);
 		void Delete(std::string_view name);
 		void Process(); // Do "If event->Trig() then event->Act()" for every event.
-		void TrigAll(); // Execute all events without its condition. (For Performance)
+		void TrigAll(); // Execute all events without judging its condition. (For Performance)
 		void Clear(std::string_view signature);
 
 		auto GetSize() const -> size_t { return m_events.size(); }

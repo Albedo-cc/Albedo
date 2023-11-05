@@ -3,7 +3,6 @@
 #include <Albedo.Core.Log>
 #include <Albedo.Core.Time>
 #include <Albedo.Graphics>
-#include <Albedo.System.Control>
 #include <Albedo.System.Window>
 
 #include "renderer/renderer.h"
@@ -17,9 +16,6 @@ namespace APP
 	Runtime::
 	Tick()
 	{
-		WindowSystem::PollEvents();
-		ControlSystem::Process();
-
 		Renderer::GetInstance().Tick();
 
 		return IsRunning();

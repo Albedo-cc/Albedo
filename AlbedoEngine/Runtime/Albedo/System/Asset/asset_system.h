@@ -5,6 +5,7 @@ namespace Albedo
    
 	class AssetSystem final
 	{
+        friend class AlbedoAPP;
     public:
 
 	private:

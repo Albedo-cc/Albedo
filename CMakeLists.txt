@@ -49,7 +49,8 @@ target_include_directories(${ALBEDO_APP_NAME} PRIVATE "APP")
 target_sources(${ALBEDO_APP_NAME}
                 PRIVATE 
                 README.md TODO.md INSTALL.md
-                ${ALBEDO_APP_CONFIG})
+                ${ALBEDO_APP_CONFIG}
+                ${ALBEDO_APP_ASSET})
 
 # [Property]
 # Visual Studio

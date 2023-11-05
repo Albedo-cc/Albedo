@@ -14,7 +14,7 @@ namespace APP
 		GRI::GraphicsPipeline(GRI::GraphicsPipeline::ShaderModule
 			{
 				.descriptor_set_layouts =
-				{*GRI::GetGlobalDescriptorSetLayout("NULL")}, // Set=0
+				{*GRI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera")}, // Set=0
 				.vertex_shader = 
 				GRI::Shader::Create(ShaderType_Vertex,	 BinaryFile(vert_shader_path)),
 				.fragment_shader = 

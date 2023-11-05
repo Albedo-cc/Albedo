@@ -3,11 +3,16 @@
 namespace Albedo{
 namespace APP
 {
+	Camera::
+	Camera()
+	{
+		// Register Control Events
+	}
+
 	const Matrix4x4&
 	Camera::
 	GetViewMatrix()
 	{
-		Camera ca{};
 		if (!m_view_matrix.has_value())
 		{
 			m_view_matrix = m_parameters.tranform.GetModelMatrix();

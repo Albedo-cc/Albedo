@@ -75,6 +75,7 @@ namespace Albedo
 		static void Screenshot(std::shared_ptr<Texture> output);
 
 		static auto MakeID(const std::vector<VkDescriptorType>& types_in_order) -> std::string;
+		static auto PadUniformBufferSize(size_t original_size) -> size_t;
 
 	public: // Developer-level Interface
 		class SIGNAL_RECREATE_SWAPCHAIN : public std::exception {};
@@ -316,6 +317,7 @@ namespace Albedo
 
 		public:
 			void Write(void* data); // The buffer must be mapping-allowed and writable
+			void Write(void* data, size_t offset, size_t size);
 			auto Access() -> void*; // If the buffer is persistently mapped, you can access its memory directly
 
 			struct CopyInfo
