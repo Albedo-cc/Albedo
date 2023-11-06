@@ -528,7 +528,7 @@ namespace Albedo
 			struct AttachmentSetting
 			{
 				VkAttachmentDescription description;
-				VkClearValue			clearColor{{1,0,1,1}}; // Purple(Color) | One(ZBuffer)
+				VkClearValue			clearColor{{0,0,1,1}}; // Blue(Color) | Zero(Reversed ZBuffer)
 			};
 
 			struct SubpassSetting

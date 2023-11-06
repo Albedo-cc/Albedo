@@ -1,5 +1,7 @@
 #include "camera.h"
 
+#include <Albedo.System.Control>
+
 namespace Albedo{
 namespace APP
 {
@@ -7,6 +9,10 @@ namespace APP
 	Camera()
 	{
 		// Register Control Events
+		/*ControlSystem::RegisterControlEvent(new ControlEvent
+			{
+
+			});*/
 	}
 
 	const Matrix4x4&
@@ -24,6 +30,7 @@ namespace APP
 	Camera::
 	GetProjectMatrix()
 	{
+		// [NOTE]: This matrix is Z-Reversed!
 		if (!m_proj_matrix.has_value())
 		{
 			auto& p = m_parameters;
@@ -39,6 +46,13 @@ namespace APP
 					{0								, 0				, n / (n - f)	, -f * n / (n - f)},
 					{0								, 0				, 1				, 0},
 				};
+				/*m_proj_matrix = Matrix4x4
+				{
+					{1.0f / (p.fov.aspect * semiFOV), 0				, 0				, 0},
+					{0								, 1.0f / semiFOV, 0				, 0},
+					{0								, 0				, f / (f - n)	, -f * n / (f - n)},
+					{0								, 0				, 1				, 0},
+				};*/
 			}
 			else // ProjectionMode::Orthographics
 			{
