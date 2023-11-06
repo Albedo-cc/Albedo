@@ -35,7 +35,7 @@ namespace APP
 											   VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 				});
 			// [1]: Lines
-			add_subpass(GRI::RenderPass::SubpassSetting
+			/*add_subpass(GRI::RenderPass::SubpassSetting
 				{
 					.name					 = "Geometry::Lines",
 					.pipeline				 = std::make_unique<LinesPipeline>(),
@@ -48,7 +48,7 @@ namespace APP
 											   VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
 					.destination_access_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
 											   VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-				});
+				});*/
 			// [2]: Points
 			/*add_subpass(GRI::RenderPass::SubpassSetting
 				{

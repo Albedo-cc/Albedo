@@ -263,8 +263,8 @@ namespace Albedo
 			friend class GRI;
 		public:
 			// GRI::UpdateDescriptorSets({SetA.WriteBuffer(...), SetB.WriteImage(...), ...}
-			auto WriteBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer) -> VkWriteDescriptorSet;
-			auto WriteTexture(uint32_t binding, std::shared_ptr<Texture> texture)  -> VkWriteDescriptorSet;
+			auto BindToBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer, size_t offset, size_t size) -> VkWriteDescriptorSet;
+			auto BindToTexture(uint32_t binding, std::shared_ptr<Texture> texture)  -> VkWriteDescriptorSet;
 
 			operator VkDescriptorSet() const { return m_handle; }
 
@@ -316,8 +316,8 @@ namespace Albedo
 			};
 
 		public:
-			void Write(void* data); // The buffer must be mapping-allowed and writable
-			void Write(void* data, size_t offset, size_t size);
+			void WriteAll(void* data); // The buffer must be mapping-allowed and writable
+			void Write(void* data, size_t size, size_t offset);
 			auto Access() -> void*; // If the buffer is persistently mapped, you can access its memory directly
 
 			struct CopyInfo

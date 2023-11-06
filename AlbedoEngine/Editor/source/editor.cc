@@ -98,7 +98,7 @@ namespace Albedo
 				// Update Descriptor Sets
 				destwriteinfo.emplace_back(
 					frame_info.descriptor_set
-					->WriteTexture(0, frame_info.main_camera));
+					->BindToTexture(0, frame_info.main_camera));
 
 				frame_info.commandbuffer =
 					GRI::GetGlobalCommandPool(

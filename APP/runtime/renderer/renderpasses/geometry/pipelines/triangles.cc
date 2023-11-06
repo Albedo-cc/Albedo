@@ -3,6 +3,8 @@
 #include <Albedo.Core.Log>
 #include <Albedo.Core.File>
 
+#include <runtime/renderer/renderer.h>
+
 namespace Albedo{
 namespace APP
 {
@@ -31,6 +33,19 @@ namespace APP
 	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
 	{
 		Pipeline::Begin(commandbuffer);
+
+		auto& ctx = Renderer::GetInstance().GetFrameContext();
+
+		std::vector<VkDescriptorSet> descriptorSets
+		{
+			*ctx.ubo.lock(),
+		};
+		
+		uint32_t uniform_offset = GRI::PadUniformBufferSize(sizeof(GlobalUBO))* ctx.frame_index;
+		vkCmdBindDescriptorSets(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout,
+			0, descriptorSets.size(), descriptorSets.data(), 1, &uniform_offset);
+
+
 		vkCmdDraw(*commandbuffer, 6, 1, 0, 0);
 	}
 

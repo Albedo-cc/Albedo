@@ -777,16 +777,15 @@ namespace Albedo
 
 	VkWriteDescriptorSet
 	GRI::DescriptorSet::
-	WriteBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer)
+	BindToBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer,
+				size_t offset, size_t size)
 	{
 		auto& bindinginfo = m_layout->GetBinding(binding);
 
-		static VkDescriptorBufferInfo descriptorBufferInfo
-		{
-			.offset = 0,
-			.range  = VK_WHOLE_SIZE // buffer->GetSize()
-		};
+		static VkDescriptorBufferInfo descriptorBufferInfo{};
 		descriptorBufferInfo.buffer = *buffer;
+		descriptorBufferInfo.offset = offset;
+		descriptorBufferInfo.range	= size;
 
 		return VkWriteDescriptorSet
 		{
@@ -804,7 +803,7 @@ namespace Albedo
 
 	VkWriteDescriptorSet
 	GRI::DescriptorSet::
-	WriteTexture(uint32_t binding, std::shared_ptr<Texture> texture)
+	BindToTexture(uint32_t binding, std::shared_ptr<Texture> texture)
 	{
 		auto& bindinginfo = m_layout->GetBinding(binding);
 
@@ -926,30 +925,31 @@ namespace Albedo
 
 	void
 	GRI::Buffer::
-	Write(void* data)
+	WriteAll(void* data)
 	{
-		Write(data, 0, GetSize()); // Write All
+		Write(data, GetSize(), 0); // Write All
 	}
 
 	void
 	GRI::Buffer::
-	Write(void* data, size_t offset, size_t size)
+	Write(void* data, size_t size, size_t offset)
 	{
 		ALBEDO_ASSERT(m_allocation->IsMappingAllowed() && "This buffer is not mapping-allowed!");
-		ALBEDO_ASSERT(offset + size < GetSize() && "Oversized!");
-
-		void* mappedArea;
+		if (offset + size > GetSize())
+		{			
+			Log::Error("Failed to write {} byte(s) with {} bytes offset to buffer (size:{}).", size, offset, GetSize());
+		}
+		
+		Byte* mappedArea;
 		if (m_allocation->IsPersistentMap())
 		{
-			mappedArea = m_allocation->GetMappedData();
-			MakeOffset(&mappedArea, offset);
-			memcpy(mappedArea, data, size);
+			mappedArea = reinterpret_cast<Byte*>(m_allocation->GetMappedData());
+			memcpy(mappedArea + offset, data, size);
 		}
 		else
 		{
-			vmaMapMemory(sm_vma, m_allocation, &mappedArea);
-			MakeOffset(&mappedArea, offset);
-			memcpy(mappedArea, data, size);
+			vmaMapMemory(sm_vma, m_allocation, reinterpret_cast<void**>(&mappedArea));
+			memcpy(mappedArea + offset, data, size);
 			vmaUnmapMemory(sm_vma, m_allocation);
 		}
 	}

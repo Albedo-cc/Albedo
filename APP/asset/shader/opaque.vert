@@ -25,9 +25,11 @@ vec3 colors[3] = vec3[](
 
 void main()
 {
-    gl_Position = ubo_camera.proj_matrix *
+    mat4x4 a = mat4x4(1.0);
+
+    gl_Position = //ubo_camera.proj_matrix *
                   ubo_camera.view_matrix *
                   vec4(positions[gl_VertexIndex], 1.0);
 
-    fragColor = colors[gl_VertexIndex];
+    fragColor = colors[gl_VertexIndex % 3];
 }

@@ -25,7 +25,7 @@ namespace APP
 			GRI::WaitNextFrame(frame.semaphore_image_available, VK_NULL_HANDLE);
 
 			// Update Resources
-			update_global_ubo(frame);
+			update_frame_context(GRI::GetRenderTargetCursor());
 
 			// Render
 			for (size_t passidx = 0; passidx < frame.renderpasses.size(); ++passidx)
@@ -149,37 +149,56 @@ namespace APP
 		if (m_frames.size() != GRI::GetRenderTargetCount())
 		{
 			m_frames.resize(GRI::GetRenderTargetCount());
-			for (auto& frame : m_frames)
-			{
-				frame.renderpasses.resize(m_renderpasses.size());
-			}
 
 			m_global_ubo = GRI::Buffer::Create(
 				{
 					.size = m_frames.size() * GRI::PadUniformBufferSize(sizeof(GlobalUBO)),
-					.usage= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+					.usage= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 					.mode = VK_SHARING_MODE_EXCLUSIVE,
 					.properties = static_cast<GRI::Buffer::Property>(
 						GRI::Buffer::Property::Persistent |
 						GRI::Buffer::Property::Writable),
 				});
-			Log::Debug("Global UBO size: {}", m_global_ubo->GetSize());
+
+			std::vector<VkWriteDescriptorSet> writes;
+			for (auto& frame : m_frames)
+			{
+				frame.renderpasses.resize(m_renderpasses.size());
+				frame.ubo_descriptor_set = GRI::GetGlobalDescriptorPool()
+					->AllocateDescriptorSet(GRI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera"));
+
+				writes.emplace_back(frame.ubo_descriptor_set
+						->BindToBuffer(
+						0,
+						m_global_ubo,
+						0, // Do not use static offset, instead, using Dynamic Binding.
+						sizeof(GlobalUBO::CameraData)));
+			}
+			GRI::UpdateDescriptorSets(writes);
 		}
 	}
 
 	void
 	Renderer::
-	update_global_ubo(Frame& current_frame)
+	update_frame_context(uint32_t frame_index)
 	{
+		auto& current_frame = m_frames[frame_index];
+		
+		// Update Context
+		auto& ctx = m_frame_context;
+		ctx.frame_index = frame_index;
+		ctx.ubo = current_frame.ubo_descriptor_set;
+
+		// Update Global UBO
 		auto& ubo_data = current_frame.ubo_data;
 		// Camera
-		{
-			auto& c = Camera::GetInstance();
-			ubo_data.m_camera_data.view_matrix = c.GetViewMatrix();
-			ubo_data.m_camera_data.proj_matrix = c.GetProjectMatrix();
-			
-			m_global_ubo->Write(&ubo_data.m_camera_data);
-		}
+		auto& c = Camera::GetInstance();
+		ubo_data.m_camera_data.view_matrix = c.GetViewMatrix();
+		ubo_data.m_camera_data.proj_matrix = c.GetProjectMatrix();
+
+		m_global_ubo->Write(&ubo_data.m_camera_data,
+							sizeof(GlobalUBO::CameraData),
+							GRI::PadUniformBufferSize(sizeof(GlobalUBO)) * frame_index);
 	}
 
 }} // namespace Albedo::APP
