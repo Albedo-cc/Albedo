@@ -1,11 +1,12 @@
 # TODO
 ## Vital
+- [ ] 2023-11-07 - Y Inversion with Vulkan Extension.
 - [ ] 2023-11-01 - Wait KTX 4.2.2 for integrate it with VMA.
 - [ ] 2023-10-31 - Add KTX Texture definition, e.g., VK_FORMAT_B8G8R8A8_SRGB
 - [ ] 2023-10-22 - Solve subresouce for Mipmap Levels.
 
 ## Optimization
-- [ ] 2023-09-12 - Delete GRIPushPreframeTask(), instead, using a Global CommandBuffer in Transfer Queue.
+- [ ] 2023-09-12 - Using a Global CommandBuffer of Transfer Queue.
 - [ ] 2023-09-02 - GRI manage Global Shaders.
 - [ ] 2023-09-01 - Move commandbuffers to each Render Pass?
 

@@ -1,3 +1,6 @@
 #pragma once
 
 #include "../Albedo/System/Control/control_system.h"
+#include "../Albedo/System/Control/action_types.h"
+#include "../Albedo/System/Control/keyboard.h"
+#include "../Albedo/System/Control/mouse.h"

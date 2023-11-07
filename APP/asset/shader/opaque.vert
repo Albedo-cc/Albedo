@@ -36,5 +36,7 @@ void main()
                   ubo_camera.view_matrix *
                   vec4(positions[gl_VertexIndex], 1.0);
 
+    gl_Position.y = -gl_Position.y;
+
     fragColor = colors[gl_VertexIndex]; 
 }

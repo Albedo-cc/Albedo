@@ -12,6 +12,59 @@
 #include <vk_mem_alloc.h>
 #include <ktxvulkan.h>
 
+namespace
+{
+	using namespace Albedo;
+	// Local Objects
+	class VMA final
+	{
+		friend class GRI;
+		VmaAllocator handle{ VK_NULL_HANDLE };
+		operator VmaAllocator() const { return handle; }
+		void Create(); void Destroy();
+	};
+	static VMA s_vma;
+
+	class KTX final
+	{
+		friend class GRI;
+		ktxVulkanDeviceInfo* context;
+		operator ktxVulkanDeviceInfo*() const { return context; }
+		void Create(); void Destroy();
+	};
+	static KTX s_ktx;
+
+	struct RenderTarget
+	{
+		static inline std::shared_ptr<GRI::Texture> zbuffer; // Shared
+		std::shared_ptr<GRI::Texture> image;
+		std::shared_ptr<GRI::CommandBuffer> commandbuffer;
+		GRI::Fence fence_in_flight{ FenceType_Signaled };
+		GRI::Semaphore  semaphore_ready{SemaphoreType_Unsignaled};
+
+		static inline uint32_t FPS{ 0 };
+		static inline StopWatch frame_timer;
+
+		static void Initialize();
+		static void Destroy();
+	};
+	static inline std::vector<RenderTarget> s_render_targets;
+
+	// Global Command Pools
+	using GRICommandPool = std::unordered_map<QueueFamilyType, std::shared_ptr<GRI::CommandPool>>;
+	static std::unordered_map<std::thread::id, GRICommandPool> s_normal_command_pools;
+	static std::unordered_map<std::thread::id, GRICommandPool> s_auto_free_command_pools;
+	static std::unordered_map<std::thread::id, GRICommandPool> s_auto_reset_command_pools;
+
+	// Global Descriptor Objects
+	static std::unordered_map<std::string, std::shared_ptr<GRI::DescriptorSetLayout>>s_descriptor_set_layouts;
+	static std::unordered_map<std::thread::id, std::shared_ptr<GRI::DescriptorPool>> s_descriptor_pools;
+
+	// Global Resource
+	static std::unordered_map<std::string, std::shared_ptr<GRI::Sampler>> s_global_samplers;
+	static std::unordered_map<std::string, std::shared_ptr<GRI::Texture>> s_global_textures;
+}
+
 namespace Albedo
 {
 
@@ -29,8 +82,8 @@ namespace Albedo
 			.msg_callback = createinfo.msg_callback
 		});
 
-		sm_vma.Create();
-		sm_ktx.Create();
+		s_vma.Create();
+		s_ktx.Create();
 
 		// Init Default Global Resource
 		RegisterGlobalSampler("Default", Sampler::Create({}));
@@ -50,11 +103,7 @@ namespace Albedo
 				}
 			}));
 
-		
-		sm_preframe_task_pools.resize(MAX_QUEUEFAMILY_TYPE);
-
-		create_render_targets();
-
+		RenderTarget::Initialize();
 	}
 
 	void 
@@ -64,71 +113,22 @@ namespace Albedo
 		Log::Debug("Albedo GRI is being terminated...");
 		vkDeviceWaitIdle(g_rhi->device);
 		
-		destroy_render_targets();
-		sm_preframe_task_pools.clear();
+		RenderTarget::Destroy();
 
-		sm_global_samplers.clear();
-		sm_global_textures.clear();
+		s_global_samplers.clear();
+		s_global_textures.clear();
 
-		sm_descriptor_pools.clear();
-		sm_descriptor_set_layouts.clear();
+		s_descriptor_pools.clear();
+		s_descriptor_set_layouts.clear();
 
-		sm_vma.Destroy();
-		sm_ktx.Destroy();
+		s_vma.Destroy();
+		s_ktx.Destroy();
 
-		sm_normal_command_pools.clear();
-		sm_auto_free_command_pools.clear();
-		sm_auto_reset_command_pools.clear();
+		s_normal_command_pools.clear();
+		s_auto_free_command_pools.clear();
+		s_auto_reset_command_pools.clear();
 
 		g_rhi->Terminate();
-	}
-
-	void
-	GRI::VMA::
-	Create()
-	{
-		VmaAllocatorCreateInfo vmaAllocatorCreateInfo
-		{
-			.flags = 0x0,							//VmaAllocatorCreateFlagBits
-			.physicalDevice = g_rhi->GPU,
-			.device = g_rhi->device,
-			.preferredLargeHeapBlockSize = 0,		// 0 means Default (256MiB)
-			.pAllocationCallbacks = g_rhi->allocator,
-			.pDeviceMemoryCallbacks = nullptr,
-			.instance = g_rhi->instance,
-			.vulkanApiVersion  = VULKAN_API_VERSION // VMA Default API Version 1.0
-		};
-		
-		if (vmaCreateAllocator(&vmaAllocatorCreateInfo, &handle) != VK_SUCCESS)
-			Log::Fatal("Failed to create the VMA (Vulkan Memory Allocator)!");
-	}
-
-	void
-	GRI::VMA::
-	Destroy()
-	{
-		vmaDestroyAllocator(handle);
-		handle = VK_NULL_HANDLE;
-	}
-
-	void
-	GRI::KTX::
-	Create()
-	{
-		context = ktxVulkanDeviceInfo_Create(
-			g_rhi->GPU,
-			g_rhi->device,
-			g_rhi->device.queue_families.transfer.queues.front(),
-			*GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Transfer),
-			g_rhi->allocator);
-	}
-
-	
-	void
-	GRI::KTX::
-	Destroy()
-	{
-		ktxVulkanDeviceInfo_Destroy(context);
 	}
 
 	void
@@ -136,8 +136,8 @@ namespace Albedo
 	recreate_swapchain()
 	{
 		g_rhi->recreate_swapchain();
-		destroy_render_targets();
-		create_render_targets();
+		RenderTarget::Destroy();
+		RenderTarget::Initialize();
 		Editor::Recreate();
 	}
 	
@@ -152,7 +152,7 @@ namespace Albedo
 		{
 		case CommandPoolType_Normal:
 		{
-			auto& commandPools = sm_normal_command_pools[thread_id];
+			auto& commandPools = s_normal_command_pools[thread_id];
 			auto& commandPool = commandPools[queue];
 			if (commandPool == nullptr)
 			{
@@ -167,7 +167,7 @@ namespace Albedo
 		}
 		case CommandPoolType_Transient:
 		{
-			auto& commandPools = sm_auto_free_command_pools[thread_id];
+			auto& commandPools = s_auto_free_command_pools[thread_id];
 			auto& commandPool = commandPools[queue];
 			if (commandPool == nullptr)
 			{
@@ -182,7 +182,7 @@ namespace Albedo
 		}
 		case CommandPoolType_Resettable:
 		{
-			auto& commandPools = sm_auto_reset_command_pools[thread_id];
+			auto& commandPools = s_auto_reset_command_pools[thread_id];
 			auto& commandPool = commandPools[queue];
 			if (commandPool == nullptr)
 			{
@@ -204,11 +204,11 @@ namespace Albedo
 	GRI::
 	RegisterGlobalDescriptorSetLayout(std::string id, std::shared_ptr<DescriptorSetLayout> descriptor_set_layout)
 	{
-		auto target = sm_descriptor_set_layouts.find(id);
-		if (target == sm_descriptor_set_layouts.end())
+		auto target = s_descriptor_set_layouts.find(id);
+		if (target == s_descriptor_set_layouts.end())
 		{
 			Log::Debug("Albedo GRI is registering a new Descriptor Set Layout({}).", id);
-			sm_descriptor_set_layouts.emplace(std::move(id), std::move(descriptor_set_layout));
+			s_descriptor_set_layouts.emplace(std::move(id), std::move(descriptor_set_layout));
 		}
 		else Log::Fatal("Failed to register duplicate Vulkan Descriptor Set Layouts({})!", id);
 	}
@@ -217,11 +217,11 @@ namespace Albedo
 	GRI::
 	RegisterGlobalSampler(std::string id, std::shared_ptr<Sampler> sampler)
 	{
-		auto target = sm_global_samplers.find(id);
-		if (target == sm_global_samplers.end())
+		auto target = s_global_samplers.find(id);
+		if (target == s_global_samplers.end())
 		{
 			Log::Debug("Albedo GRI is registering a new Sampelr({}).", id);
-			sm_global_samplers.emplace(std::move(id), std::move(sampler));
+			s_global_samplers.emplace(std::move(id), std::move(sampler));
 		}
 		else Log::Fatal("Failed to register duplicate GRI Sampelr({})!", id);
 	}
@@ -230,11 +230,11 @@ namespace Albedo
 	GRI::
 	RegisterGlobalTexture(std::string id, std::shared_ptr<Texture> texture)
 	{
-		auto target = sm_global_textures.find(id);
-		if (target == sm_global_textures.end())
+		auto target = s_global_textures.find(id);
+		if (target == s_global_textures.end())
 		{
 			Log::Debug("Albedo GRI is registering a new Texture({}).", id);
-			sm_global_textures.emplace(std::move(id), std::move(texture));
+			s_global_textures.emplace(std::move(id), std::move(texture));
 		}
 		else Log::Fatal("Failed to register duplicate GRI Texture({})!", id);
 	}
@@ -291,7 +291,7 @@ namespace Albedo
 	GRI::
 	GetGlobalDescriptorPool(std::thread::id thread_id/* = std::this_thread::get_id()*/)
 	{
-		auto& target = sm_descriptor_pools[thread_id];
+		auto& target = s_descriptor_pools[thread_id];
 		if (target == nullptr)
 		{
 			Log::Debug("Albedo GRI is creating a new Global Descriptor Pool.");
@@ -320,8 +320,8 @@ namespace Albedo
 	GRI::
 	GetGlobalDescriptorSetLayout(const std::string& id)
 	{
-		auto target = sm_descriptor_set_layouts.find(id);
-		if (target != sm_descriptor_set_layouts.end())
+		auto target = s_descriptor_set_layouts.find(id);
+		if (target != s_descriptor_set_layouts.end())
 		{
 			return target->second;
 		}
@@ -332,8 +332,8 @@ namespace Albedo
 	GRI::
 	GetGlobalSampler(const std::string& id)
 	{
-		auto target = sm_global_samplers.find(id.data());
-		if (target != sm_global_samplers.end())
+		auto target = s_global_samplers.find(id.data());
+		if (target != s_global_samplers.end())
 		{
 			return target->second;
 		}
@@ -343,8 +343,8 @@ namespace Albedo
 	std::shared_ptr<GRI::Texture>
 	GRI::GetGlobalTexture(const std::string& id)
 	{
-		auto target = sm_global_textures.find(id.data());
-		if (target != sm_global_textures.end())
+		auto target = s_global_textures.find(id.data());
+		if (target != s_global_textures.end())
 		{
 			return target->second;
 		}
@@ -399,7 +399,7 @@ namespace Albedo
 	GRI::
 	GetCurrentRenderTarget()
 	{
-		return sm_render_targets[g_rhi->swapchain.cursor].image;
+		return s_render_targets[g_rhi->swapchain.cursor].image;
 	}
 
 	size_t
@@ -430,22 +430,6 @@ namespace Albedo
 		return RenderTarget::zbuffer;
 	}
 
-	void
-	GRI::
-	PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer)
-	{
-		ALBEDO_ASSERT(CommandPoolType_Transient == commandbuffer->m_parent->m_settings.type);
-		ALBEDO_ASSERT(!commandbuffer->IsRecording());
-		ALBEDO_ASSERT(commandbuffer.use_count() == 2);
-
-		sm_preframe_task_pools[commandbuffer->m_parent->m_settings.queue_family]
-			.task_set[*commandbuffer->m_parent]
-			.emplace_back(commandbuffer->m_handle);
-
-		commandbuffer->m_handle = VK_NULL_HANDLE; // Handing over Life Management to GRI
-		commandbuffer.reset();
-	}
-	
 	GRI::Fence::
 	Fence(FenceType type)
 	{
@@ -907,7 +891,7 @@ namespace Albedo
 		}; 
 
 		if (vmaCreateBuffer(
-			sm_vma,
+			s_vma,
 			&bufferCreateInfo,
 			&allocationInfo,
 			&m_handle,
@@ -919,7 +903,7 @@ namespace Albedo
 	GRI::Buffer::
 	~Buffer() noexcept
 	{
-		vmaDestroyBuffer(sm_vma, m_handle, m_allocation);
+		vmaDestroyBuffer(s_vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
 	}
 
@@ -936,7 +920,7 @@ namespace Albedo
 	{
 		ALBEDO_ASSERT(m_allocation->IsMappingAllowed() && "This buffer is not mapping-allowed!");
 		if (offset + size > GetSize())
-		{			
+		{
 			Log::Error("Failed to write {} byte(s) with {} bytes offset to buffer (size:{}).", size, offset, GetSize());
 		}
 		
@@ -948,9 +932,9 @@ namespace Albedo
 		}
 		else
 		{
-			vmaMapMemory(sm_vma, m_allocation, reinterpret_cast<void**>(&mappedArea));
+			vmaMapMemory(s_vma, m_allocation, reinterpret_cast<void**>(&mappedArea));
 			memcpy(mappedArea + offset, data, size);
-			vmaUnmapMemory(sm_vma, m_allocation);
+			vmaUnmapMemory(s_vma, m_allocation);
 		}
 	}
 
@@ -1058,7 +1042,7 @@ namespace Albedo
 		};
 
 		if (vmaCreateImage(
-			sm_vma,
+			s_vma,
 			&imageCreateInfo,
 			&allocationInfo,
 			&m_handle,
@@ -1164,7 +1148,7 @@ namespace Albedo
 	GRI::Texture::
 	~Texture() noexcept
 	{
-		vmaDestroyImage(sm_vma, m_handle, m_allocation);
+		vmaDestroyImage(s_vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
 		vkDestroyImageView(g_rhi->device, m_view, g_rhi->allocator);
 		m_view	 = VK_NULL_HANDLE;
@@ -1307,7 +1291,7 @@ namespace Albedo
 		
 		m_settings.extent = extent;
 
-		vmaDestroyImage(sm_vma, m_handle, m_allocation);
+		vmaDestroyImage(s_vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
 		vkDestroyImageView(g_rhi->device, m_view, g_rhi->allocator);
 		m_view	 = VK_NULL_HANDLE;
@@ -1337,7 +1321,7 @@ namespace Albedo
 		};
 
 		if (vmaCreateImage(
-			sm_vma,
+			s_vma,
 			&imageCreateInfo,
 			&allocationInfo,
 			&m_handle,
@@ -1645,7 +1629,7 @@ namespace Albedo
 		}});
 		for (size_t i = 0; i < m_framebuffers.size(); ++i)
 		{
-			m_framebuffers[i].render_targets.emplace_back(sm_render_targets[i].image->GetView());
+			m_framebuffers[i].render_targets.emplace_back(s_render_targets[i].image->GetView());
 		}
 
 		if (ZWrite & flags)
@@ -1900,7 +1884,7 @@ namespace Albedo
 			.x = 0.0f, 
 			.y = 0.0f,
 			.width	= static_cast<float>(g_rhi->swapchain.extent.width),
-			.height	= static_cast<float>(g_rhi->swapchain.extent.height),
+			.height	= static_cast<float>(g_rhi->swapchain.extent.height), // Y-Inversion (https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_maintenance1.html)
 			.minDepth = 0.0f,
 			.maxDepth = 1.0f,
 		},
@@ -2028,7 +2012,7 @@ namespace Albedo
 			.rasterizerDiscardEnable= VK_FALSE, // if VK_TRUE, then geometry never passes through the rasterizer stage
 			.polygonMode			= VK_POLYGON_MODE_FILL,
 			.cullMode				= VK_CULL_MODE_BACK_BIT,
-			.frontFace				= VK_FRONT_FACE_CLOCKWISE, // Consistent with Unity Engine. (Note Y-Flip)
+			.frontFace				= VK_FRONT_FACE_COUNTER_CLOCKWISE, // Consistent with Unity Engine. (Note Y-Flip)
 			.depthBiasEnable		= VK_TRUE,
 			.depthBiasConstantFactor= 0.0f, 
 			.depthBiasClamp			= 0.0f,
@@ -2122,10 +2106,18 @@ namespace Albedo
 		VkFence		signal_fence) 
 	throw (SIGNAL_RECREATE_SWAPCHAIN)
 	{
-		do_preframe_tasks();
-
-		auto& RT = sm_render_targets[g_rhi->swapchain.cursor];
+		auto& RT = s_render_targets[g_rhi->swapchain.cursor];
 		RT.fence_in_flight.Wait();
+
+		// Compute in each loop
+		static uint32_t frame_count = 0;
+		frame_count += 1;
+		if (RenderTarget::frame_timer.Split().seconds() >= 1)
+		{
+			RenderTarget::FPS = frame_count / RenderTarget::frame_timer.Split().seconds();
+			frame_count = 0;
+			RenderTarget::frame_timer.Reset();
+		}
 
 		auto result = vkAcquireNextImageKHR(
 			g_rhi->device, 
@@ -2160,7 +2152,7 @@ namespace Albedo
 	PresentFrame(const std::vector<VkSemaphore>& wait_semaphores)
 	throw (SIGNAL_RECREATE_SWAPCHAIN)
 	{
-		auto& RT = sm_render_targets[g_rhi->swapchain.cursor];
+		auto& RT = s_render_targets[g_rhi->swapchain.cursor];
 		VkSemaphore present_wait_semaphore;
 
 		if (Editor::IsEnabled())
@@ -2327,7 +2319,7 @@ namespace Albedo
 	ClearScreen(std::shared_ptr<CommandBuffer> commandbuffer, const VkClearColorValue& clear_color)
 	{
 		//[WARN] It is invalid to issue this call inside an active VkRenderPass!
-		auto& screen = sm_render_targets[g_rhi->swapchain.cursor].image;
+		auto& screen = s_render_targets[g_rhi->swapchain.cursor].image;
 		screen->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		auto subsrcrange = screen->GetSubresourceRange();
 		vkCmdClearColorImage(*commandbuffer,
@@ -2336,6 +2328,12 @@ namespace Albedo
 			&clear_color,
 			1, &subsrcrange);
 		screen->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
+	}
+
+	uint32_t
+	GRI::GetFPS()
+	{
+		return RenderTarget::FPS;
 	}
 
 	void
@@ -2351,7 +2349,7 @@ namespace Albedo
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
 		uint32_t prev_cursor = (GetRenderTargetCursor() + (g_rhi->swapchain.images.size() - 1)) % g_rhi->swapchain.images.size();
-		auto& PrevRT = sm_render_targets[prev_cursor];
+		auto& PrevRT = s_render_targets[prev_cursor];
 		PrevRT.fence_in_flight.Wait();
 		PrevRT.fence_in_flight.Reset();
 
@@ -2369,71 +2367,64 @@ namespace Albedo
 		PrevRT.fence_in_flight.Wait();
 	}
 
+} // namespace Albedo
+
+namespace
+{
 	void
-	GRI::
-	do_preframe_tasks()
+	VMA::
+	Create()
 	{
-		std::array<bool, MAX_QUEUEFAMILY_TYPE> submitted{};
-
-		// Submit Tasks
-		static auto load_and_submit_tasks = 
-			[&submitted](QueueFamilyType queue_family)->void
-			{
-				auto& taskpool = sm_preframe_task_pools[queue_family];
-				if (taskpool.task_set.empty()) return;
-
-				std::vector<VkSubmitInfo> submitinfos;
-				for (auto& [_, tasks] : taskpool.task_set)
-				{
-					submitinfos.emplace_back(VkSubmitInfo
-					{
-						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-						.waitSemaphoreCount = 0,
-						.pWaitSemaphores	= nullptr,
-						.pWaitDstStageMask  = nullptr,
-						.commandBufferCount = static_cast<uint32_t>(tasks.size()),
-						.pCommandBuffers	= tasks.data(),
-						.signalSemaphoreCount = 0,
-						.pSignalSemaphores	= nullptr,
-					});
-				}
-				vkQueueSubmit(GetQueue(queue_family), submitinfos.size(), submitinfos.data(), taskpool.fence);
-
-				submitted[queue_family] = true;
-			};
-
-		load_and_submit_tasks(QueueFamilyType_Graphics);
-		load_and_submit_tasks(QueueFamilyType_Present);
-		load_and_submit_tasks(QueueFamilyType_Transfer);
-		load_and_submit_tasks(QueueFamilyType_Compute);
+		VmaAllocatorCreateInfo vmaAllocatorCreateInfo
+		{
+			.flags = 0x0,							//VmaAllocatorCreateFlagBits
+			.physicalDevice = g_rhi->GPU,
+			.device = g_rhi->device,
+			.preferredLargeHeapBlockSize = 0,		// 0 means Default (256MiB)
+			.pAllocationCallbacks = g_rhi->allocator,
+			.pDeviceMemoryCallbacks = nullptr,
+			.instance = g_rhi->instance,
+			.vulkanApiVersion  = VULKAN_API_VERSION // VMA Default API Version 1.0
+		};
 		
-		// Wait Tasks
-		static auto wait_and_free_tasks =
-			[&submitted](QueueFamilyType queue_family)->void
-			{
-				if (!submitted[queue_family]) return;
-
-				auto& taskpool = sm_preframe_task_pools[queue_family];
-				taskpool.fence.Wait(); taskpool.fence.Reset();
-				for (auto& [pool, buffers] : taskpool.task_set)
-				{
-					vkFreeCommandBuffers(g_rhi->device, pool, buffers.size(), buffers.data());
-				}
-			};
-
-		wait_and_free_tasks(QueueFamilyType_Graphics);
-		wait_and_free_tasks(QueueFamilyType_Present);
-		wait_and_free_tasks(QueueFamilyType_Transfer);
-		wait_and_free_tasks(QueueFamilyType_Compute);
+		if (vmaCreateAllocator(&vmaAllocatorCreateInfo, &handle) != VK_SUCCESS)
+			Log::Fatal("Failed to create the VMA (Vulkan Memory Allocator)!");
 	}
 
 	void
-	GRI::
-	create_render_targets()
+	VMA::
+	Destroy()
 	{
-		sm_render_targets.resize(g_rhi->swapchain.images.size());
+		vmaDestroyAllocator(handle);
+		handle = VK_NULL_HANDLE;
+	}
 
-		auto commandbuffer = GetGlobalCommandPool(
+	void
+	KTX::
+	Create()
+	{
+		context = ktxVulkanDeviceInfo_Create(
+			g_rhi->GPU,
+			g_rhi->device,
+			g_rhi->device.queue_families.transfer.queues.front(),
+			*GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Transfer),
+			g_rhi->allocator);
+	}
+	
+	void
+	KTX::
+	Destroy()
+	{
+		ktxVulkanDeviceInfo_Destroy(context);
+	}
+
+	void
+	RenderTarget::
+	Initialize()
+	{
+		s_render_targets.resize(g_rhi->swapchain.images.size());
+
+		auto commandbuffer = GRI::GetGlobalCommandPool(
 			CommandPoolType_Transient,
 			QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
@@ -2461,15 +2452,15 @@ namespace Albedo
 		commandbuffer->Begin();
 		{
 			// Create Color Attachment
-			for (size_t i = 0; i < sm_render_targets.size(); ++i)
+			for (size_t i = 0; i < s_render_targets.size(); ++i)
 			{
-				auto& RT = sm_render_targets[i];
-				RT.image = Texture::Create(Texture::CreateInfo
+				auto& RT = s_render_targets[i];
+				RT.image = GRI::Texture::Create(GRI::Texture::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 						.usage  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
 								  VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-						.format = GetRenderTargetFormat(),
+						.format = GRI::GetRenderTargetFormat(),
 						.extent = {g_rhi->swapchain.extent.width, g_rhi->swapchain.extent.height, 1},
 						.mipLevels	 = 1,
 						.arrayLayers = 1,
@@ -2477,7 +2468,7 @@ namespace Albedo
 						.tiling  = VK_IMAGE_TILING_OPTIMAL,
 					});
 				RT.image->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
-				RT.commandbuffer = GetGlobalCommandPool(
+				RT.commandbuffer = GRI::GetGlobalCommandPool(
 					CommandPoolType_Resettable,
 					QueueFamilyType_Graphics)
 					->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
@@ -2494,7 +2485,7 @@ namespace Albedo
 					1, &barrier);
 			}
 			// Create ZBuffer(Shared)
-			RenderTarget::zbuffer = Texture::Create(Texture::CreateInfo
+			RenderTarget::zbuffer = GRI::Texture::Create(GRI::Texture::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_DEPTH_BIT,
 						.usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -2508,17 +2499,17 @@ namespace Albedo
 			RenderTarget::zbuffer->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		}
 		commandbuffer->End();
-		Fence fence{ FenceType_Unsignaled };
+		GRI::Fence fence{ FenceType_Unsignaled };
 		commandbuffer->Submit({}, fence);
 		fence.Wait();
 	}
 
 	void
-	GRI::
-	destroy_render_targets()
+	RenderTarget::
+	Destroy()
 	{
-		sm_render_targets.clear();
+		s_render_targets.clear();
 		RenderTarget::zbuffer.reset();
 	}
 
-} // namespace Albedo
+} // namespace

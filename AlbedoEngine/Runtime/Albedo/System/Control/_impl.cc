@@ -1,10 +1,17 @@
+#include "action_types.h"
+#include "mouse.h"
 #include "keyboard.h"
 #include <GLFW/glfw3.h>
 
 namespace Albedo
 {
 
-	Keyboard::Key
+    ActionType::Action ActionType::Release	= GLFW_RELEASE;	// Released
+	ActionType::Action ActionType::Press	= GLFW_PRESS;	// Just Pressed
+	ActionType::Action ActionType::Hold		= GLFW_REPEAT;	// Pressed and Holding
+	ActionType::Action ActionType::Detach	= Hold + 1;		// Just Released  (a special Release action)
+	
+    Keyboard::Key
 	//Keyboard::Alphabat
 	Keyboard::A = GLFW_KEY_A, Keyboard::B = GLFW_KEY_B, Keyboard::C = GLFW_KEY_C, Keyboard::D = GLFW_KEY_D,
 	Keyboard::E = GLFW_KEY_E, Keyboard::F = GLFW_KEY_F, Keyboard::G = GLFW_KEY_G, Keyboard::H = GLFW_KEY_H,
@@ -33,5 +40,10 @@ namespace Albedo
 	Keyboard::ESC    = GLFW_KEY_ESCAPE,
 	Keyboard::Enter  = GLFW_KEY_ENTER,
 	Keyboard::Tab	 = GLFW_KEY_TAB;
+
+	Mouse::Button
+	Mouse::Left	  = GLFW_MOUSE_BUTTON_LEFT,
+	Mouse::Middle = GLFW_MOUSE_BUTTON_MIDDLE,
+	Mouse::Right  = GLFW_MOUSE_BUTTON_RIGHT;
 
 } // namespace Albedo

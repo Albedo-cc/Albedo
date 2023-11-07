@@ -40,10 +40,11 @@ namespace Albedo
         AngleAxis roll	(static_cast<Radian>(rotate.roll),  World::Axis.Roll);
         AngleAxis pitch	(static_cast<Radian>(rotate.pitch), World::Axis.Pitch);
         AngleAxis yaw	(static_cast<Radian>(rotate.yaw),   World::Axis.Yaw);
-            
+        
+		// Stack Order
         out .rotate(yaw * pitch * roll)
-			.scale(scale)
-			.translate(translate);
+			.translate(translate)
+			.scale(scale);
 	}
 
 	Matrix4x4
@@ -52,6 +53,33 @@ namespace Albedo
 	{
 		Affine3D affine;
 		GetModelMatrix(affine);
+
+		return affine.matrix();
+	}
+
+	void
+	Transform::
+	GetViewMatrix(Affine3D& out) const
+	{
+		out = Affine3D::Identity();
+
+        // Euler Extrinsic Rotation
+        AngleAxis roll	(static_cast<Radian>(rotate.roll),  World::Axis.Roll);
+        AngleAxis pitch	(static_cast<Radian>(rotate.pitch), World::Axis.Pitch);
+        AngleAxis yaw	(static_cast<Radian>(rotate.yaw),   World::Axis.Yaw);
+        
+		// Stack Order
+        out .rotate(yaw * pitch * roll)
+			.translate(-translate) // Minus Translate (Different from Model Matrix)
+			.scale(scale);
+	}
+
+	Matrix4x4
+	Transform::
+	GetViewMatrix() const
+	{
+		Affine3D affine;
+		GetViewMatrix(affine);
 
 		return affine.matrix();
 	}

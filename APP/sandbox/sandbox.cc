@@ -32,6 +32,8 @@ namespace APP
 				{
 					ImGui::Begin("Camera");
 					{
+						ImGui::Text("%u", GRI::GetFPS());
+
 						ImGui::Text(
 							"%.1f, %.1f, %.1f, %.1f\n"
 							"%.1f, %.1f, %.1f, %.1f\n"

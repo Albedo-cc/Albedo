@@ -25,7 +25,9 @@ namespace Albedo
 		union { struct { Degree roll, pitch, yaw; }; }rotate{ 0, 0, 0 };
 
 		void GetModelMatrix(Affine3D& out) const;
-		auto GetModelMatrix() const -> Matrix4x4;	
+		auto GetModelMatrix() const -> Matrix4x4;
+		void GetViewMatrix(Affine3D& out) const;
+		auto GetViewMatrix() const -> Matrix4x4;
 	};
 
 } // namespace Albedo

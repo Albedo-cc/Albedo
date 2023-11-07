@@ -14,7 +14,7 @@ namespace APP
     {
         friend class Runtime;
         friend class Pattern::Singleton<Renderer>;
-        enum RenderPasses { /*Background,*/ Geometry, MAX_RENDERPASS_COUNT };
+        enum RenderPasses { Background, Geometry, MAX_RENDERPASS_COUNT };
     public:
         struct FrameContext
         {
@@ -37,7 +37,6 @@ namespace APP
 
         struct Frame
         {
-            GlobalUBO                           ubo_data{};
             std::shared_ptr<GRI::DescriptorSet> ubo_descriptor_set{};
             GRI::Semaphore semaphore_image_available = GRI::Semaphore(SemaphoreType_Unsignaled);
             

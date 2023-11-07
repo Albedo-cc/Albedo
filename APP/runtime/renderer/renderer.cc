@@ -127,7 +127,8 @@ namespace APP
 	{
 		// System Render Passes
 		m_renderpasses.resize(RenderPasses::MAX_RENDERPASS_COUNT);
-		m_renderpasses[RenderPasses::Geometry] = std::make_unique<GeometryPass>();
+		m_renderpasses[RenderPasses::Background] = std::make_unique<BackgroundPass>();
+		m_renderpasses[RenderPasses::Geometry]	 = std::make_unique<GeometryPass>();
 
 		// User Render Passes
 		// ...
@@ -190,13 +191,9 @@ namespace APP
 		ctx.ubo = current_frame.ubo_descriptor_set;
 
 		// Update Global UBO
-		auto& ubo_data = current_frame.ubo_data;
-		// Camera
-		auto& c = Camera::GetInstance();
-		ubo_data.m_camera_data.view_matrix = c.GetViewMatrix();
-		ubo_data.m_camera_data.proj_matrix = c.GetProjectMatrix();
+		auto& camera = Camera::GetInstance();
 
-		m_global_ubo->Write(&ubo_data.m_camera_data,
+		m_global_ubo->Write(&camera.m_matrics,
 							sizeof(GlobalUBO::CameraData),
 							GRI::PadUniformBufferSize(sizeof(GlobalUBO)) * frame_index);
 	}

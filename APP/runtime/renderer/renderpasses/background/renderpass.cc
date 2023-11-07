@@ -9,7 +9,7 @@ namespace APP
 	BackgroundPass::
 	BackgroundPass() : GRI::RenderPass{"Background", 10000}
 	{
-		BEGIN_BUILD();
+		BEGIN_BUILD(ClearSTColor);
 		{
 			// Add Attachments (From SystemTarget::MAX_SYSTEM_TARGET)
 		

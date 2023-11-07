@@ -13,7 +13,6 @@
 #include <thread>
 #include <vector>
 #include <string>
-#include <cassert>
 #include <optional>
 #include <stdexcept>
 #include <functional>
@@ -70,8 +69,7 @@ namespace Albedo
 		static auto GetRenderTargetCursor()	 -> uint32_t;
 		static auto GetRenderTargetFormat()	 -> VkFormat;
 
-		static void PushPreframeTask(std::shared_ptr<CommandBuffer> commandbuffer); //[WARN]: will be depreciated!
-
+		static auto GetFPS() -> uint32_t;
 		static void Screenshot(std::shared_ptr<Texture> output);
 
 		static auto MakeID(const std::vector<VkDescriptorType>& types_in_order) -> std::string;
@@ -637,67 +635,6 @@ namespace Albedo
 			VkRect2D							m_scissor;
 			VkPipelineColorBlendAttachmentState m_color_blend;
 		};
-
-	private:
-		class VMA final
-		{
-			friend class GRI;
-			VmaAllocator handle{ VK_NULL_HANDLE };
-			operator VmaAllocator() const { return handle; }
-
-			void Create();
-			void Destroy();
-		};
-		static inline VMA sm_vma;
-
-		class KTX final
-		{
-			friend class GRI;
-			ktxVulkanDeviceInfo* context;
-			operator ktxVulkanDeviceInfo*() const { return context; }
-
-			void Create();
-			void Destroy();
-		};
-		static inline KTX sm_ktx;
-
-    private:
-		// Global Command Pools
-		using GRICommandPool = std::unordered_map<QueueFamilyType, std::shared_ptr<CommandPool>>;
-		static inline std::unordered_map<std::thread::id, GRICommandPool> sm_normal_command_pools;
-		static inline std::unordered_map<std::thread::id, GRICommandPool> sm_auto_free_command_pools;
-		static inline std::unordered_map<std::thread::id, GRICommandPool> sm_auto_reset_command_pools;
-
-		// Global Descriptor Objects
-		static inline std::unordered_map<std::string, std::shared_ptr<DescriptorSetLayout>>sm_descriptor_set_layouts;
-		static inline std::unordered_map<std::thread::id, std::shared_ptr<DescriptorPool>> sm_descriptor_pools;
-
-		// Global Resource
-		static inline std::unordered_map<std::string, std::shared_ptr<Sampler>> sm_global_samplers;
-		static inline std::unordered_map<std::string, std::shared_ptr<Texture>> sm_global_textures;
-
-	private:
-		// Frame Tasks
-		struct FrameTask
-		{
-			Fence fence{ FenceType_Unsignaled };
-			std::unordered_map<VkCommandPool, std::vector<VkCommandBuffer>> task_set;
-		};
-		static inline std::vector<FrameTask> sm_preframe_task_pools;
-		static void do_preframe_tasks(); //[TODO]: Delete, instead wating Transfer Queue before a new frame.
-
-	private:
-		struct RenderTarget
-		{
-			static inline std::shared_ptr<Texture> zbuffer; // Shared
-			std::shared_ptr<Texture> image;
-			std::shared_ptr<CommandBuffer> commandbuffer;
-			GRI::Fence fence_in_flight{ FenceType_Signaled };
-			Semaphore  semaphore_ready{SemaphoreType_Unsignaled};
-		};
-		static void create_render_targets();
-		static void destroy_render_targets();
-		static inline std::vector<RenderTarget> sm_render_targets;
 
     private:
         GRI()                      = delete;

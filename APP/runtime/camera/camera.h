@@ -4,7 +4,7 @@
 #include <Albedo.Core.Math>
 #include <Albedo.Core.World>
 
-#include <optional>
+#include <runtime/renderer/data/global_ubo.h>
 
 namespace Albedo{
 namespace APP
@@ -14,6 +14,7 @@ namespace APP
         : public Pattern::Singleton<Camera>
 	{
 		friend class Runtime;
+		friend class Renderer;
 		friend class Pattern::Singleton<Camera>;
 	public:
 		enum ProjectionMode { Perspective, Orthographics };
@@ -36,7 +37,7 @@ namespace APP
 			}fov;
 
 			Transform		tranform;
-			float			speed = 0.2;
+			float			speed = 0.05;
 			ProjectionMode	projection = Perspective;
 		};
 
@@ -44,8 +45,10 @@ namespace APP
 		auto GetViewMatrix()	-> const Matrix4x4&;
 		auto GetProjectMatrix() -> const Matrix4x4&;
 
-		auto SetParameters() -> Parameters& { m_view_matrix.reset(); m_proj_matrix.reset(); return m_parameters; }
-		auto SetTransform()	 -> Transform&	{ m_view_matrix.reset(); return m_parameters.tranform; }
+		auto SetParameters() -> Parameters& { m_view_outdated = true; m_proj_outdated = true; return m_parameters; }
+		auto SetTransform()	 -> Transform&	{ m_view_outdated = true; return m_parameters.tranform; }
+
+		auto IsZReversed() const { return true; }
 
 		static constexpr Degree MAX_FOV_Y				= 89;
 		static constexpr Degree MIN_FOV_Y				= 10;
@@ -61,8 +64,9 @@ namespace APP
 
 	private:
 		Parameters	m_parameters;
-		std::optional<Matrix4x4> m_view_matrix{};
-		std::optional<Matrix4x4> m_proj_matrix{};
+		bool m_view_outdated = true;
+		bool m_proj_outdated = true;
+		GlobalUBO::CameraData m_matrics;
 
 	private:
 		Camera();

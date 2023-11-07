@@ -8,8 +8,7 @@ namespace APP
 	
 	class GlobalUBO
 	{
-		friend class Renderer;
-	public :
+	public:
 		struct CameraData
 		{
 			Matrix4x4 view_matrix;
@@ -17,7 +16,7 @@ namespace APP
 		};
 
 	private:
-		CameraData m_camera_data;
+		CameraData placeholder_camera_data;
 	};
 
 }} // namespace Albedo::APP

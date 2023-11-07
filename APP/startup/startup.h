@@ -24,13 +24,21 @@ namespace APP
 			auto& CONFIG = APPConfig::GetView(); // Init
 			Log::Info("{} is being started in {}.", CONFIG.app.name, Platform::Path::WorkDir);
 		
-			// Init Window
+			// Init WindowSystem
 			WindowSystem::Initialize(WindowSystem::CreateInfo
-				{
+			{
 				.title	  = CONFIG.app.name.data(),
 				.width	  = CONFIG.window.width,
 				.height	  = CONFIG.window.height,
 				.maximize = CONFIG.window.options.maximize,
+			});
+
+			// Init ControlSystem
+			ControlSystem::Initialize(ControlSystem::CreateInfo
+			{
+				.enable_keyboard	 = true,
+				.enable_mouse_cursor = true,
+				.enable_mouse_scroll = true,
 			});
 
 			// Init GRI
@@ -74,6 +82,7 @@ namespace APP
 
 			Editor::Terminate();
 			GRI::Terminate();
+			ControlSystem::Terminate();
 			WindowSystem::Terminate();
 
 			return EXIT_SUCCESS;

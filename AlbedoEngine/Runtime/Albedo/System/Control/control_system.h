@@ -1,44 +1,62 @@
 #pragma once
 
-#include "keyboard.h"
-#include "mouse.h"
+#include "action_types.h"
 
-#include <list>
-#include <string>
-#include <functional>
+// Predeclaration
+typedef struct GLFWwindow GLFWwindow;
 
 namespace Albedo
 {
-	struct ControlType
-	{
-		using  Action = unsigned int;
-		static Action Press;	// Just Pressed
-		static Action Hold;		//Pressed and Holding
-		static Action Detach;	// Just Released  (a special Release action)
-		static Action Release;	//	Released
-		static inline Action ACTION_TYPE_COUNT = 4;
-	};
+	struct KeyboardEventCreateInfo;
+	struct MouseButtonEventCreateInfo;
+	struct MouseScrollEventCreateInfo;
 
 	class ControlSystem final
 	{
-	public:
-		//static void RegisterControlEvent(ControlEvent* event); // new ControlEvent()
-        //static void DeleteControlEvent(std::string_view name);
+	public: // Info
+		struct Mouse
+		{
+			struct
+			{
+				double x{ 0 }, dx{ 0 };
+				double y{ 0 }, dy{ 0 };
+			}cursor;
+
+			struct
+			{
+				double dx{ 0 }, dy{ 0 };
+			}scroll;
+		};
+
+	public: // Events
+		static void RegisterKeyboardEvent		(const KeyboardEventCreateInfo&	   createinfo);
+        static void DeleteKeyboardEvent			(const std::string& event_name);
+
+		static void RegisterMouseButtonEvent	(const MouseButtonEventCreateInfo& createinfo);
+        static void DeleteMouseButtonEvent		(const std::string& event_name);
+
+		static void RegisterMouseScrollEvent	(const MouseScrollEventCreateInfo& createinfo);
+        static void DeleteMouseScrollEvent		(const std::string& event_name);
 
 	public:
-		static void Initialize();
+		struct CreateInfo
+		{
+			bool enable_keyboard;
+			bool enable_mouse_cursor;
+			bool enable_mouse_scroll;
+		};
+		static void Initialize(CreateInfo createinfo);
+		static void Terminate();
 		static void Process();
 		 
 	private:
-		using EventName = std::string;
-		// Keyboard Events
-		//using KeyboardEventMap = std::unordered_map<Keyboard::Key, std::list<KeyboardEvent>>;
-		//static inline  std::unordered_map<EventName, KeyboardEvent*> m_registry_keyborad_events;
-		//inline inline  static std::array<KeyboardEventMap, Action::ACTION_TYPE_COUNT> m_keyboard_events;
-		//
-		//// Mouse Scroll Events
-		//static inline  std::unordered_map<EventName, MouseScrollEvent*> m_registry_mouse_scroll_events;
-		//static inline  std::list<MouseScrollEvent> m_mouse_scroll_events;
+		static void callback_keyboard(GLFWwindow* window, int key, int scancode, int action, int mods);
+		static void callback_mouse_scroll(GLFWwindow* window, double offset_x, double offset_y);
+		static void callback_mouse_cursor(GLFWwindow* window, double position_x, double position_y);
+
+	private:
+		static inline CreateInfo sm_settings;
+		static inline Mouse sm_mouse{};
 	};
 
 } // namespace Albedo
