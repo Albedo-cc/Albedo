@@ -1879,12 +1879,13 @@ namespace Albedo
 
 	GRI::GraphicsPipeline::
 	GraphicsPipeline(ShaderModule shader_module):
-		m_viewport // Default Viewport
+		m_viewport // Default Viewport with Y-Inversion (https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport/#:~:text=Different%20coordinate%20systems%20The%20cause%20for%20this%20is,left%20of%20the%20screen%2C%20with%20Y%20pointing%20downwards.)
 		{
-			.x = 0.0f, 
-			.y = 0.0f,
+			// Lower-left corner of screen. (Unity)
+			.x		= 0.0f, 
+			.y		= static_cast<float>(g_rhi->swapchain.extent.height),
 			.width	= static_cast<float>(g_rhi->swapchain.extent.width),
-			.height	= static_cast<float>(g_rhi->swapchain.extent.height), // Y-Inversion (https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_maintenance1.html)
+			.height	= - static_cast<float>(g_rhi->swapchain.extent.height),
 			.minDepth = 0.0f,
 			.maxDepth = 1.0f,
 		},
@@ -2012,7 +2013,7 @@ namespace Albedo
 			.rasterizerDiscardEnable= VK_FALSE, // if VK_TRUE, then geometry never passes through the rasterizer stage
 			.polygonMode			= VK_POLYGON_MODE_FILL,
 			.cullMode				= VK_CULL_MODE_BACK_BIT,
-			.frontFace				= VK_FRONT_FACE_COUNTER_CLOCKWISE, // Consistent with Unity Engine. (Note Y-Flip)
+			.frontFace				= VK_FRONT_FACE_CLOCKWISE, // Consistent with Unity Engine. (Note Y-Flip)
 			.depthBiasEnable		= VK_TRUE,
 			.depthBiasConstantFactor= 0.0f, 
 			.depthBiasClamp			= 0.0f,

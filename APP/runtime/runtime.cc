@@ -5,6 +5,7 @@
 #include <Albedo.Graphics>
 #include <Albedo.System.Window>
 
+#include "camera/camera.h"
 #include "renderer/renderer.h"
 
 namespace Albedo{
@@ -16,6 +17,7 @@ namespace APP
 	Runtime::
 	Tick()
 	{
+		Camera::GetInstance().Tick();
 		Renderer::GetInstance().Tick();
 
 		return IsRunning();
@@ -34,6 +36,13 @@ namespace APP
 	IsRunning()
 	{
 		return m_is_running && WindowSystem::IsDisplaying();
+	}
+
+	unsigned int
+	Runtime::
+	GetFPS()
+	{
+		return GRI::GetFPS();
 	}
 
 	void

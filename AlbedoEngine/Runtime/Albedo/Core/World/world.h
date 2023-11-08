@@ -5,7 +5,7 @@
 namespace Albedo
 {
 
-	/*  [ Albedo World Coordinate ] * [Standard Vulkan Coordinate]  *
+	/*   [Albedo World Coordinate]  * [Standard Vulkan Coordinate]  *
 	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 	*								*								*
 	*        (Y)					*         O---------------(X)	*
@@ -23,6 +23,48 @@ namespace Albedo
 	* [Note]														*
 	* We transfer "Vulkan Coordinate" to "Albedo World Coordinate"	*
 	* by enabling VK_KHR_maintenance1 device extension.				*
+	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+	/*  [Albedo Camera Coordinate]  *  [Standard Camera Coordinate] *
+	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+	*								*								*
+	*			   (Y)				*        (Y)					*
+	*				|				*         |						*
+	*				|				*         |     (Z)				*
+	*				|				*         |     /				*
+	*				|				*         |    /				*
+	*				O---------(X)	*         |   /					*
+	*			   /				*         |  /					*
+	*		      /					*         | /					*
+	*		     /					*         |/					*
+	*		   (Z)					*         O---------------(X)	*
+	*								*								*
+	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+	* [Note]														*
+	* Z-Reverse														*
+	* https://developer.nvidia.com/blog/visualizing-depth-precision/*
+	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+	/*  [Albedo Screen Coordinate]  *   [Vulkan Screen Coordinate]  *
+	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+	*								*								*
+	*        (Y)					*         O---------------(X)	*
+	*         |						*         |						*
+	*         |     				*         |						*
+	*         |     				*         |  					*
+	*         |    					*         |   					*
+	*         |   					*         |    					*
+	*         |  					*         |     				*
+	*         | 					*         |     				*
+	*         |						*         |						*
+	*         O---------------(X)	*        (Y)					*
+	*								*								*
+	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+	* [Note]														*
+	* Y-Inversion(https://www.saschawillems.de/blog/2019/03/29/flip	*
+	* ping-the-vulkan-viewport/#:~:text=Different%20coordinate%20sy	*
+	* stems%20The%20cause%20for%20this%20is,left%20of%20the%20scree	*
+	* n%2C%20with%20Y%20pointing%20downwards.)						*
 	* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 	class World

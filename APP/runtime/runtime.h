@@ -1,5 +1,4 @@
 #pragma once
-#include <memory>
 
 namespace Albedo{
 namespace APP
@@ -11,6 +10,8 @@ namespace APP
 	public: // User Level Interface
 		static void ShutDown(const char* signature);
 		static auto IsRunning() -> bool;
+
+		static auto GetFPS()	-> unsigned int;
 
 	private: // System Level Interface
 		static void Initialize();

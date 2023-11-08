@@ -1,17 +1,85 @@
 #include "camera.h"
 
 #include <Albedo.Core.Log>
+#include <Albedo.Core.World>
 #include <Albedo.System.Control>
+#include <Albedo.Editor>
+
+#include <runtime/runtime.h>
 
 namespace Albedo{
 namespace APP
 {
+	void
 	Camera::
-	Camera()
+	Tick()
+	{
+		auto& settings = m_parameters;
+		// Adjust Speed
+		settings.dashboard.velocity = settings.dashboard.speed / Runtime::GetFPS();
+	}
+
+
+	Camera::
+	Camera() :
+		m_parameters
+		{ 
+			.coordinate
+			{
+				.front	= World::Axis.Front,
+				.upward = World::Axis.Up,
+				.right  = World::Axis.Right,
+			},
+			.tranform
+			{
+				.scale	   = Vector3D::Ones(),
+				.translate = World::Center,
+				.rotate    = {0, 0, 0}, // (Row, Pitch, Yaw)
+			},
+		}
 	{
 		// Init Matrics
 		GetViewMatrix();
 		GetProjectMatrix();
+
+		// Rigister Editor Events
+		Editor::RegisterUIEvent(new UIEvent
+			{
+				"Camera::Dashboard",[this]()->void
+				{
+					ImGui::Begin("Camera Dashboard");
+					{
+						ImGui::InputFloat("Speed",
+							&m_parameters.dashboard.speed);
+
+						auto& vm = GetViewMatrix();
+						auto& pm = GetProjectMatrix();
+						ImGui::Text("View Matrix");
+						ImGui::Text(
+							"%.2f, %.2f, %.2f, %.2f\n"
+							"%.2f, %.2f, %.2f, %.2f\n"
+							"%.2f, %.2f, %.2f, %.2f\n"
+							"%.2f, %.2f, %.2f, %.2f\n"
+						, vm(0,0), vm(0,1), vm(0,2), vm(0,3)
+						, vm(1,0), vm(1,1), vm(1,2), vm(1,3)
+						, vm(2,0), vm(2,1), vm(2,2), vm(2,3)
+						, vm(3,0), vm(3,1), vm(3,2), vm(3,3)
+						);
+						ImGui::Text("Project Matrix");
+						ImGui::Text(
+							"%.2f, %.2f, %.2f, %.2f\n"
+							"%.2f, %.2f, %.2f, %.2f\n"
+							"%.2f, %.2f, %.2f, %.2f\n"
+							"%.2f, %.2f, %.2f, %.2f\n"
+						, pm(0,0), pm(0,1), pm(0,2), pm(0,3)
+						, pm(1,0), pm(1,1), pm(1,2), pm(1,3)
+						, pm(2,0), pm(2,1), pm(2,2), pm(2,3)
+						, pm(3,0), pm(3,1), pm(3,2), pm(3,3)
+						);
+					}
+					ImGui::End();
+				}
+			});
 
 		// Register Control Events
 		ControlSystem::RegisterKeyboardEvent(
@@ -26,7 +94,7 @@ namespace APP
 
 					transform.translate +=
 						m_parameters.coordinate.front *
-						m_parameters.speed;
+						m_parameters.dashboard.velocity;
 				}
 			}
 		);
@@ -43,7 +111,7 @@ namespace APP
 
 					transform.translate -=
 						m_parameters.coordinate.front *
-						m_parameters.speed;
+						m_parameters.dashboard.velocity;
 				}
 			}
 		);
@@ -60,7 +128,7 @@ namespace APP
 
 					transform.translate +=
 						m_parameters.coordinate.right *
-						m_parameters.speed;
+						m_parameters.dashboard.velocity;
 				}
 			}
 		);
@@ -77,7 +145,7 @@ namespace APP
 
 					transform.translate -=
 						m_parameters.coordinate.right *
-						m_parameters.speed;
+						m_parameters.dashboard.velocity;
 				}
 			}
 		);
@@ -94,7 +162,7 @@ namespace APP
 
 					transform.translate +=
 						m_parameters.coordinate.upward *
-						m_parameters.speed;
+						m_parameters.dashboard.velocity;
 				}
 			}
 		);
@@ -111,7 +179,7 @@ namespace APP
 
 					transform.translate -=
 						m_parameters.coordinate.upward *
-						m_parameters.speed;
+						m_parameters.dashboard.velocity;
 				}
 			}
 		);
@@ -137,7 +205,7 @@ namespace APP
 		if (m_proj_outdated)
 		{
 			auto& p = m_parameters;
-			float semiFOV = std::tan(p.fov.range / 2.0);
+			float semiFOV = Tan(p.fov.range) / 2.0;
 			float n = p.fov.near;
 			float f = p.fov.far;
 			if (ProjectionMode::Perspective == p.projection)
@@ -163,6 +231,6 @@ namespace APP
 			m_proj_outdated = false;
 		}
 		return m_matrics.proj_matrix;
-	}	
+	}
 
 }} // namespace Albedo::APP

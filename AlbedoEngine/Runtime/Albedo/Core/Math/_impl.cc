@@ -63,15 +63,14 @@ namespace Albedo
 	{
 		out = Affine3D::Identity();
 
-        // Euler Extrinsic Rotation
-        AngleAxis roll	(static_cast<Radian>(rotate.roll),  World::Axis.Roll);
-        AngleAxis pitch	(static_cast<Radian>(rotate.pitch), World::Axis.Pitch);
-        AngleAxis yaw	(static_cast<Radian>(rotate.yaw),   World::Axis.Yaw);
+        // Euler Extrinsic Rotation (Inversed)
+        AngleAxis roll	(static_cast<Radian>(-rotate.roll),  World::Axis.Roll);
+        AngleAxis pitch	(static_cast<Radian>(-rotate.pitch), World::Axis.Pitch);
+        AngleAxis yaw	(static_cast<Radian>(-rotate.yaw),   World::Axis.Yaw);
         
 		// Stack Order
-        out .rotate(yaw * pitch * roll)
-			.translate(-translate) // Minus Translate (Different from Model Matrix)
-			.scale(scale);
+        out .rotate(yaw * pitch * roll) 
+			.translate(-translate);		// Inversed
 	}
 
 	Matrix4x4

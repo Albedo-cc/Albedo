@@ -55,4 +55,34 @@ namespace Albedo
 		double m_radian = 0.0;
 	};
 
+	double inline Tan(const Radian& radian)
+	{
+		return std::tan(radian);
+	}
+
+	double inline Tan(const Degree& degree)
+	{
+		return Tan(static_cast<Radian>(degree));
+	}
+
+	double inline Sin(const Radian& radian)
+	{
+		return std::sin(radian);
+	}
+
+	double inline Sin(const Degree& degree)
+	{
+		return Sin(static_cast<Radian>(degree));
+	}
+
+	double inline Cos(const Radian& radian)
+	{
+		return std::cos(radian);
+	}
+
+	double inline Cos(const Degree& degree)
+	{
+		return Cos(static_cast<Radian>(degree));
+	}
+
 } // namespace Albedo

@@ -192,7 +192,6 @@ namespace APP
 
 		// Update Global UBO
 		auto& camera = Camera::GetInstance();
-
 		m_global_ubo->Write(&camera.m_matrics,
 							sizeof(GlobalUBO::CameraData),
 							GRI::PadUniformBufferSize(sizeof(GlobalUBO)) * frame_index);

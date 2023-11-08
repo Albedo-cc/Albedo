@@ -2,7 +2,6 @@
 
 #include <Albedo.Pattern>
 #include <Albedo.Core.Math>
-#include <Albedo.Core.World>
 
 #include <runtime/renderer/data/global_ubo.h>
 
@@ -22,9 +21,9 @@ namespace APP
 		{
 			struct
 			{
-				Vector3D front	{ World::Axis.Front };
-				Vector3D upward	{ World::Axis.Up	};
-				Vector3D right	{ World::Axis.Right };
+				Vector3D front;
+				Vector3D upward;
+				Vector3D right;
 			}coordinate;
 
 			struct
@@ -33,11 +32,15 @@ namespace APP
 				float	aspect = 16.0 / 9.0;
 				float	near   = 0.1;
 				float	far	   = 1000.0;
-				bool	flipY  = false;
 			}fov;
 
+			struct
+			{
+				float	speed	 = 5.0; // ExpectedSpeed, coord/second
+				float	velocity = 0.0; // Instantaneous, coord/frame
+			}dashboard;
+
 			Transform		tranform;
-			float			speed = 0.05;
 			ProjectionMode	projection = Perspective;
 		};
 
@@ -49,6 +52,9 @@ namespace APP
 		auto SetTransform()	 -> Transform&	{ m_view_outdated = true; return m_parameters.tranform; }
 
 		auto IsZReversed() const { return true; }
+
+	private:
+		void Tick();
 
 		static constexpr Degree MAX_FOV_Y				= 89;
 		static constexpr Degree MIN_FOV_Y				= 10;
