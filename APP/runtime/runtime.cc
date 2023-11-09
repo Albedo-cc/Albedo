@@ -2,8 +2,8 @@
 
 #include <Albedo.Core.Log>
 #include <Albedo.Core.Time>
-#include <Albedo.Graphics>
 #include <Albedo.System.Window>
+#include <Albedo.Graphics.RHI>
 
 #include "camera/camera.h"
 #include "renderer/renderer.h"
@@ -42,7 +42,7 @@ namespace APP
 	Runtime::
 	GetFPS()
 	{
-		return GRI::GetFPS();
+		return RHI::GetFPS();
 	}
 
 	void

@@ -3,7 +3,8 @@
 #include <Albedo/Core/Log/log.h>
 #include <Albedo/Core/Norm/assert.h>
 #include <Albedo/Core/Norm/assert.h>
-#include <Albedo/Graphics/Internal/RHI.h>
+#include <Albedo/Graphics/RHI.h>
+#include <Albedo/Graphics/Internal/Vulkan.h>
 #include <Albedo/System/Window/window_system.h>
 #include <Albedo/Platform/path.h>
 
@@ -23,23 +24,23 @@ namespace Albedo
 
 		sm_renderpass = std::make_shared<EditorPass>();
 
-		ALBEDO_ASSERT(g_rhi != nullptr && "Forget to Initialize RHI?");
+		ALBEDO_ASSERT(g_vk != nullptr && "Forget to Initialize RHI?");
 
 		// Initialize Dear ImGUI
 		ImGui_ImplVulkan_InitInfo ImGui_InitInfo
 		{
-			.Instance		= g_rhi->instance,
-			.PhysicalDevice = g_rhi->GPU,
-			.Device			= g_rhi->device,
-			.QueueFamily	= g_rhi->device.queue_families.graphics,
-			.Queue			= g_rhi->device.queue_families.graphics.queues[0],
-			.PipelineCache	= g_rhi->pipeline_cache,
-			.DescriptorPool = *GRI::GetGlobalDescriptorPool(),
+			.Instance		= g_vk->instance,
+			.PhysicalDevice = g_vk->GPU,
+			.Device			= g_vk->device,
+			.QueueFamily	= g_vk->device.queue_families.graphics,
+			.Queue			= g_vk->device.queue_families.graphics.queues[0],
+			.PipelineCache	= g_vk->pipeline_cache,
+			.DescriptorPool = *RHI::GetGlobalDescriptorPool(),
 			.Subpass		= EditorPass::Subpass::ImGui,
-			.MinImageCount	= static_cast<uint32_t>(g_rhi->swapchain.images.size()),
-			.ImageCount		= static_cast<uint32_t>(g_rhi->swapchain.images.size()),
+			.MinImageCount	= static_cast<uint32_t>(g_vk->swapchain.images.size()),
+			.ImageCount		= static_cast<uint32_t>(g_vk->swapchain.images.size()),
 			.MSAASamples	= VK_SAMPLE_COUNT_1_BIT,
-			.Allocator		= g_rhi->allocator,
+			.Allocator		= g_vk->allocator,
 		};
 
 		IMGUI_CHECKVERSION();
@@ -58,11 +59,11 @@ namespace Albedo
 		ImGui_ImplGlfw_InitForVulkan(WindowSystem::GetWindow(), INSTALL_IMGUI_CALLBACKS); // Install callbacks via ImGUI
 		ImGui_ImplVulkan_Init(&ImGui_InitInfo, *sm_renderpass);
 
-		sm_frame_infos.resize(GRI::GetRenderTargetCount());
+		sm_frame_infos.resize(RHI::GetRenderTargetCount());
 
-		GRI::Fence fence{ FenceType_Unsignaled };
+		Fence fence{ FenceType_Unsignaled };
 		auto commandbuffer =
-			GRI::GetGlobalCommandPool(
+			RHI::GetGlobalCommandPool(
 				CommandPoolType_Transient,
 				QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
@@ -74,17 +75,17 @@ namespace Albedo
 			ImGui_ImplVulkan_CreateFontsTexture(*commandbuffer);
 			for (auto& frame_info : sm_frame_infos)
 			{
-				frame_info.descriptor_set = GRI::GetGlobalDescriptorPool()
-				->AllocateDescriptorSet(GRI::GetGlobalDescriptorSetLayout
-				(GRI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER})));
+				frame_info.descriptor_set = RHI::GetGlobalDescriptorPool()
+				->AllocateDescriptorSet(RHI::GetGlobalDescriptorSetLayout
+				(RHI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER})));
 
 				frame_info.main_camera =
-					GRI::Texture2D::Create(GRI::Texture::CreateInfo
+					Texture2D::Create(Texture::CreateInfo
 					{
 					.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 					.usage  = VK_IMAGE_USAGE_SAMPLED_BIT |
 							  VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-					.format = GRI::GetRenderTargetFormat(),
+					.format = RHI::GetRenderTargetFormat(),
 					.extent = {uint32_t(sm_main_camera_extent.x),
 							   uint32_t(sm_main_camera_extent.y), 1},
 					.mipLevels	 = 1,
@@ -101,7 +102,7 @@ namespace Albedo
 					->BindToTexture(0, frame_info.main_camera));
 
 				frame_info.commandbuffer =
-					GRI::GetGlobalCommandPool(
+					RHI::GetGlobalCommandPool(
 						CommandPoolType_Resettable,
 						QueueFamilyType_Graphics)
 					->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
@@ -111,7 +112,7 @@ namespace Albedo
 		commandbuffer->Submit({}, fence);
 		fence.Wait();
 
-		GRI::UpdateDescriptorSets(destwriteinfo);
+		DescriptorSet::UpdateInBatch(destwriteinfo);
 
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 
@@ -119,7 +120,7 @@ namespace Albedo
 		RegisterUIEvent(new UIEvent{
 			"Editor::MainCamera", []()
 			{
-				ImGui::Image(*sm_frame_infos[GRI::GetRenderTargetCursor()].descriptor_set, sm_main_camera_extent);
+				ImGui::Image(*sm_frame_infos[RHI::GetRenderTargetCursor()].descriptor_set, sm_main_camera_extent);
 				ImGui::ShowDemoWindow();
 			}});
 		
@@ -145,11 +146,11 @@ namespace Albedo
 	Editor::FrameInfo&
 	Editor::Render()
 	{
-		auto& frame = sm_frame_infos[GRI::GetRenderTargetCursor()];
+		auto& frame = sm_frame_infos[RHI::GetRenderTargetCursor()];
 		frame.commandbuffer->Begin();
 		{
 			// Capture current scene
-			GRI::GetCurrentRenderTarget()->Blit(frame.commandbuffer, frame.main_camera);
+			RHI::GetCurrentRenderTarget()->Blit(frame.commandbuffer, frame.main_camera);
 
 			auto subpass_iter = sm_renderpass->Begin(frame.commandbuffer);
 			{
@@ -175,7 +176,7 @@ namespace Albedo
 		for (auto& frame_info : sm_frame_infos)
 		{
 			frame_info.commandbuffer =
-				GRI::GetGlobalCommandPool(
+				RHI::GetGlobalCommandPool(
 					CommandPoolType_Resettable,
 					QueueFamilyType_Graphics)
 				->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });

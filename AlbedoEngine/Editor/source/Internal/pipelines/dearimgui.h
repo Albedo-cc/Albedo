@@ -1,17 +1,17 @@
 #pragma once
 
-#include <Albedo/Graphics/GRI.h>
+#include <Albedo/Graphics/widgets.h>
 
 namespace Albedo
 {
+	using namespace Albedo::Graphics;
 
-	
 	class ImGuiPipeline final
-		:public GRI::GraphicsPipeline
+		:public GraphicsPipeline
 	{
 	public:
-		virtual void Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer) override;
-		virtual void End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)	 override;
+		virtual void Begin(std::shared_ptr<CommandBuffer> commandbuffer) override;
+		virtual void End(std::shared_ptr<CommandBuffer> commandbuffer)	 override;
 
 	public:
 		ImGuiPipeline() :GraphicsPipeline{} {}; // Created by ImGui

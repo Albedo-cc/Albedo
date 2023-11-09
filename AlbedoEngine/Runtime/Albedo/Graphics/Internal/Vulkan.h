@@ -17,11 +17,11 @@
 // Predeclartion
 typedef struct GLFWwindow GLFWwindow;
 
-namespace Albedo
+namespace Albedo { namespace Graphics
 {    
 	// Internal Global Context Interface
-	class RHI; extern std::unique_ptr<RHI> g_rhi;
-	struct RHICreateInfo
+	class Vulkan; extern std::unique_ptr<Vulkan> g_vk;
+	struct VulkanCreateInfo
     {
         const char* app_name    = nullptr;
         uint32_t	app_version = 0;
@@ -40,9 +40,9 @@ namespace Albedo
 	constexpr bool IS_DEBUG_MODE = true; // Enable Debug Messenger & Save Pipeline Cache
 #endif
 
-	class RHI
+	class Vulkan
 	{
-		friend class GRI; // Initialze by GRI
+		friend class RHI; // Initialze by RHI
 	public:
 		const VkAllocationCallbacks*	allocator  { nullptr };
 
@@ -165,16 +165,16 @@ namespace Albedo
 		void create_pipeline_cache();		void destroy_pipeline_cache();
 
 	public:
-		RHI();
-		~RHI() noexcept;
+		Vulkan();
+		~Vulkan() noexcept;
 
 	private:
-		void Initialize(const RHICreateInfo& createinfo);
+		void Initialize(const VulkanCreateInfo& createinfo);
 		void Terminate() noexcept;
-        RHI(const RHI&)				= delete;
-        RHI(RHI&&)					= delete;
-        RHI& operator=(const RHI&)	= delete;
-        RHI& operator=(RHI&&)		= delete;
+        Vulkan(const Vulkan&)				= delete;
+        Vulkan(Vulkan&&)					= delete;
+        Vulkan& operator=(const Vulkan&)	= delete;
+        Vulkan& operator=(Vulkan&&)		= delete;
 
 	private:
 		static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -185,4 +185,4 @@ namespace Albedo
 				void* pUserData);
 	};
 
-} // namespace Albedo
+}} // namespace Albedo::Graphics

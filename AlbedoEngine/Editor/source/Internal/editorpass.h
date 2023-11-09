@@ -1,12 +1,13 @@
 #pragma once
 
-#include <Albedo/Graphics/GRI.h>
+#include <Albedo/Graphics/widgets.h>
 
 namespace Albedo
 {
-	
+	using namespace Albedo::Graphics;
+
 	class EditorPass final
-		:public GRI::RenderPass
+		:public RenderPass
 	{
 	public:
 		enum Subpass { ImGui };

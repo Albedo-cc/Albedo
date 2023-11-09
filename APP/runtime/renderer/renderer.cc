@@ -1,6 +1,7 @@
 #include "renderer.h"
 
 #include <Albedo.Core.Log>
+#include <Albedo.Graphics.RHI>
 
 #include "renderpasses/background/renderpass.h"
 #include "renderpasses/geometry/renderpass.h"
@@ -21,11 +22,11 @@ namespace APP
 		try
 		{
 			// Wait for the next frame
-			auto& frame = m_frames[GRI::GetRenderTargetCursor()];
-			GRI::WaitNextFrame(frame.semaphore_image_available, VK_NULL_HANDLE);
+			auto& frame = m_frames[RHI::GetRenderTargetCursor()];
+			RHI::WaitNextFrame(frame.semaphore_image_available, VK_NULL_HANDLE);
 
 			// Update Resources
-			update_frame_context(GRI::GetRenderTargetCursor());
+			update_frame_context(RHI::GetRenderTargetCursor());
 
 			// Render
 			for (size_t passidx = 0; passidx < frame.renderpasses.size(); ++passidx)
@@ -45,7 +46,7 @@ namespace APP
 				}
 				renderpass.commandbuffer->End();
 
-				GRI::CommandBuffer::SubmitInfo submitinfo
+				CommandBuffer::SubmitInfo submitinfo
 				{
 					.wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 					.wait_semaphores = {frame.semaphore_image_available},
@@ -57,16 +58,16 @@ namespace APP
 			}
 
 			// Present
-			GRI::PresentFrame({ frame.renderpasses.back().semaphore });
+			RHI::PresentFrame({ frame.renderpasses.back().semaphore });
 		}
-		catch (GRI::SIGNAL_RECREATE_SWAPCHAIN)
+		catch (RHI::SIGNAL_RECREATE_SWAPCHAIN)
 		{
 			Log::Debug("Recreating Swapchain...");
 			when_recreate_swapchain();
 		}
 	}
 
-	const std::unique_ptr<GRI::RenderPass>&
+	const std::unique_ptr<RenderPass>&
 	Renderer::
 	SearchRenderPass(std::string_view name) const
 	{
@@ -90,7 +91,7 @@ namespace APP
 	Renderer::
 	Destroy()
 	{
-		GRI::WaitDeviceIdle();
+		RHI::WaitDeviceIdle();
 		m_frames.clear();
 		m_global_ubo.reset();
 		m_renderpasses.clear();
@@ -107,9 +108,9 @@ namespace APP
 	create_decriptor_set_layouts()
 	{
 		// Add Descriptor Set Layouts
-		GRI::RegisterGlobalDescriptorSetLayout(
+		RHI::RegisterGlobalDescriptorSetLayout(
 			"GlobalUBO_Camera",
-			GRI::DescriptorSetLayout::Create({
+			DescriptorSetLayout::Create({
 				VkDescriptorSetLayoutBinding
 				{
 					.binding = 0,
@@ -135,8 +136,8 @@ namespace APP
 
 		// Sort Render Passes by Priority
 		std::sort(m_renderpasses.begin(), m_renderpasses.end(),
-			[](const std::unique_ptr<GRI::RenderPass>& a,
-			   const std::unique_ptr<GRI::RenderPass>& b)
+			[](const std::unique_ptr<RenderPass>& a,
+			   const std::unique_ptr<RenderPass>& b)
 			->bool
 			{
 				return a->GetPriority() > b->GetPriority();
@@ -147,26 +148,34 @@ namespace APP
 	Renderer::
 	create_frames()
 	{
-		if (m_frames.size() != GRI::GetRenderTargetCount())
+		if (m_frames.size() != RHI::GetRenderTargetCount())
 		{
-			m_frames.resize(GRI::GetRenderTargetCount());
+			m_frames.resize(RHI::GetRenderTargetCount());
 
-			m_global_ubo = GRI::Buffer::Create(
+			m_global_ubo = Buffer::Create(
 				{
-					.size = m_frames.size() * GRI::PadUniformBufferSize(sizeof(GlobalUBO)),
+					.size = m_frames.size() * RHI::PadUniformBufferSize(sizeof(GlobalUBO)),
 					.usage= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 					.mode = VK_SHARING_MODE_EXCLUSIVE,
-					.properties = static_cast<GRI::Buffer::Property>(
-						GRI::Buffer::Property::Persistent |
-						GRI::Buffer::Property::Writable),
+					.properties = static_cast<Buffer::Property>(
+						Buffer::Property::Persistent |
+						Buffer::Property::Writable),
 				});
 
 			std::vector<VkWriteDescriptorSet> writes;
 			for (auto& frame : m_frames)
 			{
 				frame.renderpasses.resize(m_renderpasses.size());
-				frame.ubo_descriptor_set = GRI::GetGlobalDescriptorPool()
-					->AllocateDescriptorSet(GRI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera"));
+				for (auto& renderpass : frame.renderpasses)
+				{
+					renderpass.commandbuffer =  RHI::GetGlobalCommandPool(
+						CommandPoolType_Resettable,
+						QueueFamilyType_Graphics)
+						->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+				}
+
+				frame.ubo_descriptor_set = RHI::GetGlobalDescriptorPool()
+					->AllocateDescriptorSet(RHI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera"));
 
 				writes.emplace_back(frame.ubo_descriptor_set
 						->BindToBuffer(
@@ -175,7 +184,7 @@ namespace APP
 						0, // Do not use static offset, instead, using Dynamic Binding.
 						sizeof(GlobalUBO::CameraData)));
 			}
-			GRI::UpdateDescriptorSets(writes);
+			DescriptorSet::UpdateInBatch(writes);
 		}
 	}
 
@@ -194,7 +203,7 @@ namespace APP
 		auto& camera = Camera::GetInstance();
 		m_global_ubo->Write(&camera.m_matrics,
 							sizeof(GlobalUBO::CameraData),
-							GRI::PadUniformBufferSize(sizeof(GlobalUBO)) * frame_index);
+							RHI::PadUniformBufferSize(sizeof(GlobalUBO)) * frame_index);
 	}
 
 }} // namespace Albedo::APP

@@ -10,7 +10,7 @@ namespace Albedo
 
 	void
 	ImGuiPipeline::
-	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
+	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{	
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -19,7 +19,7 @@ namespace Albedo
 
 	void
 	ImGuiPipeline::
-	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
+	End(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		ImGui::Render(); // Prepare the data for rendering so you can call GetDrawData()
 		// Note: at this point both vkCmdSetViewport() and vkCmdSetScissor() have been called.

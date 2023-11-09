@@ -2,6 +2,7 @@
 
 #include <Albedo.Core.Log>
 #include <Albedo.Core.File>
+#include <Albedo.Graphics.RHI>
 
 namespace Albedo{
 namespace APP
@@ -11,14 +12,14 @@ namespace APP
 
 	LinesPipeline::
 	LinesPipeline():
-		GRI::GraphicsPipeline(GRI::GraphicsPipeline::ShaderModule
+		GraphicsPipeline(GraphicsPipeline::ShaderModule
 			{
 				.descriptor_set_layouts =
-				{*GRI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera")}, // Set=0
+				{*RHI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera")}, // Set=0
 				.vertex_shader = 
-				GRI::Shader::Create(ShaderType_Vertex,	 BinaryFile(vert_shader_path)),
+				Shader::Create(ShaderType_Vertex,	 BinaryFile(vert_shader_path)),
 				.fragment_shader = 
-				GRI::Shader::Create(ShaderType_Fragment, BinaryFile(frag_shader_path)),
+				Shader::Create(ShaderType_Fragment, BinaryFile(frag_shader_path)),
 			})
 	{
 
@@ -26,7 +27,7 @@ namespace APP
 
 	void
 	LinesPipeline::
-	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
+	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		Pipeline::Begin(commandbuffer);
 		vkCmdDraw(*commandbuffer, 6, 1, 0, 0);
@@ -34,7 +35,7 @@ namespace APP
 
 	void
 	LinesPipeline::
-	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
+	End(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		Pipeline::End(commandbuffer);
 	}
@@ -46,7 +47,7 @@ namespace APP
 		static VkVertexInputBindingDescription vertexInputBindingDescription
 		{
 			.binding = 0,
-			.stride  = sizeof(Model::Vertex),
+			.stride  = 3 * sizeof(float),
 			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 		};
 

@@ -2,17 +2,19 @@
 
 #include <imgui.h>
 
-#include <Albedo/Graphics/GRI.h>
+#include <Albedo/Graphics/widgets.h>
 #include <Albedo/Core/Event/event_manager.h>
 
 namespace Albedo
 {
+    using namespace Albedo::Graphics;
+
     using UIEvent = BasicEvent;
     class EditorPass;
 
     class Editor final
     {
-        friend class GRI;
+        friend class RHI;
         struct FrameInfo;
     public: 
         static void Enable(const char* signature);
@@ -44,10 +46,10 @@ namespace Albedo
         static inline std::shared_ptr<EditorPass> sm_renderpass;
         struct FrameInfo
         {
-            std::shared_ptr<GRI::Texture2D>     main_camera;
-            std::shared_ptr<GRI::CommandBuffer> commandbuffer;
-            std::shared_ptr<GRI::DescriptorSet> descriptor_set;
-            GRI::Semaphore semaphore_editor{ SemaphoreType_Unsignaled };
+            std::shared_ptr<Texture2D>     main_camera;
+            std::shared_ptr<CommandBuffer> commandbuffer;
+            std::shared_ptr<DescriptorSet> descriptor_set;
+            Semaphore semaphore_editor{ SemaphoreType_Unsignaled };
         };
         static inline ImVec2 sm_main_camera_extent{ 600, 300 };
         static inline std::vector<FrameInfo> sm_frame_infos;

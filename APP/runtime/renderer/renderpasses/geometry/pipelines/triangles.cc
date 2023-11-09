@@ -2,6 +2,7 @@
 
 #include <Albedo.Core.Log>
 #include <Albedo.Core.File>
+#include <Albedo.Graphics.RHI>
 
 #include <runtime/renderer/renderer.h>
 
@@ -13,16 +14,16 @@ namespace APP
 
 	TrianglesPipeline::
 	TrianglesPipeline():
-		GRI::GraphicsPipeline(GRI::GraphicsPipeline::ShaderModule
+		GraphicsPipeline(GraphicsPipeline::ShaderModule
 			{
 				.descriptor_set_layouts =
 				{
-					*GRI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera") // Set=0
+					*RHI::GetGlobalDescriptorSetLayout("GlobalUBO_Camera") // Set=0
 				},
 				.vertex_shader = 
-				GRI::Shader::Create(ShaderType_Vertex,	 BinaryFile(vert_shader_path)),
+				Shader::Create(ShaderType_Vertex,	 BinaryFile(vert_shader_path)),
 				.fragment_shader = 
-				GRI::Shader::Create(ShaderType_Fragment, BinaryFile(frag_shader_path)),
+				Shader::Create(ShaderType_Fragment, BinaryFile(frag_shader_path)),
 			})
 	{
 
@@ -30,7 +31,7 @@ namespace APP
 
 	void
 	TrianglesPipeline::
-	Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
+	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		Pipeline::Begin(commandbuffer);
 
@@ -41,7 +42,7 @@ namespace APP
 			*ctx.ubo.lock(),
 		};
 		
-		uint32_t uniform_offset = GRI::PadUniformBufferSize(sizeof(GlobalUBO))* ctx.frame_index;
+		uint32_t uniform_offset = RHI::PadUniformBufferSize(sizeof(GlobalUBO))* ctx.frame_index;
 		vkCmdBindDescriptorSets(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout,
 			0, descriptorSets.size(), descriptorSets.data(), 1, &uniform_offset);
 
@@ -51,7 +52,7 @@ namespace APP
 
 	void
 	TrianglesPipeline::
-	End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)
+	End(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		Pipeline::End(commandbuffer);
 	}
@@ -63,7 +64,7 @@ namespace APP
 		static VkVertexInputBindingDescription vertexInputBindingDescription
 		{
 			.binding = 0,
-			.stride  = sizeof(Model::Vertex),
+			.stride  = 3 * sizeof(float),
 			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 		};
 

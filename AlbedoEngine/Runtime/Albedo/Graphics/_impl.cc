@@ -1,5 +1,6 @@
-#include "GRI.h"
-#include "internal/RHI.h"
+#include "RHI.h"
+#include "widgets.h"
+#include "Internal/Vulkan.h"
 
 #include <Albedo/Core/Log/log.h>
 #include <Albedo/Core/Norm/assert.h>
@@ -15,32 +16,39 @@
 namespace
 {
 	using namespace Albedo;
+	using namespace Albedo::Graphics;
 	// Local Objects
 	class VMA final
 	{
-		friend class GRI;
-		VmaAllocator handle{ VK_NULL_HANDLE };
+		friend class RHI;
+	public:
 		operator VmaAllocator() const { return handle; }
+
+	private:
+		VmaAllocator handle{ VK_NULL_HANDLE };
 		void Create(); void Destroy();
 	};
 	static VMA s_vma;
 
 	class KTX final
 	{
-		friend class GRI;
-		ktxVulkanDeviceInfo* context;
+		friend class RHI;
+	public:
 		operator ktxVulkanDeviceInfo*() const { return context; }
+
+	private:
+		ktxVulkanDeviceInfo* context;
 		void Create(); void Destroy();
 	};
 	static KTX s_ktx;
 
 	struct RenderTarget
 	{
-		static inline std::shared_ptr<GRI::Texture> zbuffer; // Shared
-		std::shared_ptr<GRI::Texture> image;
-		std::shared_ptr<GRI::CommandBuffer> commandbuffer;
-		GRI::Fence fence_in_flight{ FenceType_Signaled };
-		GRI::Semaphore  semaphore_ready{SemaphoreType_Unsignaled};
+		static inline std::shared_ptr<Texture> zbuffer; // Shared
+		std::shared_ptr<Texture> image;
+		std::shared_ptr<CommandBuffer> commandbuffer;
+		Fence fence_in_flight{ FenceType_Signaled };
+		Semaphore  semaphore_ready{SemaphoreType_Unsignaled};
 
 		static inline uint32_t FPS{ 0 };
 		static inline StopWatch frame_timer;
@@ -51,30 +59,30 @@ namespace
 	static inline std::vector<RenderTarget> s_render_targets;
 
 	// Global Command Pools
-	using GRICommandPool = std::unordered_map<QueueFamilyType, std::shared_ptr<GRI::CommandPool>>;
+	using GRICommandPool = std::unordered_map<QueueFamilyType, std::shared_ptr<CommandPool>>;
 	static std::unordered_map<std::thread::id, GRICommandPool> s_normal_command_pools;
 	static std::unordered_map<std::thread::id, GRICommandPool> s_auto_free_command_pools;
 	static std::unordered_map<std::thread::id, GRICommandPool> s_auto_reset_command_pools;
 
 	// Global Descriptor Objects
-	static std::unordered_map<std::string, std::shared_ptr<GRI::DescriptorSetLayout>>s_descriptor_set_layouts;
-	static std::unordered_map<std::thread::id, std::shared_ptr<GRI::DescriptorPool>> s_descriptor_pools;
+	static std::unordered_map<std::string, std::shared_ptr<DescriptorSetLayout>>s_descriptor_set_layouts;
+	static std::unordered_map<std::thread::id, std::shared_ptr<DescriptorPool>> s_descriptor_pools;
 
 	// Global Resource
-	static std::unordered_map<std::string, std::shared_ptr<GRI::Sampler>> s_global_samplers;
-	static std::unordered_map<std::string, std::shared_ptr<GRI::Texture>> s_global_textures;
+	static std::unordered_map<std::string, std::shared_ptr<Sampler>> s_global_samplers;
+	static std::unordered_map<std::string, std::shared_ptr<Texture>> s_global_textures;
 }
 
-namespace Albedo
+namespace Albedo { namespace Graphics
 {
 
 	void 
-	GRI::
-	Initialize(const GRICreateInfo& createinfo)
+	RHI::
+	Initialize(const RHICreateInfo& createinfo)
 	{
 		Log::Debug("Albedo GRI is being initialized...");
 
-		g_rhi->Initialize(RHICreateInfo
+		g_vk->Initialize(VulkanCreateInfo
 		{
 			.app_name	  = createinfo.app_name,
 			.app_version  = createinfo.app_version,
@@ -89,10 +97,10 @@ namespace Albedo
 		RegisterGlobalSampler("Default", Sampler::Create({}));
 		RegisterGlobalSampler("Cubemap", Sampler::Create({ .wrap_mode{.U = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER } }));
 
-		GRI::RegisterGlobalDescriptorSetLayout(
+		RHI::RegisterGlobalDescriptorSetLayout(
 			// [0]CIS
-			GRI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER}),
-			GRI::DescriptorSetLayout::Create({
+			RHI::MakeID({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER}),
+			DescriptorSetLayout::Create({
 				VkDescriptorSetLayoutBinding
 				{
 					.binding = 0,
@@ -107,11 +115,11 @@ namespace Albedo
 	}
 
 	void 
-	GRI::
+	RHI::
 	Terminate() noexcept
 	{
 		Log::Debug("Albedo GRI is being terminated...");
-		vkDeviceWaitIdle(g_rhi->device);
+		vkDeviceWaitIdle(g_vk->device);
 		
 		RenderTarget::Destroy();
 
@@ -128,21 +136,21 @@ namespace Albedo
 		s_auto_free_command_pools.clear();
 		s_auto_reset_command_pools.clear();
 
-		g_rhi->Terminate();
+		g_vk->Terminate();
 	}
 
 	void
-	GRI::
+	RHI::
 	recreate_swapchain()
 	{
-		g_rhi->recreate_swapchain();
+		g_vk->recreate_swapchain();
 		RenderTarget::Destroy();
 		RenderTarget::Initialize();
 		Editor::Recreate();
 	}
 	
-	std::shared_ptr<GRI::CommandPool>
-	GRI::
+	std::shared_ptr<CommandPool>
+	RHI::
 	GetGlobalCommandPool(
 		CommandPoolType type,
 		QueueFamilyType queue,
@@ -201,7 +209,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::
+	RHI::
 	RegisterGlobalDescriptorSetLayout(std::string id, std::shared_ptr<DescriptorSetLayout> descriptor_set_layout)
 	{
 		auto target = s_descriptor_set_layouts.find(id);
@@ -214,7 +222,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::
+	RHI::
 	RegisterGlobalSampler(std::string id, std::shared_ptr<Sampler> sampler)
 	{
 		auto target = s_global_samplers.find(id);
@@ -227,7 +235,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::
+	RHI::
 	RegisterGlobalTexture(std::string id, std::shared_ptr<Texture> texture)
 	{
 		auto target = s_global_textures.find(id);
@@ -240,7 +248,7 @@ namespace Albedo
 	}
 
 	std::string
-	GRI::MakeID(const std::vector<VkDescriptorType>& types_in_order)
+	RHI::MakeID(const std::vector<VkDescriptorType>& types_in_order)
 	{
 		ALBEDO_ASSERT(types_in_order.size() < 10 && "Unexpected Size!");
 		static std::string alias[]
@@ -269,13 +277,13 @@ namespace Albedo
 	}
 
 	size_t
-	GRI::
+	RHI::
 	PadUniformBufferSize(size_t original_size)
 	{
 		// Calculate required alignment based on minimum device offset alignment
 		// Thanks to Sascha Willems and his Vulkan samples for the snippet.
 		// https://github.com/SaschaWillems/Vulkan/tree/master/examples/dynamicuniformbuffer
-		size_t minUboAlignment = g_rhi->GPU.properties.limits.minUniformBufferOffsetAlignment;
+		size_t minUboAlignment = g_vk->GPU.properties.limits.minUniformBufferOffsetAlignment;
 		size_t alignedSize = original_size;
 
 		if (minUboAlignment > 0)
@@ -287,8 +295,8 @@ namespace Albedo
 		return alignedSize;
 	}
 
-	std::shared_ptr<GRI::DescriptorPool>
-	GRI::
+	std::shared_ptr<DescriptorPool>
+	RHI::
 	GetGlobalDescriptorPool(std::thread::id thread_id/* = std::this_thread::get_id()*/)
 	{
 		auto& target = s_descriptor_pools[thread_id];
@@ -316,8 +324,8 @@ namespace Albedo
 		else return target;
 	}
 
-	std::shared_ptr<GRI::DescriptorSetLayout>
-	GRI::
+	std::shared_ptr<DescriptorSetLayout>
+	RHI::
 	GetGlobalDescriptorSetLayout(const std::string& id)
 	{
 		auto target = s_descriptor_set_layouts.find(id);
@@ -328,8 +336,8 @@ namespace Albedo
 		else Log::Fatal("Failed to get {} Descriptor Set Layouts!", id);
 	}
 
-	std::shared_ptr<GRI::Sampler>
-	GRI::
+	std::shared_ptr<Sampler>
+	RHI::
 	GetGlobalSampler(const std::string& id)
 	{
 		auto target = s_global_samplers.find(id.data());
@@ -340,8 +348,8 @@ namespace Albedo
 		else Log::Fatal("Failed to get {} Sampler!", id);
 	}
 
-	std::shared_ptr<GRI::Texture>
-	GRI::GetGlobalTexture(const std::string& id)
+	std::shared_ptr<Texture>
+	RHI::GetGlobalTexture(const std::string& id)
 	{
 		auto target = s_global_textures.find(id.data());
 		if (target != s_global_textures.end())
@@ -352,85 +360,85 @@ namespace Albedo
 	}
 
 	VkQueue
-	GRI::
-	GetQueue(QueueFamilyType queue_family, uint32_t index/* = 0*/)
+	RHI::
+	RHI::GetQueue(QueueFamilyType queue_family, uint32_t index/* = 0*/)
 	{
 		switch (queue_family)
 		{
 		case QueueFamilyType_Graphics:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.graphics.queues.size() > index);
-			return g_rhi->device.queue_families.graphics.queues[index];
+			ALBEDO_ASSERT(g_vk->device.queue_families.graphics.queues.size() > index);
+			return g_vk->device.queue_families.graphics.queues[index];
 		case QueueFamilyType_Present:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.present.queues.size() > index);
-			return g_rhi->device.queue_families.present.queues[index];
+			ALBEDO_ASSERT(g_vk->device.queue_families.present.queues.size() > index);
+			return g_vk->device.queue_families.present.queues[index];
 		case QueueFamilyType_Transfer:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.transfer.queues.size() > index);
-			return g_rhi->device.queue_families.transfer.queues[index];
+			ALBEDO_ASSERT(g_vk->device.queue_families.transfer.queues.size() > index);
+			return g_vk->device.queue_families.transfer.queues[index];
 		case QueueFamilyType_Compute:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.compute.queues.size() > index);
-			return g_rhi->device.queue_families.compute.queues[index];
+			ALBEDO_ASSERT(g_vk->device.queue_families.compute.queues.size() > index);
+			return g_vk->device.queue_families.compute.queues[index];
 		default: ALBEDO_UNEXPECTED_ASSERT;
 		}
 	}
 
 	uint32_t
-	GRI::
-	GetQueueFamilyIndex(QueueFamilyType queue_family)
+	RHI::
+	RHI::GetQueueFamilyIndex(QueueFamilyType queue_family)
 	{
 		switch (queue_family)
 		{
 		case QueueFamilyType_Graphics:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.graphics.index.has_value());
-			return g_rhi->device.queue_families.graphics.index.value();
+			ALBEDO_ASSERT(g_vk->device.queue_families.graphics.index.has_value());
+			return g_vk->device.queue_families.graphics.index.value();
 		case QueueFamilyType_Present:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.present.index.has_value());
-			return g_rhi->device.queue_families.present.index.value();
+			ALBEDO_ASSERT(g_vk->device.queue_families.present.index.has_value());
+			return g_vk->device.queue_families.present.index.value();
 		case QueueFamilyType_Transfer:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.transfer.index.has_value());
-			return g_rhi->device.queue_families.transfer.index.value();
+			ALBEDO_ASSERT(g_vk->device.queue_families.transfer.index.has_value());
+			return g_vk->device.queue_families.transfer.index.value();
 		case QueueFamilyType_Compute:
-			ALBEDO_ASSERT(g_rhi->device.queue_families.compute.index.has_value());
-			return g_rhi->device.queue_families.compute.index.value();
+			ALBEDO_ASSERT(g_vk->device.queue_families.compute.index.has_value());
+			return g_vk->device.queue_families.compute.index.value();
 		default: ALBEDO_UNEXPECTED_ASSERT;
 		}
 	}
 
-	std::shared_ptr<const GRI::Texture>
-	GRI::
+	std::shared_ptr<const Texture>
+	RHI::
 	GetCurrentRenderTarget()
 	{
-		return s_render_targets[g_rhi->swapchain.cursor].image;
+		return s_render_targets[g_vk->swapchain.cursor].image;
 	}
 
 	size_t
-	GRI::
+	RHI::
 	GetRenderTargetCount()
 	{
-		return g_rhi->swapchain.images.size();
+		return g_vk->swapchain.images.size();
 	}
 
 	uint32_t
-	GRI::
+	RHI::
 	GetRenderTargetCursor()
 	{
-		return g_rhi->swapchain.cursor;
+		return g_vk->swapchain.cursor;
 	}
 
 	VkFormat
-	GRI::
+	RHI::
 	GetRenderTargetFormat()
 	{
-		return g_rhi->swapchain.format;
+		return g_vk->swapchain.format;
 	}
 
-	std::shared_ptr<const GRI::Texture>
-	GRI::
+	std::shared_ptr<const Texture>
+	RHI::
 	GetZBuffer()
 	{
 		return RenderTarget::zbuffer;
 	}
 
-	GRI::Fence::
+	Fence::
 	Fence(FenceType type)
 	{
 		VkFenceCreateInfo fenceCreateInfo
@@ -439,42 +447,42 @@ namespace Albedo
 			.flags = FenceType_Signaled & type ? VK_FENCE_CREATE_SIGNALED_BIT : VkFenceCreateFlags(0),
 		};
 		if (vkCreateFence(
-			g_rhi->device,
+			g_vk->device,
 			&fenceCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Fence!");
 	}
 
-	GRI::Fence::
+	Fence::
 	~Fence() noexcept
 	{
-		vkDestroyFence(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroyFence(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
 	void 
-	GRI::Fence::
+	Fence::
 	Wait(uint64_t timeout/* = std::numeric_limits<uint64_t>::max()*/)
 	{
-		vkWaitForFences(g_rhi->device, 1, &m_handle, VK_TRUE, timeout);
+		vkWaitForFences(g_vk->device, 1, &m_handle, VK_TRUE, timeout);
 	}
 
 	void 
-	GRI::Fence::
+	Fence::
 	Reset()
 	{
-		vkResetFences(g_rhi->device, 1, &m_handle);
+		vkResetFences(g_vk->device, 1, &m_handle);
 	}
 
 	bool 
-	GRI::Fence::
+	Fence::
 	IsReady()
 	{
-		return VK_SUCCESS == vkGetFenceStatus(g_rhi->device, m_handle);
+		return VK_SUCCESS == vkGetFenceStatus(g_vk->device, m_handle);
 	}
 
-	GRI::Semaphore::
+	Semaphore::
 	Semaphore(SemaphoreType type)
 	{
 		VkSemaphoreCreateInfo semaphoreCreateInfo
@@ -483,21 +491,21 @@ namespace Albedo
 			.flags = VkSemaphoreCreateFlags(type),
 		};
 		if (vkCreateSemaphore(
-			g_rhi->device,
+			g_vk->device,
 			&semaphoreCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Semaphore!");
 	}
 
-	GRI::Semaphore::
+	Semaphore::
 	~Semaphore() noexcept
 	{
-		vkDestroySemaphore(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroySemaphore(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
-	GRI::CommandBuffer::
+	CommandBuffer::
 	CommandBuffer(
 		std::shared_ptr<CommandPool> command_pool, 
 		const CreateInfo& createinfo) :
@@ -513,24 +521,23 @@ namespace Albedo
 		};
 
 		if (vkAllocateCommandBuffers(
-			g_rhi->device,
+			g_vk->device,
 			&commandBufferAllocateInfo, 
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Command Buffer!");
 	}
 
-	GRI::
 	CommandBuffer::
 	~CommandBuffer() noexcept
 	{
 		if (VK_NULL_HANDLE == m_handle) return;
 
-		vkFreeCommandBuffers(g_rhi->device, *m_parent, 1, &m_handle);
+		vkFreeCommandBuffers(g_vk->device, *m_parent, 1, &m_handle);
 		m_handle = VK_NULL_HANDLE;
 	}
 
 	void 
-	GRI::CommandBuffer::
+	CommandBuffer::
 	Begin()
 	{
 		ALBEDO_ASSERT(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
@@ -547,7 +554,7 @@ namespace Albedo
 		m_is_recording = true;
 	}
 	void 
-	GRI::CommandBuffer::
+	CommandBuffer::
 	End()
 	{
 		ALBEDO_ASSERT(IsRecording() && "You cannot End() an idle Vulkan Command Buffer!");
@@ -559,7 +566,7 @@ namespace Albedo
 	}
 
 	void 
-	GRI::CommandBuffer::
+	CommandBuffer::
 	Submit(const SubmitInfo& submitinfo, VkFence signal_fence/* = VK_NULL_HANDLE*/)
 	{
 		ALBEDO_ASSERT(!IsRecording() && "You should call End() before Submit()!");
@@ -577,7 +584,7 @@ namespace Albedo
 		};
 
 		if (vkQueueSubmit(
-			GetQueue(m_parent->m_settings.queue_family), 
+			RHI::GetQueue(m_parent->GetSettings().queue_family),
 			1,
 			&submitInfo,
 			signal_fence) != VK_SUCCESS)
@@ -585,7 +592,7 @@ namespace Albedo
 	}
 
 	void 
-	GRI::TransientCommandBuffer::
+	TransientCommandBuffer::
 	TransientCommandBuffer::Begin()
 	{
 		ALBEDO_ASSERT(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
@@ -603,7 +610,7 @@ namespace Albedo
 	}
 
 	void 
-	GRI::AutoResetCommandBuffer::
+	AutoResetCommandBuffer::
 	Begin()
 	{
 		ALBEDO_ASSERT(!IsRecording() && "You cannot Begin() a recording Vulkan Command Buffer!");
@@ -622,7 +629,7 @@ namespace Albedo
 		m_is_recording = true;
 	}
    
-	GRI::CommandPool::
+	CommandPool::
 	CommandPool(const CommandPool::CreateInfo& createinfo) :
 		m_settings{ createinfo }
 	{
@@ -630,30 +637,30 @@ namespace Albedo
 		{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 			.flags = VkCommandPoolCreateFlags(m_settings.type),
-			.queueFamilyIndex = GetQueueFamilyIndex(m_settings.queue_family)
+			.queueFamilyIndex = RHI::GetQueueFamilyIndex(m_settings.queue_family)
 		};
 
 		if (vkCreateCommandPool(
-			g_rhi->device,
+			g_vk->device,
 			&commandPoolCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Command Pool!");
 	}
 
-	GRI::CommandPool::
+	CommandPool::
 	~CommandPool() noexcept
 	{
 		// Command buffers will be automatically freed when their command pool is destroyed
-		vkDestroyCommandPool(g_rhi->device, m_handle,g_rhi->allocator);
+		vkDestroyCommandPool(g_vk->device, m_handle,g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
 	void
-	GRI::CommandPool::
+	CommandPool::
 	SubmitCommandBuffers(const std::vector<VkSubmitInfo>& submitinfos, VkFence signal_fence/* = VK_NULL_HANDLE*/)
 	{
-		if (vkQueueSubmit(GetQueue(m_settings.queue_family), 
+		if (vkQueueSubmit(RHI::GetQueue(m_settings.queue_family), 
 			submitinfos.size(),
 			submitinfos.data(),
 			signal_fence) != VK_SUCCESS)
@@ -661,11 +668,11 @@ namespace Albedo
 	}
 
 	// Don't need createinfo unless CommandPoolType_Customize
-	std::shared_ptr<GRI::CommandBuffer> 
-	GRI::CommandPool::
+	std::shared_ptr<CommandBuffer> 
+	CommandPool::
 	AllocateCommandBuffer(const CommandBuffer::CreateInfo& createinfo/* = {}*/)
 	{
-		std::shared_ptr<GRI::CommandBuffer> commandbuffer;
+		std::shared_ptr<CommandBuffer> commandbuffer;
 
 		switch (m_settings.type)
 		{
@@ -684,7 +691,7 @@ namespace Albedo
 		return commandbuffer;
 	}
 
-	GRI::DescriptorSetLayout::
+	DescriptorSetLayout::
 	DescriptorSetLayout(std::vector<VkDescriptorSetLayoutBinding> descriptor_bindings):
 		m_bindings{std::move(descriptor_bindings)}
 	{
@@ -696,29 +703,29 @@ namespace Albedo
 		};
 
 		if (vkCreateDescriptorSetLayout(
-			g_rhi->device,
+			g_vk->device,
 			&descriptorSetLayoutCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Descriptor Set Layout!");
 	}
 
-	GRI::DescriptorSetLayout::
+	DescriptorSetLayout::
 	~DescriptorSetLayout() noexcept
 	{
-		vkDestroyDescriptorSetLayout(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroyDescriptorSetLayout(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
 	const VkDescriptorSetLayoutBinding&
-	GRI::DescriptorSetLayout::
+	DescriptorSetLayout::
 	GetBinding(uint32_t index) const
 	{
 		ALBEDO_ASSERT(m_bindings.size() > index);
 		return m_bindings[index];
 	}
 
-	GRI::DescriptorPool::
+	DescriptorPool::
 	DescriptorPool(const std::vector<VkDescriptorPoolSize>& pool_size, uint32_t limit_max_sets)
 	{
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo
@@ -730,37 +737,37 @@ namespace Albedo
 			.pPoolSizes = pool_size.data()
 		};
 		if (vkCreateDescriptorPool(
-			g_rhi->device,
+			g_vk->device,
 			&descriptorPoolCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Descriptor Pool!");
 	}
 
-	GRI::DescriptorPool::
+	DescriptorPool::
 	~DescriptorPool() noexcept
 	{
 		//ALBEDO_ASSERT(weak_from_this().use_count() == 1 && "You should free all descriptor sets created by current descriptor pool first.");
-		vkDestroyDescriptorPool(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroyDescriptorPool(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
-	std::shared_ptr<GRI::DescriptorSet>
-	GRI::DescriptorPool::
+	std::shared_ptr<DescriptorSet>
+	DescriptorPool::
 	AllocateDescriptorSet(std::shared_ptr<DescriptorSetLayout> layout)
 	{
-		return std::make_shared<GRI::DescriptorSet>(shared_from_this(), layout);
+		return std::make_shared<DescriptorSet>(shared_from_this(), layout);
 	}
 
 	void
-	GRI::
-	UpdateDescriptorSets(const std::vector<VkWriteDescriptorSet>& updateinfo)
+	DescriptorSet::
+	UpdateInBatch(const std::vector<VkWriteDescriptorSet>& updateinfo)
 	{
-		vkUpdateDescriptorSets(g_rhi->device, updateinfo.size(), updateinfo.data(), 0, nullptr);
+		vkUpdateDescriptorSets(g_vk->device, updateinfo.size(), updateinfo.data(), 0, nullptr);
 	}
 
 	VkWriteDescriptorSet
-	GRI::DescriptorSet::
+	DescriptorSet::
 	BindToBuffer(uint32_t binding, std::shared_ptr<Buffer> buffer,
 				size_t offset, size_t size)
 	{
@@ -786,7 +793,7 @@ namespace Albedo
 	}
 
 	VkWriteDescriptorSet
-	GRI::DescriptorSet::
+	DescriptorSet::
 	BindToTexture(uint32_t binding, std::shared_ptr<Texture> texture)
 	{
 		auto& bindinginfo = m_layout->GetBinding(binding);
@@ -810,7 +817,7 @@ namespace Albedo
 		};
 	}
 
-	GRI::DescriptorSet::
+	DescriptorSet::
 	DescriptorSet(std::shared_ptr<DescriptorPool> parent, std::shared_ptr<DescriptorSetLayout> layout) :
 		m_parent{ std::move(parent) },
 		m_layout{ std::move(layout) }
@@ -825,22 +832,22 @@ namespace Albedo
 		};
 
 		if (vkAllocateDescriptorSets(
-			g_rhi->device,
+			g_vk->device,
 			&descriptorSetAllocateInfo,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Descriptor Sets!");
 	}
 
-	GRI::DescriptorSet::
+	DescriptorSet::
 	~DescriptorSet() noexcept
 	{
 		if (VK_NULL_HANDLE == m_handle) return;
 
-		vkFreeDescriptorSets(g_rhi->device, *m_parent, 1, &m_handle);
+		vkFreeDescriptorSets(g_vk->device, *m_parent, 1, &m_handle);
 		m_handle = VK_NULL_HANDLE;
 	}
 
-	GRI::Shader::
+	Shader::
 	Shader(ShaderType type, std::vector<char> code) :
 		m_type{ type },
 		m_code{ std::move(code) }
@@ -854,21 +861,21 @@ namespace Albedo
 		};
 
 		if (vkCreateShaderModule(
-			g_rhi->device,
+			g_vk->device,
 			&shaderModuleCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Shader!");
 	}
 
-	GRI::Shader::
+	Shader::
 	~Shader() noexcept
 	{
-		vkDestroyShaderModule(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroyShaderModule(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
-	GRI::Buffer::
+	Buffer::
 	Buffer(const CreateInfo& createinfo)
 	{
 		VkBufferCreateInfo bufferCreateInfo
@@ -900,7 +907,7 @@ namespace Albedo
 			Log::Fatal("Failed to create the Vulkan Buffer!");
 	}
 
-	GRI::Buffer::
+	Buffer::
 	~Buffer() noexcept
 	{
 		vmaDestroyBuffer(s_vma, m_handle, m_allocation);
@@ -908,14 +915,14 @@ namespace Albedo
 	}
 
 	void
-	GRI::Buffer::
+	Buffer::
 	WriteAll(void* data)
 	{
 		Write(data, GetSize(), 0); // Write All
 	}
 
 	void
-	GRI::Buffer::
+	Buffer::
 	Write(void* data, size_t size, size_t offset)
 	{
 		ALBEDO_ASSERT(m_allocation->IsMappingAllowed() && "This buffer is not mapping-allowed!");
@@ -939,7 +946,7 @@ namespace Albedo
 	}
 
 	void* 
-	GRI::Buffer::
+	Buffer::
 	Access()
 	{
 		ALBEDO_ASSERT(m_allocation->IsPersistentMap() && "This buffer is not persistently mapped!");
@@ -947,7 +954,7 @@ namespace Albedo
 	}
 
 	void 
-	GRI::Buffer::
+	Buffer::
 	CopyTo(std::shared_ptr<CommandBuffer> commandbuffer,
 		   std::shared_ptr<Buffer> target,
 		   const CopyInfo& copyinfo/* = {}*/) const
@@ -967,7 +974,7 @@ namespace Albedo
 	}
 
 	void 
-	GRI::Buffer::
+	Buffer::
 	CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer,
 			 std::shared_ptr<Buffer> target,
 			 const CopyInfo& copyinfo/* = {}*/)
@@ -988,13 +995,13 @@ namespace Albedo
 
 	
 	VkDeviceSize 
-	GRI::Buffer::
+	Buffer::
 	GetSize() const
 	{
 		return m_allocation->GetSize();
 	}
 
-	GRI::Texture::
+	Texture::
 	Texture(CreateInfo createinfo, std::shared_ptr<Sampler> sampler/* = nullptr*/) :
 		m_settings{ std::move(createinfo) },
 		m_sampler{ std::move(sampler) }
@@ -1069,9 +1076,9 @@ namespace Albedo
 			}
 		};
 		if (vkCreateImageView(
-			g_rhi->device,
+			g_vk->device,
 			&imageViewCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_view
 			) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Image View!");
@@ -1079,83 +1086,21 @@ namespace Albedo
 		if (!m_sampler)
 		{
 			Log::Debug("Using the default sampler to initialize a texture.");
-			m_sampler = GRI::GetGlobalSampler("Default");
+			m_sampler = RHI::GetGlobalSampler("Default");
 		}
 	}
 
-	GRI::Texture::
-	Texture(std::string_view ktx_texture_path,
-			std::shared_ptr<Sampler> sampler/* = nullptr*/)
-	{
-		ALBEDO_WORK_IN_PROGRESS("Wait for KTX 4.2.2 to support VMA subAllocator.");
-
-		//if (ktxTexture_CreateFromNamedFile( // [TODO]: Move to CPU end.
-		//	ktx_texture_path.data(),
-		//	KTX_TEXTURE_CREATE_NO_FLAGS,
-		//	&m_info) != KTX_SUCCESS)
-		//	Log::Fatal("Failed to create KTX Texture from {}.", ktx_texture_path);	
-
-		//ktxVulkanTexture vkTexture{};
-
-		//if (ktxTexture_VkUploadEx(
-		//	m_info,
-		//	sm_ktx,
-		//	&vkTexture,
-		//	VK_IMAGE_TILING_OPTIMAL,
-		//	VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-		//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-		//	!= KTX_SUCCESS)
-		//	Log::Fatal("Failed to create the KTX Vulkan Texture!");
-		//vkTexture;
-
-		//VkImageType image_type = m_info->baseDepth > 1 ? 
-		//	VK_IMAGE_TYPE_3D : VkImageType(VK_IMAGE_TYPE_1D + (m_info->baseHeight > 1));
-
-		//VkImageCreateInfo imageCreateInfo
-		//{
-		//	.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		//	.flags			= 0x0,
-		//	.imageType		= image_type,
-		//	.format			= VK_FORMAT_B8G8R8A8_SRGB, //[TODO]: use macro or config
-		//	.extent			= {m_info->baseWidth, m_info->baseHeight, m_info->baseDepth},
-		//	.mipLevels		= 1,
-		//	.arrayLayers	= 1,
-		//	.samples		= VK_SAMPLE_COUNT_1_BIT,
-		//	.tiling			= VK_IMAGE_TILING_OPTIMAL, // P206
-		//	.usage			= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-		//	.sharingMode	= VK_SHARING_MODE_EXCLUSIVE, // The image will only be used by one queue family: the one that supports graphics (and therefore also) transfer operations.
-		//	.initialLayout	= VK_IMAGE_LAYOUT_UNDEFINED, // P207 Top
-		//};
-
-		//VmaAllocationCreateInfo allocationInfo
-		//{
-		//	.flags = 0x0,
-		//	.usage = VMA_MEMORY_USAGE_AUTO,
-		//	.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-		//};
-
-		//if (vmaCreateImage(
-		//	sm_vma,
-		//	&imageCreateInfo,
-		//	&allocationInfo,
-		//	&m_handle,
-		//	&m_allocation,
-		//	nullptr) != VK_SUCCESS)
-		//	Log::Fatal("Failed to create the Vulkan Image!");
-
-	}
-
-	GRI::Texture::
+	Texture::
 	~Texture() noexcept
 	{
 		vmaDestroyImage(s_vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
-		vkDestroyImageView(g_rhi->device, m_view, g_rhi->allocator);
+		vkDestroyImageView(g_vk->device, m_view, g_vk->allocator);
 		m_view	 = VK_NULL_HANDLE;
 	}
 
 	void
-	GRI::Texture::
+	Texture::
 	fill_convert_layout_info(
 		VkImageMemoryBarrier& barrier,
 		VkImageLayout source_layout,
@@ -1282,7 +1227,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::Texture::
+	Texture::
 	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent3D& extent)
 	{
 		if (!extent.width || !extent.height || !extent.depth)
@@ -1293,7 +1238,7 @@ namespace Albedo
 
 		vmaDestroyImage(s_vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
-		vkDestroyImageView(g_rhi->device, m_view, g_rhi->allocator);
+		vkDestroyImageView(g_vk->device, m_view, g_vk->allocator);
 		m_view	 = VK_NULL_HANDLE;
 
 		VkImageType image_type = m_settings.extent.depth > 1 ? VK_IMAGE_TYPE_3D : VkImageType(VK_IMAGE_TYPE_1D + (m_settings.extent.height > 1));
@@ -1346,9 +1291,9 @@ namespace Albedo
 			}
 		};
 		if (vkCreateImageView(
-			g_rhi->device,
+			g_vk->device,
 			&imageViewCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_view
 			) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Image View!");
@@ -1357,8 +1302,8 @@ namespace Albedo
 	}
 
 	void
-	GRI::Texture::
-	Write(std::shared_ptr<GRI::CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data)
+	Texture::
+	Write(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> data)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording());
 		ALBEDO_ASSERT(data->GetSize() <= GetSize() && "It is not recommanded to write the image from a bigger buffer!");
@@ -1381,8 +1326,8 @@ namespace Albedo
 	}
 
 	void
-	GRI::Texture::
-	Blit(std::shared_ptr<GRI::CommandBuffer> commandbuffer,
+	Texture::
+	Blit(std::shared_ptr<CommandBuffer> commandbuffer,
 		std::shared_ptr<Texture>  target) const
 	{
 		// Only Blit Mipmap LV.0 by default.
@@ -1448,8 +1393,8 @@ namespace Albedo
 	}
 
 	void
-	GRI::Texture::
-	ConvertLayout(std::shared_ptr<GRI::CommandBuffer> commandbuffer, VkImageLayout target_layout)
+	Texture::
+	ConvertLayout(std::shared_ptr<CommandBuffer> commandbuffer, VkImageLayout target_layout)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording());
 		if (target_layout == m_layout) return;
@@ -1471,7 +1416,7 @@ namespace Albedo
 	}
 
 	VkImageSubresourceRange
-	GRI::Texture::
+	Texture::
 	GetSubresourceRange() const
 	{
 		return VkImageSubresourceRange
@@ -1485,7 +1430,7 @@ namespace Albedo
 	}
 
 	VkImageSubresourceLayers
-	GRI::Texture::
+	Texture::
 	GetSubresourceLayers() const
 	{
 		return VkImageSubresourceLayers
@@ -1498,21 +1443,21 @@ namespace Albedo
 	}
 
 	VkDeviceSize
-	GRI::Texture::
+	Texture::
 	GetSize() const
 	{
 		return m_allocation->GetSize();
 	}
 
 	bool
-	GRI::Texture::
+	Texture::
 	HasStencil() const
 	{
 		return (VK_FORMAT_S8_UINT <= m_settings.format &&
 									 m_settings.format <= VK_FORMAT_D32_SFLOAT_S8_UINT);
 	}
 
-	GRI::Sampler::
+	Sampler::
 	Sampler(CreateInfo createinfo):
 		m_setting{ std::move(createinfo) }
 	{
@@ -1532,7 +1477,7 @@ namespace Albedo
 			.mipLodBias = 0.0,
 
 			.anisotropyEnable = m_setting.enable_anisotropy,
-			.maxAnisotropy	  = g_rhi->GPU.properties.limits.maxSamplerAnisotropy,
+			.maxAnisotropy	  = g_vk->GPU.properties.limits.maxSamplerAnisotropy,
 
 			.compareEnable	= m_setting.compare_mode? VK_TRUE : VK_FALSE,
 			.compareOp		= m_setting.compare_mode,	
@@ -1545,53 +1490,53 @@ namespace Albedo
 		};
 
 		if (vkCreateSampler(
-			g_rhi->device,
+			g_vk->device,
 			&samplerCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Sampler!");
 	}
 
-	GRI::Sampler::
+	Sampler::
 	~Sampler() noexcept
 	{
-		vkDestroySampler(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroySampler(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 	
-	GRI::Texture2D::
-	Texture2D(GRI::Texture::CreateInfo createinfo,
+	Texture2D::
+	Texture2D(Texture::CreateInfo createinfo,
 			  std::shared_ptr<Sampler> sampler/* = nullptr*/)
-		:Texture{createinfo, sampler? sampler : GRI::GetGlobalSampler("Default")}
+		:Texture{createinfo, sampler? sampler : RHI::GetGlobalSampler("Default")}
 	{
 		ALBEDO_ASSERT(m_settings.viewType == VK_IMAGE_VIEW_TYPE_2D);
 		ALBEDO_ASSERT(m_settings.extent.depth == 1);
 	}
 
-	GRI::Cubemap::
+	Cubemap::
 	~Cubemap() noexcept
 	{
 		
 	}
 
 	void
-	GRI::Texture2D::
+	Texture2D::
 	Resize(std::shared_ptr<CommandBuffer> commandbuffer, const VkExtent2D& extent)
 	{
 		Texture::Resize(commandbuffer, { extent.width, extent.height, 1 });
 	}
 
-	GRI::RenderPass::
+	RenderPass::
 	RenderPass(std::string name, uint32_t priority) :
 		m_name{ std::move(name) },
 		m_priority{ priority },
-		m_render_area{ {0,0},{g_rhi->swapchain.extent} }
+		m_render_area{ {0,0},{g_vk->swapchain.extent} }
 	{
-		m_framebuffers.resize(g_rhi->swapchain.images.size());
+		m_framebuffers.resize(g_vk->swapchain.images.size());
 		sm_renderpass_count++;
 	}
 
-	GRI::RenderPass::
+	RenderPass::
 	~RenderPass() noexcept
 	{
 		// Destroy Graphics Pipelines
@@ -1602,22 +1547,22 @@ namespace Albedo
 		// Destroy Frame Buffers
 		for (auto& frame_buffer : m_framebuffers)
 		{
-			vkDestroyFramebuffer(g_rhi->device, frame_buffer, g_rhi->allocator);
+			vkDestroyFramebuffer(g_vk->device, frame_buffer, g_vk->allocator);
 		}
-		vkDestroyRenderPass(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroyRenderPass(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 
 		sm_renderpass_count--;
 	}
 
 	void
-	GRI::RenderPass::
+	RenderPass::
 	BEGIN_BUILD(uint32_t flags/* = 0*/)
 	{
 		add_attachment(AttachmentSetting{ // ST_Color
 			.description
 			{
-				.format			= GRI::GetRenderTargetFormat(),
+				.format			= RHI::GetRenderTargetFormat(),
 				.samples		= VK_SAMPLE_COUNT_1_BIT,
 				.loadOp			= ClearSTColor & flags? 
 								  VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
@@ -1637,7 +1582,7 @@ namespace Albedo
 			add_attachment(AttachmentSetting{ // ST_ZBuffer
 			.description
 			{
-				.format			= GRI::GetZBuffer()->GetFormat(),
+				.format			= RHI::GetZBuffer()->GetFormat(),
 				.samples		= VK_SAMPLE_COUNT_1_BIT,
 				.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
@@ -1654,7 +1599,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::RenderPass::
+	RenderPass::
 	END_BUILD()
 	{
 		ALBEDO_ASSERT(VK_SUBPASS_EXTERNAL == uint32_t(-1));
@@ -1693,9 +1638,9 @@ namespace Albedo
 		};
 
 		if (vkCreateRenderPass(
-			g_rhi->device,
+			g_vk->device,
 			&renderPassCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Render Pass!");
 
@@ -1742,11 +1687,11 @@ namespace Albedo
 			};
 
 			if (vkCreateGraphicsPipelines(
-				g_rhi->device,
-				g_rhi->pipeline_cache,
+				g_vk->device,
+				g_vk->pipeline_cache,
 				1,
 				&graphicsPipelineCreateInfo,
-				g_rhi->allocator,
+				g_vk->allocator,
 				&pipeline->m_handle) != VK_SUCCESS)
 				Log::Fatal("Failed to create the Vulkan Graphics Pipeline!");
 		}
@@ -1765,16 +1710,16 @@ namespace Albedo
 			};
 
 			if (vkCreateFramebuffer(
-				g_rhi->device,
+				g_vk->device,
 				&framebufferCreateInfo,
-				g_rhi->allocator,
+				g_vk->allocator,
 				&m_framebuffers[i].handle) != VK_SUCCESS)
 				Log::Fatal("Failed to create the Vulkan Framebuffer!");
 		}
 	}
 
 	uint32_t
-	GRI::RenderPass::
+	RenderPass::
 	add_attachment(AttachmentSetting setting)
 	{
 		size_t index = m_attachments.descriptions.size();
@@ -1784,7 +1729,7 @@ namespace Albedo
 	}
 
 	uint32_t
-	GRI::RenderPass::
+	RenderPass::
 	add_subpass(SubpassSetting setting)
 	{
 		ALBEDO_ASSERT(!setting.name.empty());
@@ -1795,7 +1740,7 @@ namespace Albedo
 	}
 
 	VkAttachmentReference
-	GRI::RenderPass::
+	RenderPass::
 	get_system_target_reference(SystemTarget target)
 	{
 		ALBEDO_ASSERT(target < MAX_SYSTEM_TARGET);
@@ -1807,13 +1752,13 @@ namespace Albedo
 		return references[target];
 	}
 
-	GRI::RenderPass::SubpassIterator
-	GRI::RenderPass::
+	RenderPass::SubpassIterator
+	RenderPass::
 	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		ALBEDO_ASSERT(VK_NULL_HANDLE != m_handle && "Please call build() in constructor!");
 		// Begin Info
-		auto& current_framebuffer = m_framebuffers[g_rhi->swapchain.cursor];
+		auto& current_framebuffer = m_framebuffers[g_vk->swapchain.cursor];
 		VkRenderPassBeginInfo renderPassBeginInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -1834,7 +1779,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::RenderPass::
+	RenderPass::
 	End(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You must Begin() the command buffer before End() the render pass!");
@@ -1842,7 +1787,7 @@ namespace Albedo
 	}
 
 	uint32_t
-	GRI::RenderPass::
+	RenderPass::
 	SeachSubpass(std::string_view name) const
 	throw(std::runtime_error)
 	{
@@ -1854,7 +1799,7 @@ namespace Albedo
 	}
 
 	void
-	GRI::Pipeline::
+	Pipeline::
 	Begin(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You cannot Begin() before beginning the command buffer!");
@@ -1862,37 +1807,37 @@ namespace Albedo
 	}
 
 	void
-	GRI::Pipeline::
+	Pipeline::
 	End(std::shared_ptr<CommandBuffer> commandbuffer)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You cannot End() before beginning the command buffer!");
 	}
 
-	GRI::Pipeline::
+	Pipeline::
 	~Pipeline() noexcept
 	{
-		vkDestroyPipelineLayout(g_rhi->device, m_pipeline_layout, g_rhi->allocator);
+		vkDestroyPipelineLayout(g_vk->device, m_pipeline_layout, g_vk->allocator);
 		m_pipeline_layout = VK_NULL_HANDLE;
-		vkDestroyPipeline(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroyPipeline(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	GraphicsPipeline(ShaderModule shader_module):
 		m_viewport // Default Viewport with Y-Inversion (https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport/#:~:text=Different%20coordinate%20systems%20The%20cause%20for%20this%20is,left%20of%20the%20screen%2C%20with%20Y%20pointing%20downwards.)
 		{
 			// Lower-left corner of screen. (Unity)
 			.x		= 0.0f, 
-			.y		= static_cast<float>(g_rhi->swapchain.extent.height),
-			.width	= static_cast<float>(g_rhi->swapchain.extent.width),
-			.height	= - static_cast<float>(g_rhi->swapchain.extent.height),
+			.y		= static_cast<float>(g_vk->swapchain.extent.height),
+			.width	= static_cast<float>(g_vk->swapchain.extent.width),
+			.height	= - static_cast<float>(g_vk->swapchain.extent.height),
 			.minDepth = 0.0f,
 			.maxDepth = 1.0f,
 		},
 		m_scissor // Default Scissor
 		{
 			.offset = { 0, 0 },
-			.extent = g_rhi->swapchain.extent,
+			.extent = g_vk->swapchain.extent,
 		},
 		m_color_blend // Default Color Blend
 		{
@@ -1925,28 +1870,28 @@ namespace Albedo
 			.pPushConstantRanges = push_constants.data()
 		};
 		if (vkCreatePipelineLayout(
-			g_rhi->device,
+			g_vk->device,
 			&pipelineLayoutCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_pipeline_layout) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Vulkan Pipeline Layout!");
 	}
 
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	GraphicsPipeline()
 	{
 		Log::Debug("Creating a Graphics Pipeline without Shader Module!");
 	}
 
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	~GraphicsPipeline() noexcept
 	{
-		vkDestroyPipeline(g_rhi->device, m_handle, g_rhi->allocator);
+		vkDestroyPipeline(g_vk->device, m_handle, g_vk->allocator);
 		m_handle = VK_NULL_HANDLE;
 	}
 
 	const VkPipelineVertexInputStateCreateInfo&
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	vertex_input_state()
 	{
 		static VkPipelineVertexInputStateCreateInfo state
@@ -1961,7 +1906,7 @@ namespace Albedo
 	}
 
 	const VkPipelineTessellationStateCreateInfo &
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	tessellation_state()
 	{
 		static VkPipelineTessellationStateCreateInfo state
@@ -1973,7 +1918,7 @@ namespace Albedo
 	}
 
 	const VkPipelineInputAssemblyStateCreateInfo&
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	input_assembly_state()
 	{
 		static VkPipelineInputAssemblyStateCreateInfo state
@@ -1986,7 +1931,7 @@ namespace Albedo
 	}
 
 	const VkPipelineViewportStateCreateInfo&
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	viewport_state()
 	{
 		static VkPipelineViewportStateCreateInfo state
@@ -2003,7 +1948,7 @@ namespace Albedo
 	}
 
 	const VkPipelineRasterizationStateCreateInfo&
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	rasterization_state()
 	{
 		static VkPipelineRasterizationStateCreateInfo state
@@ -2024,7 +1969,7 @@ namespace Albedo
 	}
 
 	const VkPipelineMultisampleStateCreateInfo&
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	multisampling_state()
 	{
 		static VkPipelineMultisampleStateCreateInfo state
@@ -2041,7 +1986,7 @@ namespace Albedo
 	}
 
 	const VkPipelineDepthStencilStateCreateInfo&
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	depth_stencil_state()
 	{
 		static VkPipelineDepthStencilStateCreateInfo state
@@ -2063,7 +2008,7 @@ namespace Albedo
 	}
 
 	const VkPipelineColorBlendStateCreateInfo&
-	GRI::GraphicsPipeline::	
+	GraphicsPipeline::	
 	color_blend_state()
 	{
 		static VkPipelineColorBlendStateCreateInfo state
@@ -2080,7 +2025,7 @@ namespace Albedo
 	}
 
 	const VkPipelineDynamicStateCreateInfo&
-	GRI::GraphicsPipeline::
+	GraphicsPipeline::
 	dynamic_state()
 	{
 		static VkPipelineDynamicStateCreateInfo state
@@ -2101,13 +2046,13 @@ namespace Albedo
 	 * @exception  Unkonwn Exceptions
 	 */
 	void
-	GRI::
+	RHI::
 	WaitNextFrame(
 		VkSemaphore signal_semaphore,
 		VkFence		signal_fence) 
 	throw (SIGNAL_RECREATE_SWAPCHAIN)
 	{
-		auto& RT = s_render_targets[g_rhi->swapchain.cursor];
+		auto& RT = s_render_targets[g_vk->swapchain.cursor];
 		RT.fence_in_flight.Wait();
 
 		// Compute in each loop
@@ -2121,12 +2066,12 @@ namespace Albedo
 		}
 
 		auto result = vkAcquireNextImageKHR(
-			g_rhi->device, 
-			g_rhi->swapchain,
+			g_vk->device, 
+			g_vk->swapchain,
 			std::numeric_limits<uint64_t>::max(),
 			signal_semaphore, 
 			signal_fence,
-			&g_rhi->swapchain.cursor);
+			&g_vk->swapchain.cursor);
 
 		// Judge if recreate Swapchain
 		if (VK_ERROR_OUT_OF_DATE_KHR == result ||
@@ -2143,17 +2088,17 @@ namespace Albedo
 	/**
 	 * @brief      Present the current image of Swapchain. (Assure that the final image layout is presentable!)
 	 * 
-	 * @param      wait_semaphores: Semaphores to wait for (You can create from GRI::Semaphore)
+	 * @param      wait_semaphores: Semaphores to wait for (You can create from Semaphore)
 	 * @return     void
 	 * 
 	 * @exception  SIGNAL_RECREATE_SWAPCHAIN
 	 */
 	void
-	GRI::
+	RHI::
 	PresentFrame(const std::vector<VkSemaphore>& wait_semaphores)
 	throw (SIGNAL_RECREATE_SWAPCHAIN)
 	{
-		auto& RT = s_render_targets[g_rhi->swapchain.cursor];
+		auto& RT = s_render_targets[g_vk->swapchain.cursor];
 		VkSemaphore present_wait_semaphore;
 
 		if (Editor::IsEnabled())
@@ -2170,10 +2115,10 @@ namespace Albedo
 		}
 		else
 		{
-			auto& current_swapchain_image = g_rhi->swapchain.images[g_rhi->swapchain.cursor];
+			auto& current_swapchain_image = g_vk->swapchain.images[g_vk->swapchain.cursor];
 
 			VkOffset3D srcBlitOffset{ RT.image->GetExtent().width, RT.image->GetExtent().height, 1 };
-			VkOffset3D dstBlitOffset{ g_rhi->swapchain.extent.width, g_rhi->swapchain.extent.height, 1 };
+			VkOffset3D dstBlitOffset{ g_vk->swapchain.extent.width, g_vk->swapchain.extent.height, 1 };
 			VkImageBlit blitRegion
 			{
 				.srcSubresource
@@ -2282,12 +2227,12 @@ namespace Albedo
 			.waitSemaphoreCount = 1,
 			.pWaitSemaphores	= &present_wait_semaphore,
 			.swapchainCount		= 1,
-			.pSwapchains		= &g_rhi->swapchain.handle,
-			.pImageIndices		= &g_rhi->swapchain.cursor,
+			.pSwapchains		= &g_vk->swapchain.handle,
+			.pImageIndices		= &g_vk->swapchain.cursor,
 			.pResults			= nullptr // It is not necessary if you are only using a single swap chain
 		};
 
-		auto result = vkQueuePresentKHR(GetQueue(QueueFamilyType_Present), &presentInfo);
+		auto result = vkQueuePresentKHR(RHI::GetQueue(QueueFamilyType_Present), &presentInfo);
 
 		if (VK_ERROR_OUT_OF_DATE_KHR == result ||
 			VK_SUBOPTIMAL_KHR		 == result)
@@ -2297,7 +2242,7 @@ namespace Albedo
 		}
 
 		if (result != VK_SUCCESS) Log::Fatal("Failed to present the Vulkan Swap Chain!");
-		g_rhi->swapchain.cursor = (g_rhi->swapchain.cursor + 1) % g_rhi->swapchain.images.size();
+		g_vk->swapchain.cursor = (g_vk->swapchain.cursor + 1) % g_vk->swapchain.images.size();
 	}
 
 	/**
@@ -2309,18 +2254,18 @@ namespace Albedo
 	 * @exception  No Exceptions
 	 */
 	void
-	GRI::
+	RHI::
 	WaitDeviceIdle()
 	{
-		vkDeviceWaitIdle(g_rhi->device);
+		vkDeviceWaitIdle(g_vk->device);
 	}
 
 	void
-	GRI::
+	RHI::
 	ClearScreen(std::shared_ptr<CommandBuffer> commandbuffer, const VkClearColorValue& clear_color)
 	{
 		//[WARN] It is invalid to issue this call inside an active VkRenderPass!
-		auto& screen = s_render_targets[g_rhi->swapchain.cursor].image;
+		auto& screen = s_render_targets[g_vk->swapchain.cursor].image;
 		screen->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		auto subsrcrange = screen->GetSubresourceRange();
 		vkCmdClearColorImage(*commandbuffer,
@@ -2332,13 +2277,13 @@ namespace Albedo
 	}
 
 	uint32_t
-	GRI::GetFPS()
+	RHI::GetFPS()
 	{
 		return RenderTarget::FPS;
 	}
 
 	void
-	GRI::
+	RHI::
 	Screenshot(std::shared_ptr<Texture> output)
 	{
 		ALBEDO_ASSERT(VK_IMAGE_USAGE_TRANSFER_DST_BIT & output->m_settings.usage);
@@ -2349,7 +2294,7 @@ namespace Albedo
 			QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
-		uint32_t prev_cursor = (GetRenderTargetCursor() + (g_rhi->swapchain.images.size() - 1)) % g_rhi->swapchain.images.size();
+		uint32_t prev_cursor = (GetRenderTargetCursor() + (g_vk->swapchain.images.size() - 1)) % g_vk->swapchain.images.size();
 		auto& PrevRT = s_render_targets[prev_cursor];
 		PrevRT.fence_in_flight.Wait();
 		PrevRT.fence_in_flight.Reset();
@@ -2368,7 +2313,7 @@ namespace Albedo
 		PrevRT.fence_in_flight.Wait();
 	}
 
-} // namespace Albedo
+}} // namespace Albedo::Graphics
 
 namespace
 {
@@ -2379,12 +2324,12 @@ namespace
 		VmaAllocatorCreateInfo vmaAllocatorCreateInfo
 		{
 			.flags = 0x0,							//VmaAllocatorCreateFlagBits
-			.physicalDevice = g_rhi->GPU,
-			.device = g_rhi->device,
+			.physicalDevice = g_vk->GPU,
+			.device = g_vk->device,
 			.preferredLargeHeapBlockSize = 0,		// 0 means Default (256MiB)
-			.pAllocationCallbacks = g_rhi->allocator,
+			.pAllocationCallbacks = g_vk->allocator,
 			.pDeviceMemoryCallbacks = nullptr,
-			.instance = g_rhi->instance,
+			.instance = g_vk->instance,
 			.vulkanApiVersion  = VULKAN_API_VERSION // VMA Default API Version 1.0
 		};
 		
@@ -2405,11 +2350,11 @@ namespace
 	Create()
 	{
 		context = ktxVulkanDeviceInfo_Create(
-			g_rhi->GPU,
-			g_rhi->device,
-			g_rhi->device.queue_families.transfer.queues.front(),
-			*GRI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Transfer),
-			g_rhi->allocator);
+			g_vk->GPU,
+			g_vk->device,
+			g_vk->device.queue_families.transfer.queues.front(),
+			*RHI::GetGlobalCommandPool(CommandPoolType_Resettable, QueueFamilyType_Transfer),
+			g_vk->allocator);
 	}
 	
 	void
@@ -2423,9 +2368,9 @@ namespace
 	RenderTarget::
 	Initialize()
 	{
-		s_render_targets.resize(g_rhi->swapchain.images.size());
+		s_render_targets.resize(g_vk->swapchain.images.size());
 
-		auto commandbuffer = GRI::GetGlobalCommandPool(
+		auto commandbuffer = RHI::GetGlobalCommandPool(
 			CommandPoolType_Transient,
 			QueueFamilyType_Graphics)
 			->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
@@ -2456,26 +2401,26 @@ namespace
 			for (size_t i = 0; i < s_render_targets.size(); ++i)
 			{
 				auto& RT = s_render_targets[i];
-				RT.image = GRI::Texture::Create(GRI::Texture::CreateInfo
+				RT.image = Texture::Create(Texture::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
 						.usage  = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
 								  VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-						.format = GRI::GetRenderTargetFormat(),
-						.extent = {g_rhi->swapchain.extent.width, g_rhi->swapchain.extent.height, 1},
+						.format = RHI::GetRenderTargetFormat(),
+						.extent = {g_vk->swapchain.extent.width, g_vk->swapchain.extent.height, 1},
 						.mipLevels	 = 1,
 						.arrayLayers = 1,
 						.samples = VK_SAMPLE_COUNT_1_BIT,
 						.tiling  = VK_IMAGE_TILING_OPTIMAL,
 					});
 				RT.image->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
-				RT.commandbuffer = GRI::GetGlobalCommandPool(
+				RT.commandbuffer = RHI::GetGlobalCommandPool(
 					CommandPoolType_Resettable,
 					QueueFamilyType_Graphics)
 					->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
 
 				// Convert Swapchain Image Layout
-				barrier.image = g_rhi->swapchain.images[i];
+				barrier.image = g_vk->swapchain.images[i];
 				vkCmdPipelineBarrier(
 					*commandbuffer,
 					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -2486,12 +2431,12 @@ namespace
 					1, &barrier);
 			}
 			// Create ZBuffer(Shared)
-			RenderTarget::zbuffer = GRI::Texture::Create(GRI::Texture::CreateInfo
+			RenderTarget::zbuffer = Texture::Create(Texture::CreateInfo
 					{
 						.aspect = VK_IMAGE_ASPECT_DEPTH_BIT,
 						.usage  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 						.format = VK_FORMAT_D32_SFLOAT,
-						.extent = {g_rhi->swapchain.extent.width, g_rhi->swapchain.extent.height, 1},
+						.extent = {g_vk->swapchain.extent.width, g_vk->swapchain.extent.height, 1},
 						.mipLevels	 = 1,
 						.arrayLayers = 1,
 						.samples = VK_SAMPLE_COUNT_1_BIT,
@@ -2500,7 +2445,7 @@ namespace
 			RenderTarget::zbuffer->ConvertLayout(commandbuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		}
 		commandbuffer->End();
-		GRI::Fence fence{ FenceType_Unsignaled };
+		Fence fence{ FenceType_Unsignaled };
 		commandbuffer->Submit({}, fence);
 		fence.Wait();
 	}

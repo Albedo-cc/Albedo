@@ -1,13 +1,14 @@
 #pragma once
 
-#include <Albedo.Graphics>
 #include <Albedo.Pattern>
+#include <Albedo.Graphics.Widgets>
 
 #include "data/global_ubo.h"
 
 namespace Albedo{
 namespace APP
 {
+    using namespace Albedo::Graphics;
 	
     class Renderer final
         : public Pattern::Singleton<Renderer>
@@ -19,9 +20,9 @@ namespace APP
         struct FrameContext
         {
             uint32_t frame_index = 0;
-            std::weak_ptr<GRI::DescriptorSet> ubo;
+            std::weak_ptr<DescriptorSet> ubo;
         };
-        auto SearchRenderPass(std::string_view name) const -> const std::unique_ptr<GRI::RenderPass>&;
+        auto SearchRenderPass(std::string_view name) const -> const std::unique_ptr<RenderPass>&;
         auto GetFrameContext() -> const FrameContext& { return m_frame_context; }
 
     private:
@@ -31,23 +32,19 @@ namespace APP
 
     private:
         FrameContext m_frame_context;
-        std::shared_ptr<GRI::Buffer>  m_global_ubo;
+        std::shared_ptr<Buffer>  m_global_ubo;
         
-        std::vector<std::unique_ptr<GRI::RenderPass>> m_renderpasses;
+        std::vector<std::unique_ptr<RenderPass>> m_renderpasses;
 
         struct Frame
         {
-            std::shared_ptr<GRI::DescriptorSet> ubo_descriptor_set{};
-            GRI::Semaphore semaphore_image_available = GRI::Semaphore(SemaphoreType_Unsignaled);
+            std::shared_ptr<DescriptorSet> ubo_descriptor_set{};
+            Semaphore semaphore_image_available = Semaphore(SemaphoreType_Unsignaled);
             
             struct RenderPassResource
             {
-                GRI::Semaphore  semaphore =GRI::Semaphore(SemaphoreType_Unsignaled);
-                std::shared_ptr<GRI::CommandBuffer> commandbuffer = 
-                    GRI::GetGlobalCommandPool(
-				    CommandPoolType_Resettable,
-				    QueueFamilyType_Graphics)
-				    ->AllocateCommandBuffer({ .level = CommandBufferLevel_Primary });
+                Semaphore  semaphore =Semaphore(SemaphoreType_Unsignaled);
+                std::shared_ptr<CommandBuffer> commandbuffer;
             };
             std::vector<RenderPassResource> renderpasses;
         };

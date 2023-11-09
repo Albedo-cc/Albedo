@@ -4,7 +4,7 @@
 #include <Albedo/Core/Log/log.h>
 #include <Albedo/Core/Norm/assert.h>
 #include <Albedo/Core/Norm/assert.h>
-#include <Albedo/Graphics/Internal/RHI.h>
+#include <Albedo/Graphics/Internal/Vulkan.h>
 
 #include "../editor.h"
 #include "pipelines/dearimgui.h"
@@ -13,13 +13,13 @@ namespace Albedo
 {
 
 	EditorPass::
-	EditorPass() : GRI::RenderPass{ "Editor", 0 }
+	EditorPass() : RenderPass{ "Editor", 0 }
 	{
 		auto color_index = add_attachment(AttachmentSetting
 			{
 				.description
 				{
-					.format			= g_rhi->swapchain.format,
+					.format			= g_vk->swapchain.format,
 					.samples		= VK_SAMPLE_COUNT_1_BIT,
 					.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR,
 					.storeOp		= VK_ATTACHMENT_STORE_OP_STORE,
@@ -81,20 +81,20 @@ namespace Albedo
 		};
 
 		if (vkCreateRenderPass(
-			g_rhi->device,
+			g_vk->device,
 			&renderPassCreateInfo,
-			g_rhi->allocator,
+			g_vk->allocator,
 			&m_handle) != VK_SUCCESS)
 			Log::Fatal("Failed to create the Albedo::Editor Render Pass!");
 
 		// Create Framebuffers			
-		m_framebuffers.resize(g_rhi->swapchain.images.size());
+		m_framebuffers.resize(g_vk->swapchain.images.size());
 		
 		for (size_t i = 0; i < m_framebuffers.size(); ++i)
 		{
 			auto& framebuffer = m_framebuffers[i];
 
-			framebuffer.render_targets.emplace_back(g_rhi->swapchain.image_views[i]);
+			framebuffer.render_targets.emplace_back(g_vk->swapchain.image_views[i]);
 
 			VkFramebufferCreateInfo framebufferCreateInfo
 			{
@@ -102,15 +102,15 @@ namespace Albedo
 				.renderPass = m_handle,
 				.attachmentCount = static_cast<uint32_t>(framebuffer.render_targets.size()),
 				.pAttachments = framebuffer.render_targets.data(),
-				.width  = g_rhi->swapchain.extent.width,
-				.height = g_rhi->swapchain.extent.height,
+				.width  = g_vk->swapchain.extent.width,
+				.height = g_vk->swapchain.extent.height,
 				.layers = 1
 			};
 
 			if (vkCreateFramebuffer(
-				g_rhi->device,
+				g_vk->device,
 				&framebufferCreateInfo,
-				g_rhi->allocator,
+				g_vk->allocator,
 				&framebuffer.handle) != VK_SUCCESS)
 				Log::Fatal("Failed to create the Vulkan Framebuffer!");
 		}

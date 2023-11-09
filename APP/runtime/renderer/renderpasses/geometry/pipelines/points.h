@@ -1,17 +1,17 @@
 #pragma once
 
-#include <Albedo.Graphics>
+#include "../renderpass.h"
 
 namespace Albedo{
 namespace APP
 {
-	
+
 	class PointsPipeline final
-		:public GRI::GraphicsPipeline
+		:public GraphicsPipeline
 	{
 	public:
-		virtual void Begin(std::shared_ptr<GRI::CommandBuffer> commandbuffer) override;
-		virtual void End(std::shared_ptr<GRI::CommandBuffer> commandbuffer)	  override;
+		virtual void Begin(std::shared_ptr<CommandBuffer> commandbuffer) override;
+		virtual void End(std::shared_ptr<CommandBuffer> commandbuffer)	  override;
 
 	public:
 		PointsPipeline();

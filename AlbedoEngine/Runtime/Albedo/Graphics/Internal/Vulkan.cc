@@ -1,4 +1,4 @@
-#include "RHI.h"
+#include "Vulkan.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -10,17 +10,17 @@
 #include <fstream>
 #include <format>
 
-namespace Albedo
+namespace Albedo { namespace Graphics
 {
 	// Global Context
-	std::unique_ptr<RHI> g_rhi = std::make_unique<RHI>();
+	std::unique_ptr<Vulkan> g_vk = std::make_unique<Vulkan>();
 
-	RHI::RHI()
+	Vulkan::Vulkan()
 	{
-		if (g_rhi != nullptr) throw std::runtime_error("RHI is a singleton!");
+		if (g_vk != nullptr) throw std::runtime_error("Vulkan is a singleton!");
 	}
 
-	void RHI::Initialize(const RHICreateInfo& createinfo)
+	void Vulkan::Initialize(const VulkanCreateInfo& createinfo)
 	{
 		ALBEDO_ASSERT(createinfo.app_window   != nullptr);
 		instance.app_name	 = createinfo.app_name;
@@ -75,12 +75,12 @@ namespace Albedo
 		create_pipeline_cache();
 	}
 
-    RHI::~RHI() noexcept
+    Vulkan::~Vulkan() noexcept
     {
         ALBEDO_ASSERT(instance == VK_NULL_HANDLE && "Please call GRI::Terminate()");
     }
 
-	void RHI::Terminate() noexcept
+	void Vulkan::Terminate() noexcept
 	{
         vkDeviceWaitIdle(device);
 
@@ -91,7 +91,7 @@ namespace Albedo
 		destroy_instance();
 	}
 
-	void RHI::create_instance()
+	void Vulkan::create_instance()
 	{
 		// Enable Layers
         uint32_t layerCount = 0;
@@ -169,7 +169,7 @@ namespace Albedo
         }
 	}
 
-	void RHI::destroy_instance()
+	void Vulkan::destroy_instance()
 	{
 		if (IS_DEBUG_MODE)
 		{
@@ -181,7 +181,7 @@ namespace Albedo
         instance.handle = VK_NULL_HANDLE;
 	}
 
-	void RHI::create_surface()
+	void Vulkan::create_surface()
 	{
        /*
 		*  The window surface needs to be created right after the instance creation,
@@ -196,13 +196,13 @@ namespace Albedo
         surface;
 	}
 
-	void RHI::destroy_surface()
+	void Vulkan::destroy_surface()
 	{
         vkDestroySurfaceKHR(instance, surface, allocator);
         surface.handle = VK_NULL_HANDLE;
 	}
 
-    void RHI::create_physical_device()
+    void Vulkan::create_physical_device()
     {
         uint32_t phyDevCnt = 0;
 		vkEnumeratePhysicalDevices(instance, &phyDevCnt, nullptr);
@@ -230,7 +230,7 @@ namespace Albedo
 		vkGetPhysicalDeviceMemoryProperties(GPU, &GPU.memory_properties);
     }
 
-    bool RHI::check_physical_device_features_support()
+    bool Vulkan::check_physical_device_features_support()
     {
         // Properties
 		vkGetPhysicalDeviceProperties(GPU, &GPU.properties);
@@ -258,7 +258,7 @@ namespace Albedo
 		return true;
     }
 
-    bool RHI::check_physical_device_queue_families_support()
+    bool Vulkan::check_physical_device_queue_families_support()
     {
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(GPU, &queueFamilyCount, nullptr);
@@ -331,7 +331,7 @@ namespace Albedo
 		return false;
     }
 
-    bool RHI::check_physical_device_extensions_support()
+    bool Vulkan::check_physical_device_extensions_support()
     {
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(GPU, nullptr, &extensionCount, nullptr);
@@ -348,7 +348,7 @@ namespace Albedo
 		return requiredExtensions.empty();
     }
 
-    bool RHI::check_physical_device_surface_support()
+    bool Vulkan::check_physical_device_surface_support()
     {
 		// 1. Surface Formats
 		uint32_t formatCount;
@@ -371,7 +371,7 @@ namespace Albedo
 		return !surface.formats.empty() && !surface.present_modes.empty();
     }
 
-	void RHI::create_logical_device()
+	void Vulkan::create_logical_device()
 	{
 		std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos;
 
@@ -463,13 +463,13 @@ namespace Albedo
 		}
 	}
 
-	void RHI::destroy_logical_device()
+	void Vulkan::destroy_logical_device()
 	{
 		vkDestroyDevice(device, allocator);
 		device.handle = VK_NULL_HANDLE;
 	}
 
-	void RHI::create_swapchain()
+	void Vulkan::create_swapchain()
 	{
 		if (!check_swap_chain_image_format_support())
 			throw std::runtime_error(std::format("Failed to create the Vulkan Swap Chain - Image format is not supported!"));
@@ -594,7 +594,7 @@ namespace Albedo
 		swapchain.cursor = 0;
 	}
 
-	void RHI::destroy_swapchain()
+	void Vulkan::destroy_swapchain()
 	{
 		for (auto imageview : swapchain.image_views)
 		{
@@ -604,7 +604,7 @@ namespace Albedo
 		swapchain.handle = VK_NULL_HANDLE;
 	}
 
-	void RHI::recreate_swapchain()
+	void Vulkan::recreate_swapchain()
 	{
 		vkDeviceWaitIdle(device);
 		VkSwapchainKHR new_swapchain_handle = VK_NULL_HANDLE;
@@ -721,7 +721,7 @@ namespace Albedo
 		swapchain.cursor = 0;
 	}
 
-	bool RHI::check_swap_chain_image_format_support()
+	bool Vulkan::check_swap_chain_image_format_support()
 	{
 		for (const auto& surface_format : surface.formats)
 		{
@@ -734,7 +734,7 @@ namespace Albedo
 		return false;
 	}
 
-	bool RHI::check_swap_chain_depth_format_support()
+	bool Vulkan::check_swap_chain_depth_format_support()
 	{
 		// Deduce Channels
 		//switch(m_swapchain_depth_stencil_format)
@@ -770,7 +770,7 @@ namespace Albedo
 		return false;
 	}
 
-	bool RHI::check_swap_chain_present_mode_support()
+	bool Vulkan::check_swap_chain_present_mode_support()
 	{
 		for (const auto& surface_present_mode : surface.present_modes)
 		{
@@ -782,7 +782,7 @@ namespace Albedo
 		return false;
 	}
 
-	void RHI::create_pipeline_cache()
+	void Vulkan::create_pipeline_cache()
 	{
 		std::vector<char> buffer;
 		// Read Pipeline Cache File
@@ -822,7 +822,7 @@ namespace Albedo
 			throw std::runtime_error("Failed to create Vulkan Pipeline Cache!");
 	}
 
-	void RHI::destroy_pipeline_cache()
+	void Vulkan::destroy_pipeline_cache()
 	{
 		if (pipeline_cache.is_expired)
 		{
@@ -843,7 +843,7 @@ namespace Albedo
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL
-        RHI::default_messenger_callback(
+        Vulkan::default_messenger_callback(
             VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
             VkDebugUtilsMessageTypeFlagsEXT messageType,
             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -852,21 +852,21 @@ namespace Albedo
 			switch (messageSeverity)
 			{
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-				//std::cerr << "\n[RHI Verbose]: " << pCallbackData->pMessage;
+				//std::cerr << "\n[Vulkan Verbose]: " << pCallbackData->pMessage;
 				break;
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-				//std::cerr << "\n[RHI Info]: " << pCallbackData->pMessage;
+				//std::cerr << "\n[Vulkan Info]: " << pCallbackData->pMessage;
 				break;
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-				std::cerr << "\n[RHI Warn]: " << pCallbackData->pMessage;
+				std::cerr << "\n[Vulkan Warn]: " << pCallbackData->pMessage;
 				break;
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-				std::cerr << "\n[RHI Error]: " << pCallbackData->pMessage;
+				std::cerr << "\n[Vulkan Error]: " << pCallbackData->pMessage;
 				break;
 			default:
-				std::cerr << "\n[RHI Exception]: Unknow Message Severity " << messageSeverity;
+				std::cerr << "\n[Vulkan Exception]: Unknow Message Severity " << messageSeverity;
 			}
 			return VK_FALSE; // Always return VK_FALSE
 		}
 
-} // namespace Albedo
+}} // namespace Albedo::Graphics

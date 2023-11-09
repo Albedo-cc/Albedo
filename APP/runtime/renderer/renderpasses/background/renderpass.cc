@@ -7,7 +7,7 @@ namespace APP
 {
 
 	BackgroundPass::
-	BackgroundPass() : GRI::RenderPass{"Background", 10000}
+	BackgroundPass() : RenderPass{"Background", 10000}
 	{
 		BEGIN_BUILD(ClearSTColor);
 		{
@@ -15,7 +15,7 @@ namespace APP
 		
 			// Add Subpasses
 			// [0]: Triangles
-			add_subpass(GRI::RenderPass::SubpassSetting
+			add_subpass(RenderPass::SubpassSetting
 				{
 					.name					 = "Background::Skybox",
 					.pipeline				 = std::make_unique<SkyboxPipeline>(),

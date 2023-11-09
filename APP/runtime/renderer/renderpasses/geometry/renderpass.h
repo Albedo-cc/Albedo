@@ -1,13 +1,13 @@
 #pragma once
 
-#include <Albedo.Graphics>
+#include <runtime/renderer/renderer.h>
 
 namespace Albedo{
 namespace APP
 {
 	
 	class GeometryPass final
-		:public GRI::RenderPass
+		:public RenderPass
 	{
 	public:
 		enum Subpass { Triangles, Lines, Points };

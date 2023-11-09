@@ -1,6 +1,6 @@
 # TODO
 ## Vital
-- [ ] 2023-11-07 - Y Inversion with Vulkan Extension.
+- [ ] 2023-11-09 - Remove all RHI in pipelines, instead using Renderer's interfaces.
 - [ ] 2023-11-01 - Wait KTX 4.2.2 for integrate it with VMA.
 - [ ] 2023-10-31 - Add KTX Texture definition, e.g., VK_FORMAT_B8G8R8A8_SRGB
 - [ ] 2023-10-22 - Solve subresouce for Mipmap Levels.
@@ -13,6 +13,7 @@
 ## Trival
 
 ## DONE
+- [X] 2023-11-07 - Y Inversion with Vulkan Extension.
 - [X] 2023-10-22 - Dynamic Uniform Buffers.
 - [X] 2023-09-05 - Implement ZReverse.
 - [X] 2023-07-30 - Solve VMA Implement macro issue (now two RHI function difinitions in GRI.cc)

@@ -9,7 +9,7 @@ namespace APP
 {
 
 	GeometryPass::
-	GeometryPass() : GRI::RenderPass{"Geometry", 3000}
+	GeometryPass() : RenderPass{"Geometry", 3000}
 	{
 		BEGIN_BUILD(ZWrite);
 		{
@@ -20,7 +20,7 @@ namespace APP
 		
 			// Add Subpasses
 			// [0]: Triangles
-			add_subpass(GRI::RenderPass::SubpassSetting
+			add_subpass(RenderPass::SubpassSetting
 				{
 					.name					 = "Geometry::Triangles",
 					.pipeline				 = std::make_unique<TrianglesPipeline>(),
@@ -35,7 +35,7 @@ namespace APP
 											   VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 				});
 			// [1]: Lines
-			/*add_subpass(GRI::RenderPass::SubpassSetting
+			/*add_subpass(RenderPass::SubpassSetting
 				{
 					.name					 = "Geometry::Lines",
 					.pipeline				 = std::make_unique<LinesPipeline>(),
@@ -50,7 +50,7 @@ namespace APP
 											   VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 				});*/
 			// [2]: Points
-			/*add_subpass(GRI::RenderPass::SubpassSetting
+			/*add_subpass(RenderPass::SubpassSetting
 				{
 					.name					 = "Geometry::Points",
 					.pipeline				 = std::make_unique<PointsPipeline>(),

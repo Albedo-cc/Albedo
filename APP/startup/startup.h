@@ -42,7 +42,7 @@ namespace APP
 			});
 
 			// Init GRI
-			GRI::Initialize(GRICreateInfo
+			RHI::Initialize(RHICreateInfo
 			{
 				.app_name     = CONFIG.app.name.data(),
 				.app_window   = WindowSystem::GetWindow(),
@@ -81,7 +81,7 @@ namespace APP
 			Log::Info("{} is being terminated...", APPConfig::GetView().app.name);
 
 			Editor::Terminate();
-			GRI::Terminate();
+			RHI::Terminate();
 			ControlSystem::Terminate();
 			WindowSystem::Terminate();
 
