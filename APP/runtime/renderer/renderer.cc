@@ -1,6 +1,7 @@
 #include "renderer.h"
 
 #include <Albedo.Core.Log>
+#include <Albedo.Core.Norm>
 #include <Albedo.Graphics.RHI>
 
 #include "renderpasses/background/renderpass.h"
@@ -67,6 +68,41 @@ namespace APP
 		}
 	}
 
+	Renderer::Model&
+	Renderer::
+	RegisterModel(ModelData model_info)
+	{
+		ALBEDO_ASSERT(model_info.vertices.data && model_info.vertices.count);
+		model_info.vertices.count *= 3;
+		auto& model = m_models.emplace_back(std::move(model_info), nullptr, nullptr);
+		model.vbo = Graphics::Buffer::Create(
+			{
+				.size	= model.data.vertices.count * sizeof(ModelData::VertexType),
+				.usage	= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				.mode	= VK_SHARING_MODE_EXCLUSIVE,
+				.properties = Buffer::Property::Writable,
+			});
+		
+		model.vbo->WriteAll(model.data.vertices.data);
+
+		// IBO(Optional)
+		if (model.data.indices.data)
+		{
+			ALBEDO_ASSERT(model.data.indices.count != 0);
+			model.ibo = Graphics::Buffer::Create(
+			{
+				.size	= model.data.indices.count * sizeof(ModelData::IndexType),
+				.usage	= VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				.mode	= VK_SHARING_MODE_EXCLUSIVE,
+				.properties = Buffer::Property::Writable,
+			});
+
+			model.ibo->WriteAll(model.data.indices.data);
+		}
+
+		return model;
+	}
+
 	const std::unique_ptr<RenderPass>&
 	Renderer::
 	SearchRenderPass(std::string_view name) const
@@ -92,6 +128,7 @@ namespace APP
 	Destroy()
 	{
 		RHI::WaitDeviceIdle();
+		m_models.clear();
 		m_frames.clear();
 		m_global_ubo.reset();
 		m_renderpasses.clear();
@@ -193,17 +230,21 @@ namespace APP
 	update_frame_context(uint32_t frame_index)
 	{
 		auto& current_frame = m_frames[frame_index];
-		
+				
 		// Update Context
 		auto& ctx = m_frame_context;
 		ctx.frame_index = frame_index;
 		ctx.ubo = current_frame.ubo_descriptor_set;
+		ALBEDO_ASSERT(m_models.size() == 1);// TESTING
+		ctx.model = &m_models.front();
 
-		// Update Global UBO
+		// Update Global UBO	
+		const static size_t ubo_block_size = RHI::PadUniformBufferSize(sizeof(GlobalUBO));
+
 		auto& camera = Camera::GetInstance();
 		m_global_ubo->Write(&camera.m_matrics,
-							sizeof(GlobalUBO::CameraData),
-							RHI::PadUniformBufferSize(sizeof(GlobalUBO)) * frame_index);
+							ubo_block_size * frame_index,
+							sizeof(GlobalUBO::CameraData));
 	}
 
 }} // namespace Albedo::APP

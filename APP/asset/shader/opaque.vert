@@ -1,5 +1,6 @@
 #version 450
 
+layout(location = 0) in  vec3 vertex;
 layout(location = 0) out vec3 fragColor;
 
 layout(set = 0, binding = 0) uniform GlobalUBO_Camera
@@ -18,23 +19,18 @@ vec3 positions[6] = vec3[](
     vec3(-0.7, -0.3, 0.8)
 );
 
-vec3 colors[6] = vec3[](
+vec3 colors[3] = vec3[](
     vec3(1.0, 0.0, 0.0),
     vec3(0.0, 1.0, 0.0),
-    vec3(0.0, 0.0, 1.0),
-
-    vec3(1.0, 0.0, 0.0),
-    vec3(1.0, 0.0, 0.0),
-    vec3(1.0, 0.0, 0.0)
+    vec3(0.0, 0.0, 1.0)
 );
 
 void main()
 {
-    mat4x4 a = mat4x4(1.0);
-
     gl_Position = ubo_camera.proj_matrix *
                   ubo_camera.view_matrix *
-                  vec4(positions[gl_VertexIndex], 1.0);
+                  vec4(vertex, 1.0);
+                  //vec4(positions[gl_VertexIndex], 1.0);
 
-    fragColor = colors[gl_VertexIndex]; 
+    fragColor = colors[gl_VertexIndex % 3]; 
 }

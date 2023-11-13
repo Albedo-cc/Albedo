@@ -127,7 +127,7 @@ namespace Albedo { namespace Graphics
 			uint32_t				cursor{ 0 };	// Current image index for rendering
 			VkFormat				format			= VK_FORMAT_B8G8R8A8_SRGB;
 			VkColorSpaceKHR			color_space		= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-			VkPresentModeKHR		present_mode	= VK_PRESENT_MODE_MAILBOX_KHR;
+			VkPresentModeKHR		present_mode	= VK_PRESENT_MODE_FIFO_RELAXED_KHR;
 			VkFormat				zbuffer_format  = VK_FORMAT_D32_SFLOAT;
 			VkImageTiling			zbuffer_tiling  = VK_IMAGE_TILING_OPTIMAL;
 			
@@ -174,7 +174,7 @@ namespace Albedo { namespace Graphics
         Vulkan(const Vulkan&)				= delete;
         Vulkan(Vulkan&&)					= delete;
         Vulkan& operator=(const Vulkan&)	= delete;
-        Vulkan& operator=(Vulkan&&)		= delete;
+        Vulkan& operator=(Vulkan&&)			= delete;
 
 	private:
 		static VKAPI_ATTR VkBool32 VKAPI_CALL

@@ -120,7 +120,18 @@ namespace Albedo
 		RegisterUIEvent(new UIEvent{
 			"Editor::MainCamera", []()
 			{
-				ImGui::Image(*sm_frame_infos[RHI::GetRenderTargetCursor()].descriptor_set, sm_main_camera_extent);
+				auto& frame = sm_frame_infos[RHI::GetRenderTargetCursor()];
+
+				ImGui::SetNextWindowSize(sm_main_camera_extent);
+				ImGui::Begin("Main Scene", nullptr,
+					ImGuiWindowFlags_NoCollapse |
+					ImGuiWindowFlags_NoScrollbar |
+					ImGuiWindowFlags_NoScrollWithMouse);
+				{
+					ImGui::Image(*frame.descriptor_set, {1080,720});
+					sm_main_camera_extent = ImGui::GetWindowSize();
+				}
+				ImGui::End();
 				ImGui::ShowDemoWindow();
 			}});
 		
@@ -147,6 +158,42 @@ namespace Albedo
 	Editor::Render()
 	{
 		auto& frame = sm_frame_infos[RHI::GetRenderTargetCursor()];
+
+		//if (frame.main_camera->GetExtent().width  != sm_main_camera_extent.x ||
+		//	frame.main_camera->GetExtent().height != sm_main_camera_extent.y)
+		//{
+		//	auto cmdbuffer = 
+		//		RHI::GetGlobalCommandPool(
+		//		CommandPoolType_Transient,
+		//		QueueFamilyType_Graphics)
+		//		->AllocateCommandBuffer({
+		//		.level = CommandBufferLevel_Primary});
+		//	frame.main_camera =
+		//		Texture2D::Create(Texture::CreateInfo
+		//		{
+		//		.aspect = VK_IMAGE_ASPECT_COLOR_BIT,
+		//		.usage  = VK_IMAGE_USAGE_SAMPLED_BIT |
+		//					VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+		//		.format = RHI::GetRenderTargetFormat(),
+		//		.extent = {uint32_t(sm_main_camera_extent.x),
+		//					uint32_t(sm_main_camera_extent.y), 1},
+		//		.mipLevels	 = 1,
+		//		.arrayLayers = 1,
+		//		.samples = VK_SAMPLE_COUNT_1_BIT,
+		//		.tiling  = VK_IMAGE_TILING_OPTIMAL,
+		//		});
+
+		//	cmdbuffer->Begin();
+		//	{
+		//		//frame.main_camera->Resize(cmdbuffer, { uint32_t(window_extent.x), uint32_t(window_extent.y) });
+		//		frame.main_camera->ConvertLayout(cmdbuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		//	}
+		//	cmdbuffer->End();
+		//	Fence fence{ FenceType_Unsignaled };
+		//	cmdbuffer->Submit({}, fence);
+		//	fence.Wait();
+		//}
+
 		frame.commandbuffer->Begin();
 		{
 			// Capture current scene

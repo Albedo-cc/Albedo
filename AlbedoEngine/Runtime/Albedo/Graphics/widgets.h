@@ -221,7 +221,8 @@ namespace Albedo { namespace Graphics
 		std::vector<char> m_code;
 	};
 		
-	class Buffer final
+	class Buffer final:
+		public std::enable_shared_from_this<Buffer>
 	{
 		friend class RHI;
 	public:
@@ -236,8 +237,9 @@ namespace Albedo { namespace Graphics
 
 	public:
 		void WriteAll(void* data); // The buffer must be mapping-allowed and writable
-		void Write(void* data, size_t size, size_t offset);
+		void Write(void* data, size_t offset, size_t size);
 		auto Access() -> void*; // If the buffer is persistently mapped, you can access its memory directly
+		auto CreateView(size_t offset, size_t size) ->std::shared_ptr<BufferView>;
 
 		struct CopyInfo
 		{
@@ -246,8 +248,10 @@ namespace Albedo { namespace Graphics
 			VkDeviceSize target_offset = 0;
 		};
 		void CopyTo(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> target, const CopyInfo& copyinfo = {}) const;
-		void CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> target, const CopyInfo& copyinfo = {});
-		
+		void CopyTo(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<BufferView> target, const CopyInfo& copyinfo = {}) const;
+		void CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<const Buffer> source, const CopyInfo& copyinfo = {});
+		void CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<const BufferView> source, const CopyInfo& copyinfo = {});
+
 		auto GetSize()		const ->VkDeviceSize;
 		operator VkBuffer() const { return m_handle; }
 
@@ -261,6 +265,35 @@ namespace Albedo { namespace Graphics
 	private:
 		VkBuffer	  m_handle	   { VK_NULL_HANDLE };
 		VmaAllocation m_allocation { VK_NULL_HANDLE };	
+	};
+	
+	class BufferView
+	{
+		friend class RHI;
+		friend class Buffer;
+	public:
+		void Write(void* data, size_t offset, size_t size);
+		void WriteAll(void* data);
+
+		void CopyTo(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<Buffer> target, const Buffer::CopyInfo& copyinfo = {}) const;
+		void CopyTo(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<BufferView> target, const Buffer::CopyInfo& copyinfo = {}) const;
+		void CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<const Buffer> source, const Buffer::CopyInfo& copyinfo = {});
+		void CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer, std::shared_ptr<const BufferView> source, const Buffer::CopyInfo& copyinfo = {});
+
+		auto GetOffset()	const -> size_t { return m_offset; }
+		auto GetSize()		const -> size_t { return m_size; }
+
+		auto IsExpired()	const -> bool { return m_buffer.expired(); }
+
+	public:
+		BufferView() = delete;
+		BufferView(std::shared_ptr<Buffer> buffer, size_t offset, size_t size)
+			:m_buffer{ buffer }, m_offset{ offset }, m_size{ size } {}
+
+	private:
+		std::weak_ptr<Buffer> m_buffer;
+		size_t m_offset = 0;
+		size_t m_size   = 0;
 	};
 
 		
@@ -428,7 +461,7 @@ namespace Albedo { namespace Graphics
 			std::shared_ptr<Shader> vertex_shader;
 			std::shared_ptr<Shader> fragment_shader;	
 		};
-		GraphicsPipeline(ShaderModule shader_module);
+		GraphicsPipeline(ShaderModule shader_module, const std::vector<VkPushConstantRange>& push_constants = {});
 		GraphicsPipeline();
 		virtual ~GraphicsPipeline() noexcept;
 

@@ -918,12 +918,12 @@ namespace Albedo { namespace Graphics
 	Buffer::
 	WriteAll(void* data)
 	{
-		Write(data, GetSize(), 0); // Write All
+		Write(data, 0, GetSize()); // Write All
 	}
 
 	void
 	Buffer::
-	Write(void* data, size_t size, size_t offset)
+	Write(void* data, size_t offset, size_t size)
 	{
 		ALBEDO_ASSERT(m_allocation->IsMappingAllowed() && "This buffer is not mapping-allowed!");
 		if (offset + size > GetSize())
@@ -953,11 +953,18 @@ namespace Albedo { namespace Graphics
 		return m_allocation->GetMappedData();
 	}
 
+	std::shared_ptr<BufferView>
+	Buffer::
+	CreateView(size_t offset, size_t size)
+	{
+		return std::make_shared<BufferView>(shared_from_this(), offset, size);
+	}
+
 	void 
 	Buffer::
 	CopyTo(std::shared_ptr<CommandBuffer> commandbuffer,
-		   std::shared_ptr<Buffer> target,
-		   const CopyInfo& copyinfo/* = {}*/) const
+		 std::shared_ptr<Buffer> target,
+		 const CopyInfo& copyinfo/* = {}*/) const
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You have to ensure that the command buffer is recording while using XXXCommand funcitons!");
 		VkDeviceSize range = copyinfo.range ? copyinfo.range : GetSize();
@@ -973,14 +980,23 @@ namespace Albedo { namespace Graphics
 		vkCmdCopyBuffer(*commandbuffer, m_handle, *target, 1, &bufferCopy);
 	}
 
+	void
+	Buffer::
+	CopyTo(std::shared_ptr<CommandBuffer> commandbuffer,
+		 std::shared_ptr<BufferView> target,
+		 const CopyInfo& copyinfo/* = {}*/) const
+	{
+		target->CopyFrom(commandbuffer, shared_from_this(), copyinfo);
+	}
+
 	void 
 	Buffer::
 	CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer,
-			 std::shared_ptr<Buffer> target,
+			 std::shared_ptr<const Buffer> source,
 			 const CopyInfo& copyinfo/* = {}*/)
 	{
 		ALBEDO_ASSERT(commandbuffer->IsRecording() && "You have to ensure that the command buffer is recording while using XXXCommand funcitons!");
-		VkDeviceSize range = copyinfo.range ? copyinfo.range : target->GetSize();
+		VkDeviceSize range = copyinfo.range ? copyinfo.range : source->GetSize();
 		ALBEDO_ASSERT(range <= (GetSize() - copyinfo.source_offset) && "You cannot copy data from another big buffer!");
 
 		VkBufferCopy bufferCopy
@@ -990,15 +1006,135 @@ namespace Albedo { namespace Graphics
 			.size = range,
 		};
 
-		vkCmdCopyBuffer(*commandbuffer, *target, m_handle, 1, &bufferCopy);
+		vkCmdCopyBuffer(*commandbuffer, *source, m_handle, 1, &bufferCopy);
 	}
 
+	void
+	Buffer::
+	CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer,
+			 std::shared_ptr<const BufferView> source,
+			 const CopyInfo& copyinfo/* = {}*/)
+	{
+		source->CopyTo(commandbuffer, shared_from_this(), copyinfo);
+	}
 	
 	VkDeviceSize 
 	Buffer::
 	GetSize() const
 	{
 		return m_allocation->GetSize();
+	}
+
+	void
+	BufferView::
+	Write(void* data, size_t offset, size_t size)
+	{
+		ALBEDO_ASSERT(GetSize() >= size);
+		if (auto buffer = m_buffer.lock())
+		{
+			buffer->Write(data, offset + GetOffset(), size);
+		}
+		else Log::Error("Failed to write buffer view! - buffer is expired.");
+	}
+
+	void
+	BufferView::
+	WriteAll(void* data)
+	{
+		Write(data, 0, GetSize());
+	}
+
+	void
+	BufferView::
+	CopyTo(std::shared_ptr<CommandBuffer> commandbuffer,
+		   std::shared_ptr<Buffer> target,
+		   const Buffer::CopyInfo& copyinfo/* = {}*/) const
+	{
+		if (auto buffer = m_buffer.lock())
+		{
+			Buffer::CopyInfo viewcopy
+			{
+				.range = copyinfo.range,
+				.source_offset = copyinfo.source_offset + GetOffset(),
+				.target_offset = copyinfo.target_offset,
+			};
+			ALBEDO_ASSERT(viewcopy.source_offset + viewcopy.range <= GetSize());
+			ALBEDO_ASSERT(viewcopy.target_offset + viewcopy.range <= target->GetSize());
+
+			buffer->CopyTo(commandbuffer, target, viewcopy);
+		}
+		else Log::Error("Failed to copy buffer view to target buffer! - source buffer is expired.");
+	}
+	void
+	BufferView::
+	CopyTo(std::shared_ptr<CommandBuffer> commandbuffer,
+		   std::shared_ptr<BufferView> target,
+		   const Buffer::CopyInfo& copyinfo/* = {}*/) const
+	{
+		if (target->IsExpired())
+		Log::Error("Failed to copy buffer view to target buffer view! - target buffer is expired.");
+		
+		if (auto buffer = m_buffer.lock())
+		{
+			Buffer::CopyInfo viewcopy
+			{
+				.range = copyinfo.range,
+				.source_offset = copyinfo.source_offset + GetOffset(),
+				.target_offset = copyinfo.target_offset + target->GetOffset(),
+			};
+			ALBEDO_ASSERT(copyinfo.source_offset + copyinfo.range <= GetSize());
+			ALBEDO_ASSERT(copyinfo.target_offset + copyinfo.range <= target->GetSize());
+
+			buffer->CopyTo(commandbuffer, target->m_buffer.lock(), copyinfo);
+		}
+		else Log::Error("Failed to copy buffer view to target buffer view! - source buffer is expired.");
+	}
+
+	void 
+	BufferView::
+	CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer,
+			 std::shared_ptr<const Buffer> source,
+			 const Buffer::CopyInfo& copyinfo/* = {}*/)
+	{
+		if (auto buffer = m_buffer.lock())
+		{
+			Buffer::CopyInfo viewcopy
+			{
+				.range = copyinfo.range,
+				.source_offset = copyinfo.source_offset,
+				.target_offset = copyinfo.target_offset + GetOffset(),
+			};
+			ALBEDO_ASSERT(viewcopy.source_offset + viewcopy.range <= source->GetSize());
+			ALBEDO_ASSERT(viewcopy.target_offset + viewcopy.range <= GetSize());
+
+			buffer->CopyFrom(commandbuffer, source, viewcopy);
+		}
+		else Log::Error("Failed to copy buffer view from source buffer! - target buffer is expired.");
+	}
+
+	void
+	BufferView::
+	CopyFrom(std::shared_ptr<CommandBuffer> commandbuffer,
+			 std::shared_ptr<const BufferView> source,
+			 const Buffer::CopyInfo& copyinfo/* = {}*/)
+	{
+		if (source->IsExpired())
+		Log::Error("Failed to copy buffer view from source buffer! - source buffer is expired.");
+
+		if (auto buffer = m_buffer.lock())
+		{
+			Buffer::CopyInfo viewcopy
+			{
+				.range = copyinfo.range,
+				.source_offset = copyinfo.source_offset + source->GetOffset(),
+				.target_offset = copyinfo.target_offset + GetOffset(),
+			};
+			ALBEDO_ASSERT(viewcopy.source_offset + viewcopy.range <= source->GetSize());
+			ALBEDO_ASSERT(viewcopy.target_offset + viewcopy.range <= GetSize());
+
+			buffer->CopyFrom(commandbuffer, source, copyinfo);
+		}
+		else Log::Error("Failed to copy buffer view from source buffer! - target buffer is expired.");	
 	}
 
 	Texture::
@@ -1236,6 +1372,7 @@ namespace Albedo { namespace Graphics
 		
 		m_settings.extent = extent;
 
+		ALBEDO_WORK_IN_PROGRESS("Cannot delete in commmandbuffer! - user callback?");
 		vmaDestroyImage(s_vma, m_handle, m_allocation);
 		m_handle = VK_NULL_HANDLE;
 		vkDestroyImageView(g_vk->device, m_view, g_vk->allocator);
@@ -1823,7 +1960,8 @@ namespace Albedo { namespace Graphics
 	}
 
 	GraphicsPipeline::
-	GraphicsPipeline(ShaderModule shader_module):
+	GraphicsPipeline(ShaderModule shader_module,
+					const std::vector<VkPushConstantRange>& push_constants/* = {}*/):
 		m_viewport // Default Viewport with Y-Inversion (https://www.saschawillems.de/blog/2019/03/29/flipping-the-vulkan-viewport/#:~:text=Different%20coordinate%20systems%20The%20cause%20for%20this%20is,left%20of%20the%20screen%2C%20with%20Y%20pointing%20downwards.)
 		{
 			// Lower-left corner of screen. (Unity)
@@ -1859,8 +1997,6 @@ namespace Albedo { namespace Graphics
 		ALBEDO_ASSERT(ShaderType_Fragment == m_shader_module.fragment_shader->GetType());
 
 		// Create Pipeline Layout
-		std::vector<VkPushConstantRange> push_constants;
-		// [TODO]: Add to Shader or Pipeline directly
 		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,

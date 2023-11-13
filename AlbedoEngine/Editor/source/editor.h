@@ -51,7 +51,7 @@ namespace Albedo
             std::shared_ptr<DescriptorSet> descriptor_set;
             Semaphore semaphore_editor{ SemaphoreType_Unsignaled };
         };
-        static inline ImVec2 sm_main_camera_extent{ 600, 300 };
+        static inline ImVec2 sm_main_camera_extent{ 720, 720 };
         static inline std::vector<FrameInfo> sm_frame_infos;
         static inline bool m_enabled = false;
 

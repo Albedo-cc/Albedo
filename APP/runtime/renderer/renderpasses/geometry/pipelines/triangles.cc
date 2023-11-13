@@ -4,8 +4,6 @@
 #include <Albedo.Core.File>
 #include <Albedo.Graphics.RHI>
 
-#include <runtime/renderer/renderer.h>
-
 namespace Albedo{
 namespace APP
 {
@@ -46,8 +44,12 @@ namespace APP
 		vkCmdBindDescriptorSets(*commandbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout,
 			0, descriptorSets.size(), descriptorSets.data(), 1, &uniform_offset);
 
-
-		vkCmdDraw(*commandbuffer, 6, 1, 0, 0);
+		VkBuffer vbo = *ctx.model->vbo;
+		VkDeviceSize offsets[1] = { 0 };
+		vkCmdBindVertexBuffers(*commandbuffer, 0, 1, &vbo, offsets);
+		// [TODO]: Model::Draw?
+		ALBEDO_ASSERT(ctx.model->data.vertices.count % 3 == 0);
+		vkCmdDraw(*commandbuffer, ctx.model->data.vertices.count / 3, 1, 0, 0);
 	}
 
 	void
@@ -68,13 +70,42 @@ namespace APP
 			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 		};
 
+		static VkVertexInputAttributeDescription positionAttribute
+		{
+			.location = 0,
+			.binding = 0,
+			.format = VK_FORMAT_R32G32B32_SFLOAT,
+			.offset = 0 //offsetof(Vertex, position);
+		};
+
 		static VkPipelineVertexInputStateCreateInfo state
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			.vertexBindingDescriptionCount = 0,
-			.pVertexBindingDescriptions   = nullptr,
-			.vertexAttributeDescriptionCount = 0,
-			.pVertexAttributeDescriptions = nullptr,
+			.vertexBindingDescriptionCount = 1,
+			.pVertexBindingDescriptions   = &vertexInputBindingDescription,
+			.vertexAttributeDescriptionCount = 1,
+			.pVertexAttributeDescriptions = &positionAttribute,
+		};
+		return state;
+	}
+
+	const VkPipelineRasterizationStateCreateInfo&
+	TrianglesPipeline::
+	rasterization_state()
+	{
+		static VkPipelineRasterizationStateCreateInfo state
+		{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			.depthClampEnable		= VK_FALSE, // Fragments that are beyond the near and far planes are clamped to them as opposed to discarding them
+			.rasterizerDiscardEnable= VK_FALSE, // if VK_TRUE, then geometry never passes through the rasterizer stage
+			.polygonMode			= VK_POLYGON_MODE_LINE,
+			.cullMode				= VK_CULL_MODE_BACK_BIT,
+			.frontFace				= VK_FRONT_FACE_CLOCKWISE, // Consistent with Unity Engine. (Note Y-Flip)
+			.depthBiasEnable		= VK_TRUE,
+			.depthBiasConstantFactor= 0.0f, 
+			.depthBiasClamp			= 0.0f,
+			.depthBiasSlopeFactor	= 0.0f, // This is sometimes used for shadow mapping
+			.lineWidth				= 1.0f // Any line thicker than 1.0f requires you to enable the wideLines GPU feature.			
 		};
 		return state;
 	}

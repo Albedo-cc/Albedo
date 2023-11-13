@@ -8,6 +8,7 @@ namespace APP
 	
 	class GlobalUBO
 	{
+		friend class Renderer;
 	public:
 		struct CameraData
 		{

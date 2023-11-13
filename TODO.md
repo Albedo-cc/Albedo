@@ -1,7 +1,7 @@
 # TODO
 ## Vital
 - [ ] 2023-11-09 - Remove all RHI in pipelines, instead using Renderer's interfaces.
-- [ ] 2023-11-01 - Wait KTX 4.2.2 for integrate it with VMA.
+- [ ] 2023-11-01 - Wait KTX 4.2.2 for integrate it with VMA. (Then Skybox)
 - [ ] 2023-10-31 - Add KTX Texture definition, e.g., VK_FORMAT_B8G8R8A8_SRGB
 - [ ] 2023-10-22 - Solve subresouce for Mipmap Levels.
 

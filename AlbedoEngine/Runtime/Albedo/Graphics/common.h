@@ -19,7 +19,7 @@ namespace Albedo { namespace Graphics
 	//[GRI OBJECTS]----------------------------------------------------------------------------------------------------------------
 	/*Command*/			class CommandPool; class CommandBuffer; class TransientCommandBuffer; class AutoResetCommandBuffer;
 	/*Synchronization*/	class Fence; class Semaphore;
-	/*Memory*/			class Shader; class Buffer;
+	/*Memory*/			class Shader; class Buffer; class BufferView;
 	/*Interface Class*/	class RenderPass; class Pipeline; class GraphicsPipeline;
 	/*Descriptor*/		class DescriptorSetLayout; class DescriptorPool; class DescriptorSet;
 	/*Texture*/			class Texture; class Texture2D; class Cubemap;

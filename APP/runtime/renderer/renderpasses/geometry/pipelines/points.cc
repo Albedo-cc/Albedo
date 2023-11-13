@@ -4,6 +4,8 @@
 #include <Albedo.Core.File>
 #include <Albedo.Graphics.RHI>
 
+#include <runtime/renderer/renderer.h>
+
 namespace Albedo{
 namespace APP
 {

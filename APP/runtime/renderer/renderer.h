@@ -4,6 +4,7 @@
 #include <Albedo.Graphics.Widgets>
 
 #include "data/global_ubo.h"
+#include "data/model_data.h"
 
 namespace Albedo{
 namespace APP
@@ -16,11 +17,20 @@ namespace APP
         friend class Runtime;
         friend class Pattern::Singleton<Renderer>;
         enum RenderPasses { Background, Geometry, MAX_RENDERPASS_COUNT };
-    public:
+    public: 
+        struct Model
+        {
+            ModelData data;
+            std::shared_ptr<Buffer> vbo;
+            std::shared_ptr<Buffer> ibo;
+        };
+        Model& RegisterModel(ModelData model_info);
+
         struct FrameContext
         {
             uint32_t frame_index = 0;
             std::weak_ptr<DescriptorSet> ubo;
+            Model* model = nullptr;
         };
         auto SearchRenderPass(std::string_view name) const -> const std::unique_ptr<RenderPass>&;
         auto GetFrameContext() -> const FrameContext& { return m_frame_context; }
@@ -31,10 +41,11 @@ namespace APP
         void Tick();
 
     private:
-        FrameContext m_frame_context;
-        std::shared_ptr<Buffer>  m_global_ubo;
-        
-        std::vector<std::unique_ptr<RenderPass>> m_renderpasses;
+        FrameContext                            m_frame_context;
+        std::shared_ptr<Buffer>                 m_global_ubo;
+        std::vector<std::unique_ptr<RenderPass>>m_renderpasses;
+
+        std::vector<Model> m_models;
 
         struct Frame
         {
@@ -52,10 +63,8 @@ namespace APP
 
     private:
         void when_recreate_swapchain();
-        
         void create_renderpasses();
         void create_frames();
-        
         void create_decriptor_set_layouts();
         void update_frame_context(uint32_t frame_index);
 

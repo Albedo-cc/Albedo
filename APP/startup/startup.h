@@ -6,9 +6,9 @@
 
 // Sort by Initialization Order
 #include <Albedo.Core.Log>
-#include <Albedo.Graphics>
-#include <Albedo.Editor>
 #include <Albedo.Platform>
+#include <Albedo.Editor>
+#include <Albedo.Graphics.RHI>
 #include <Albedo.System.Window>
 #include <Albedo.System.Control>
 
@@ -64,6 +64,8 @@ namespace APP
 			Log::Info("{} is running.", APPConfig::GetView().app.name);
 
 			Runtime::Initialize();
+
+			PrepareSandbox();
 
 			while (Runtime::Tick())
 			{

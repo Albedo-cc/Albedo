@@ -3,12 +3,25 @@
 #include <Albedo.Core.Log>
 #include <Albedo.Core.File>
 #include <Albedo.Graphics.RHI>
+#include <Albedo.Editor>
 
 namespace Albedo{
 namespace APP
 {
-	static const char* vert_shader_path = "asset\\shader\\cubemap.vert.spv";
+	// ! NOT SKYBOX NOW ! (ONLY BACKGROUND)
+	static const char* vert_shader_path = "asset\\shader\\postprocessing.vert.spv";
 	static const char* frag_shader_path = "asset\\shader\\skybox.frag.spv";
+
+	static Vector4D s_bgColor{ 0.0, 0.0, 0.0, 1.0 };
+	static std::vector<VkPushConstantRange> push_constants
+	{
+		VkPushConstantRange
+		{
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset		= 0,
+			.size		= sizeof(s_bgColor),
+		},
+	};
 
 	SkyboxPipeline::
 	SkyboxPipeline():
@@ -20,9 +33,19 @@ namespace APP
 				},
 				.vertex_shader   = Shader::Create(ShaderType_Vertex,	 BinaryFile(vert_shader_path)),
 				.fragment_shader = Shader::Create(ShaderType_Fragment,  BinaryFile(frag_shader_path)),
-			})
+			},push_constants)
 	{
-
+		Editor::RegisterUIEvent(new UIEvent
+			{
+				"Pipeline::Skybox",[]()->void
+				{
+					ImGui::Begin("Background");
+					{
+						ImGui::InputFloat4("Color", s_bgColor.data(), "%.1f");
+					}
+					ImGui::End();
+				}
+			});
 	}
 
 	void
@@ -33,7 +56,12 @@ namespace APP
 		/*vkCmdBindDescriptorSets(commandbuffer, 
 			VK_PIPELINE_BIND_POINT_GRAPHICS, 
 			m_pipeline_layout, 0, 1, , 0);*/
-		//vkCmdDraw(*commandbuffer, Cubemap::VertexCount, 1, 0, 0);
+		vkCmdPushConstants(
+			*commandbuffer,
+			m_pipeline_layout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0, sizeof(s_bgColor), s_bgColor.data());
+		vkCmdDraw(*commandbuffer, 3/*Cubemap::VertexCount*/, 1, 0, 0);
 	}
 
 	void
